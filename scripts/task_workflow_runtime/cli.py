@@ -7,6 +7,7 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
+from .finalize_flow import finalize_task
 from .models import StepResult
 from .publish_flow import run_publish_flow
 from .sync_flow import backfill_task, sync_task
@@ -40,11 +41,26 @@ def print_text_report(payload: dict[str, object]) -> None:
         print(f"url={payload['url']}")
     if "merge_commit" in payload:
         print(f"merge_commit={payload['merge_commit']}")
+    if "task_branch" in payload:
+        print(f"task_branch={payload['task_branch']}")
+    if "base_branch" in payload:
+        print(f"base_branch={payload['base_branch']}")
+    if "commit_created" in payload:
+        print(f"commit_created={payload['commit_created']}")
+    if "commit_id" in payload and payload["commit_id"]:
+        print(f"commit_id={payload['commit_id']}")
     if "cleanup" in payload:
         print(f"cleanup={payload['cleanup']}")
     for item in payload["results"]:
         suffix = f" path={item['path']}" if item.get("path") else ""
         print(f"- [{item['status']}] {item['key']}: {item['detail']}{suffix}")
+    for item in payload.get("blockers", []):
+        suffix = f" path={item['path']}" if item.get("path") else ""
+        print(f"- [{item['status']}] {item['key']}: {item['detail']}{suffix}")
+        if item.get("next_action"):
+            print(f"  next_action={item['next_action']}")
+    for action in payload.get("next_actions", []):
+        print(f"next_action={action}")
 
 
 def main() -> int:
@@ -76,9 +92,15 @@ def main() -> int:
         choices=("start", "publish", "sync", "merge", "close"),
         help="Выполнить publish-helper действие вместо обычной sync-задачи.",
     )
+    parser.add_argument(
+        "--finalize",
+        action="store_true",
+        help="Выполнить local-only finalize задачи: commit, fast-forward merge в base и checkout base.",
+    )
     parser.add_argument("--unit-id", help="Delivery unit в формате `DU-01`.")
     parser.add_argument("--purpose", help="Назначение delivery unit для `start` или нового unit.")
     parser.add_argument("--base-branch", help="Целевая base-ветка для публикации и merge.")
+    parser.add_argument("--commit-message", help="Явное сообщение commit для local finalize.")
     parser.add_argument("--head-branch", help="Явно задать head-ветку delivery unit.")
     parser.add_argument("--from-ref", help="Ref, от которого создавать новую delivery-ветку.")
     parser.add_argument("--host", help="Host публикации: `github`, `gitlab`, `generic`, `none` или `auto`.")
@@ -106,7 +128,14 @@ def main() -> int:
     project_root = Path(args.project_root)
     task_dir = Path(args.task_dir)
     try:
-        if args.publish_action:
+        if args.finalize:
+            payload = finalize_task(
+                project_root,
+                task_dir,
+                base_branch=args.base_branch,
+                commit_message=args.commit_message,
+            )
+        elif args.publish_action:
             payload = run_publish_flow(
                 project_root,
                 task_dir,
@@ -149,6 +178,7 @@ def main() -> int:
     except Exception as error:  # noqa: BLE001
         payload = {
             "ok": False,
+            "outcome": "failed",
             "task_id": None,
             "task_dir": str(task_dir),
             "branch": None,

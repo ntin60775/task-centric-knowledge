@@ -95,6 +95,16 @@ task-knowledge workflow sync \
 
 Для governed compatibility-backfill legacy-задачи используй примерную команду `task-knowledge workflow backfill --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --scope compatibility`.
 
+Завершить локальный task lifecycle без `push` можно через local finalize:
+
+- Команда: `task-knowledge workflow finalize --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --base-branch main`
+
+`workflow finalize` работает только в local-only режиме:
+
+- при безопасном task-контексте он делает task-scoped commit, fast-forward merge в base-ветку и checkout base-ветки;
+- при блокере он не мутирует git-состояние и возвращает явный blocker-report с причинами и следующими действиями;
+- `push`, PR/MR и cleanup веток остаются отдельными шагами.
+
 ## Политика JSON
 
 - Глобальный флаг `--json` включает стабильный машиночитаемый вывод.

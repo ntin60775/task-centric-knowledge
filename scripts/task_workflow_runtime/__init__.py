@@ -1,6 +1,7 @@
 """Public runtime surface for task_workflow facade."""
 
 from .cli import main
+from .finalize_flow import finalize_task
 from .models import DELIVERY_ROW_PLACEHOLDER, DeliveryUnit, PublicationSnapshot, StepResult
 from .publish_flow import run_publish_flow
 from .sync_flow import backfill_task, sync_task
@@ -12,6 +13,7 @@ __all__ = [
     "PublicationSnapshot",
     "StepResult",
     "backfill_task",
+    "finalize_task",
     "main",
     "run_publish_flow",
     "sync_task",

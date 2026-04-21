@@ -246,6 +246,119 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self.assertIn("Актуальная каноническая сводка.", registry_text)
             self.assertNotIn("Устаревший кэш.", registry_text)
 
+    def test_finalize_task_fast_forwards_task_branch_to_base_and_updates_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._init_repo(Path(tmp_dir))
+            git(project_root, "branch", "-M", "main")
+            self._write_registry(project_root)
+            task_dir = project_root / "knowledge/tasks/TASK-2026-1500-finalize-demo"
+            self._write_task(
+                task_dir,
+                task_id="TASK-2026-1500",
+                slug="finalize-demo",
+                branch="task/task-2026-1500-finalize-demo",
+                status="в работе",
+                human_description="Тестовая задача для local finalize.",
+            )
+            self._register_task(project_root, task_dir, "Тестовая задача для local finalize.")
+            self._commit_all(project_root, "prepare finalize task")
+
+            git(project_root, "checkout", "-b", "task/task-2026-1500-finalize-demo")
+            workflow_module.sync_task(
+                project_root,
+                task_dir,
+                create_branch=False,
+                register_if_missing=False,
+                summary=None,
+                branch_name="task/task-2026-1500-finalize-demo",
+                inherit_branch_from_parent=False,
+                today="2026-04-21",
+            )
+            (project_root / "feature.txt").write_text("ready\n", encoding="utf-8")
+
+            payload = workflow_module.finalize_task(
+                project_root,
+                task_dir,
+                base_branch="main",
+                commit_message="TASK-2026-1500: finalize",
+                today="2026-04-21",
+            )
+
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["outcome"], "finalized")
+            self.assertEqual(payload["branch"], "main")
+            self.assertEqual(payload["task_branch"], "task/task-2026-1500-finalize-demo")
+            self.assertTrue(payload["commit_created"])
+            self.assertEqual(git(project_root, "branch", "--show-current"), "main")
+            task_text = (task_dir / "task.md").read_text(encoding="utf-8")
+            self.assertIn("| Статус | `завершена` |", task_text)
+            self.assertIn("| Ветка | `main` |", task_text)
+            registry_text = (project_root / "knowledge/tasks/registry.md").read_text(encoding="utf-8")
+            self.assertIn("| `TASK-2026-1500` | `—` | `завершена` | `средний` | `main` |", registry_text)
+            self.assertEqual((project_root / "feature.txt").read_text(encoding="utf-8"), "ready\n")
+
+    def test_finalize_task_blocks_when_open_delivery_unit_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._init_repo(Path(tmp_dir))
+            git(project_root, "branch", "-M", "main")
+            self._write_registry(project_root)
+            task_dir = project_root / "knowledge/tasks/TASK-2026-1501-finalize-blocked"
+            self._write_task(
+                task_dir,
+                task_id="TASK-2026-1501",
+                slug="finalize-blocked",
+                branch="task/task-2026-1501-finalize-blocked",
+                status="в работе",
+                human_description="Тестовая задача для blocker-report finalize.",
+            )
+            task_file = task_dir / "task.md"
+            task_file.write_text(
+                task_file.read_text(encoding="utf-8")
+                + textwrap.dedent(
+                    """\
+
+                    ## Контур публикации
+
+                    | Unit ID | Назначение | Head | Base | Host | Тип публикации | Статус | URL | Merge commit | Cleanup |
+                    |---------|------------|------|------|------|----------------|--------|-----|--------------|---------|
+                    | `DU-01` | Local publish | `du/task-2026-1501-u01-finalize-blocked` | `main` | `none` | `none` | `local` | `—` | `—` | `не требуется` |
+                    """
+                ),
+                encoding="utf-8",
+            )
+            self._register_task(project_root, task_dir, "Тестовая задача для blocker-report finalize.")
+            self._commit_all(project_root, "prepare blocked finalize task")
+
+            git(project_root, "checkout", "-b", "task/task-2026-1501-finalize-blocked")
+            workflow_module.sync_task(
+                project_root,
+                task_dir,
+                create_branch=False,
+                register_if_missing=False,
+                summary=None,
+                branch_name="task/task-2026-1501-finalize-blocked",
+                inherit_branch_from_parent=False,
+                today="2026-04-21",
+            )
+            (project_root / "feature.txt").write_text("blocked\n", encoding="utf-8")
+
+            payload = workflow_module.finalize_task(
+                project_root,
+                task_dir,
+                base_branch="main",
+                commit_message=None,
+                today="2026-04-21",
+            )
+
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["outcome"], "blocked")
+            self.assertEqual(payload["branch"], "task/task-2026-1501-finalize-blocked")
+            self.assertEqual(git(project_root, "branch", "--show-current"), "task/task-2026-1501-finalize-blocked")
+            self.assertEqual(payload["blockers"][0]["key"], "open_delivery_units")
+            task_text = (task_dir / "task.md").read_text(encoding="utf-8")
+            self.assertIn("| Статус | `в работе` |", task_text)
+            self.assertIn("| Ветка | `task/task-2026-1501-finalize-blocked` |", task_text)
+
     def test_sync_task_does_not_duplicate_existing_human_description(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             project_root = self._init_repo(Path(tmp_dir))

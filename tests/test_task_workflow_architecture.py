@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import ast
+import sys
 import unittest
 from pathlib import Path
+
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
 
 from task_workflow_testlib import ROOT
 
@@ -20,7 +25,8 @@ class TestTaskWorkflowArchitecture(unittest.TestCase):
             "forge.py": {"git_ops", "models"},
             "sync_flow.py": {"git_ops", "models", "registry_sync", "task_markdown"},
             "publish_flow.py": {"forge", "git_ops", "models", "registry_sync", "task_markdown"},
-            "cli.py": {"models", "publish_flow", "sync_flow"},
+            "finalize_flow.py": {"git_ops", "models", "registry_sync", "task_markdown"},
+            "cli.py": {"finalize_flow", "models", "publish_flow", "sync_flow"},
         }
 
         for filename, expected in allowed.items():
@@ -41,4 +47,4 @@ class TestTaskWorkflowArchitecture(unittest.TestCase):
 
         assert len(source.splitlines()) <= 50
         assert class_defs == []
-        assert function_names == ["sync_task", "run_publish_flow"]
+        assert function_names == ["sync_task", "run_publish_flow", "finalize_task"]

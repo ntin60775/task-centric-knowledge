@@ -25,7 +25,7 @@ from module_core_runtime.query_cli import (
     format_module_find_payload,
     format_module_show_payload,
 )
-from task_workflow_runtime import backfill_task, run_publish_flow, sync_task
+from task_workflow_runtime import backfill_task, finalize_task, run_publish_flow, sync_task
 from task_workflow_runtime.cli import print_text_report as print_workflow_text_report
 from task_workflow_runtime.query_cli import (
     dispatch as dispatch_query,
@@ -201,6 +201,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Тип governed backfill.",
     )
     workflow_backfill_parser.add_argument("--summary", help="Явная summary для active legacy-задачи, если нужен controlled backfill.")
+
+    workflow_finalize_parser = workflow_subparsers.add_parser(
+        "finalize",
+        parents=[_common_workflow_parent()],
+        help="Local-only finalize задачи: commit, fast-forward merge в base и checkout base.",
+    )
+    workflow_finalize_parser.add_argument("--base-branch", help="Целевая base-ветка для local finalize.")
+    workflow_finalize_parser.add_argument("--commit-message", help="Явное сообщение commit для local finalize.")
 
     workflow_publish_parser = workflow_subparsers.add_parser("publish", parents=[_common_workflow_parent()], help="Publish helper поверх delivery unit.")
     workflow_publish_parser.add_argument("action", choices=("start", "publish", "sync", "merge", "close"), help="Publish-helper действие.")
@@ -478,6 +486,13 @@ def _workflow(args: argparse.Namespace) -> tuple[dict[str, object], int]:
                 scope=args.scope,
                 summary=args.summary,
             )
+        elif args.workflow_command == "finalize":
+            payload = finalize_task(
+                project_root,
+                task_dir,
+                base_branch=args.base_branch,
+                commit_message=args.commit_message,
+            )
         else:
             payload = run_publish_flow(
                 project_root,
@@ -504,6 +519,7 @@ def _workflow(args: argparse.Namespace) -> tuple[dict[str, object], int]:
     except Exception as error:  # noqa: BLE001
         payload = {
             "ok": False,
+            "outcome": "failed",
             "task_id": None,
             "task_dir": str(task_dir),
             "branch": None,

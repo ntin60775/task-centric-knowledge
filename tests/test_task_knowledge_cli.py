@@ -97,6 +97,50 @@ class TaskKnowledgeCliTests(TempRepoCase):
             self.assertEqual(payload["command"], "status")
             self.assertEqual(payload["current_task"]["state"], "resolved")
 
+    def test_workflow_finalize_routes_to_finalize_runtime(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = self.init_repo(Path(tmp_dir))
+            git(project_root, "branch", "-M", "main")
+            self.write_registry(project_root)
+            task_dir = project_root / "knowledge/tasks/TASK-2026-1300-finalize"
+            self.write_task(
+                task_dir,
+                task_id="TASK-2026-1300",
+                slug="finalize",
+                branch="task/task-2026-1300-finalize",
+                human_description="CLI finalize task.",
+            )
+            registry_path = project_root / "knowledge/tasks/registry.md"
+            registry_path.write_text(
+                registry_path.read_text(encoding="utf-8")
+                + "| `TASK-2026-1300` | `—` | `в работе` | `средний` | `task/task-2026-1300-finalize` | `knowledge/tasks/TASK-2026-1300-finalize/` | CLI finalize task. |\n",
+                encoding="utf-8",
+            )
+            git(project_root, "add", ".")
+            git(project_root, "commit", "-m", "prepare finalize cli fixtures")
+            git(project_root, "checkout", "-b", "task/task-2026-1300-finalize")
+            (project_root / "feature.txt").write_text("cli finalize\n", encoding="utf-8")
+
+            result, payload = self.run_cli_json(
+                "workflow",
+                "finalize",
+                "--project-root",
+                str(project_root),
+                "--task-dir",
+                "knowledge/tasks/TASK-2026-1300-finalize",
+                "--base-branch",
+                "main",
+                "--commit-message",
+                "TASK-2026-1300: finalize cli",
+            )
+
+            self.assertEqual(result.returncode, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["action"], "finalize")
+            self.assertEqual(payload["outcome"], "finalized")
+            self.assertEqual(payload["branch"], "main")
+            self.assertEqual(git(project_root, "branch", "--show-current"), "main")
+
     def test_borrowings_status_reports_missing_checkout_without_network(self) -> None:
         with self.make_tempdir() as tmp_dir:
             project_root = self.init_repo(Path(tmp_dir))

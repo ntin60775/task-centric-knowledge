@@ -180,15 +180,26 @@ def parse_task_fields(lines: list[str]) -> dict[str, str]:
     return fields
 
 
-def update_task_file(task_file: Path, branch_name: str, *, today: str, summary: str | None = None) -> dict[str, str]:
+def update_task_file(
+    task_file: Path,
+    branch_name: str,
+    *,
+    today: str,
+    summary: str | None = None,
+    status: str | None = None,
+) -> dict[str, str]:
     lines, fields = read_task_fields(task_file)
     if summary:
         upsert_task_field(lines, TASK_SUMMARY_FIELD, summary, after_field="Краткое имя")
+    if status:
+        replace_task_field(lines, "Статус", status)
     replace_task_field(lines, "Ветка", branch_name)
     replace_task_field(lines, "Дата обновления", today)
     task_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
     if summary:
         fields[TASK_SUMMARY_FIELD] = summary
+    if status:
+        fields["Статус"] = status
     fields["Ветка"] = branch_name
     fields["Дата обновления"] = today
     return fields
@@ -201,16 +212,21 @@ def update_task_file_with_delivery_units(
     *,
     today: str,
     summary: str | None = None,
+    status: str | None = None,
 ) -> dict[str, str]:
     lines, fields = read_task_fields(task_file)
     if summary:
         upsert_task_field(lines, TASK_SUMMARY_FIELD, summary, after_field="Краткое имя")
+    if status:
+        replace_task_field(lines, "Статус", status)
     replace_task_field(lines, "Ветка", branch_name)
     replace_task_field(lines, "Дата обновления", today)
     updated_lines = upsert_delivery_units_section(lines, delivery_units)
     task_file.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
     if summary:
         fields[TASK_SUMMARY_FIELD] = summary
+    if status:
+        fields["Статус"] = status
     fields["Ветка"] = branch_name
     fields["Дата обновления"] = today
     return fields

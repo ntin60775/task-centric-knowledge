@@ -104,6 +104,13 @@ python3 scripts/task_query.py --project-root /abs/project task show <TASK-ID> --
 - делать осмысленные commit-ы по завершении этапа или значимой контрольной точки, если diff относится к одной задаче;
 - прогонять `git diff --check` перед завершением задачи или этапа.
 
+Если задача действительно завершена и локальный git-контекст безопасен, helper теперь может выполнить local-only finalize:
+
+- сделать task-scoped commit со всеми локальными изменениями задачи;
+- fast-forward влить task-ветку в base-ветку;
+- переключить checkout на base-ветку;
+- синхронизировать `task.md` и `registry.md` под итоговый локальный branch-state.
+
 ## Когда нужно остановиться
 
 - рабочее дерево грязное и в нём есть чужие или явно несвязанные изменения;
@@ -141,6 +148,11 @@ python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledg
 python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --publish-action merge --unit-id DU-01 --merge-commit abc1234
 ```
 
+Для local-only finalize завершённой задачи:
+
+- Legacy-команда: `python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --finalize --base-branch main`
+- Единый CLI: `task-knowledge workflow finalize --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --base-branch main`
+
 ## CLI операторских запросов
 
 Для query/reporting-сценариев использовать отдельный read-only entrypoint:
@@ -168,6 +180,13 @@ python3 scripts/task_query.py --project-root /abs/project task show TASK-2026-00
 - обновляет `Ветка` и `Дата обновления` в `task.md`;
 - обновляет или создаёт строку в `knowledge/tasks/registry.md`.
 
+В finalize-режиме helper дополнительно:
+
+- валидирует, что запуск идёт из task-ветки, а не из base-ветки;
+- блокирует finalize при открытых delivery units, branch mismatch и небезопасном non-fast-forward merge;
+- делает local-only commit, fast-forward merge в base и checkout base;
+- при блокере возвращает явный stop-report и список следующих действий без частичных git-мутаций.
+
 В publish-режиме helper дополнительно:
 
 - создаёт или переиспользует delivery unit в `## Контур публикации`;
@@ -181,5 +200,6 @@ python3 scripts/task_query.py --project-root /abs/project task show TASK-2026-00
 - не гарантирует создание PR/MR без валидной auth и поддерживаемого host adapter;
 - не переписывает историю;
 - не удаляет ветки;
-- не выполняет отдельную команду `finalize-task`;
+- не делает `push` как часть local finalize;
+- не завершает задачу при открытых delivery units или небезопасном merge-контексте;
 - не обходит стоп-условия по грязному рабочему дереву, недоступному host auth и неоднозначному контексту.
