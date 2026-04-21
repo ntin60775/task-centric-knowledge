@@ -126,6 +126,21 @@ def upsert_delivery_units_section(lines: list[str], units: list[DeliveryUnit]) -
     return updated
 
 
+def replace_section_body(lines: list[str], title: str, body_lines: list[str]) -> None:
+    bounds = find_section_bounds(lines, title)
+    if bounds is None:
+        if lines and lines[-1] != "":
+            lines.append("")
+        lines.append(title)
+        lines.append("")
+        lines.extend(body_lines)
+        return
+    start_index, end_index = bounds
+    replacement = [title, ""]
+    replacement.extend(body_lines)
+    lines[start_index:end_index] = replacement
+
+
 def replace_task_field(lines: list[str], field: str, value: str) -> None:
     replacement = f"| {field} | {format_table_value(value)} |"
     for index, line in enumerate(lines):
@@ -187,12 +202,15 @@ def update_task_file(
     today: str,
     summary: str | None = None,
     status: str | None = None,
+    current_stage: str | None = None,
 ) -> dict[str, str]:
     lines, fields = read_task_fields(task_file)
     if summary:
         upsert_task_field(lines, TASK_SUMMARY_FIELD, summary, after_field="Краткое имя")
     if status:
         replace_task_field(lines, "Статус", status)
+    if current_stage is not None:
+        replace_section_body(lines, "## Текущий этап", [current_stage])
     replace_task_field(lines, "Ветка", branch_name)
     replace_task_field(lines, "Дата обновления", today)
     task_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -213,12 +231,15 @@ def update_task_file_with_delivery_units(
     today: str,
     summary: str | None = None,
     status: str | None = None,
+    current_stage: str | None = None,
 ) -> dict[str, str]:
     lines, fields = read_task_fields(task_file)
     if summary:
         upsert_task_field(lines, TASK_SUMMARY_FIELD, summary, after_field="Краткое имя")
     if status:
         replace_task_field(lines, "Статус", status)
+    if current_stage is not None:
+        replace_section_body(lines, "## Текущий этап", [current_stage])
     replace_task_field(lines, "Ветка", branch_name)
     replace_task_field(lines, "Дата обновления", today)
     updated_lines = upsert_delivery_units_section(lines, delivery_units)

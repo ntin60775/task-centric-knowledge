@@ -294,6 +294,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             task_text = (task_dir / "task.md").read_text(encoding="utf-8")
             self.assertIn("| Статус | `завершена` |", task_text)
             self.assertIn("| Ветка | `main` |", task_text)
+            self.assertIn("Локальный finalize выполнен:", task_text)
             registry_text = (project_root / "knowledge/tasks/registry.md").read_text(encoding="utf-8")
             self.assertIn("| `TASK-2026-1500` | `—` | `завершена` | `средний` | `main` |", registry_text)
             self.assertEqual((project_root / "feature.txt").read_text(encoding="utf-8"), "ready\n")

@@ -13,6 +13,10 @@ from .task_markdown import derive_goal_summary_from_lines, read_task_fields, tas
 
 
 OPEN_DELIVERY_STATUSES = {"planned", "local", "draft", "review"}
+FINAL_STAGE_TEXT = (
+    "Локальный finalize выполнен: task-ветка влита в base-ветку, "
+    "рабочий контекст переведён на base-ветку, `push` остаётся отдельным шагом."
+)
 
 
 def _blocker(key: str, detail: str, *, next_action: str, path: str | None = None) -> dict[str, str | None]:
@@ -183,6 +187,7 @@ def finalize_task(
                 selected_base_branch,
                 today=today_value,
                 status="завершена",
+                current_stage=FINAL_STAGE_TEXT,
             )
             results.append(
                 StepResult(
@@ -198,6 +203,7 @@ def finalize_task(
                 selected_base_branch,
                 today=today_value,
                 status=fields.get("Статус"),
+                current_stage=FINAL_STAGE_TEXT,
             )
             results.append(
                 StepResult(
