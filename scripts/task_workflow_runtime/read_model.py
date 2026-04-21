@@ -260,11 +260,18 @@ def upgrade_state_summary(project_root: Path) -> dict[str, object]:
     }
     pending_count = 0
     reference_count = 0
-    for _, _, backfill_status, _, _ in _table_rows(
+    legacy_rows = _table_rows(
         lines,
-        "## Legacy tasks",
-        ("TASK-ID", "Класс", "Статус backfill", "Migration note", "Решение"),
-    ):
+        "## Исторические задачи",
+        ("TASK-ID", "Класс", "Статус совместимости", "Путь к заметке миграции", "Решение"),
+    )
+    if not legacy_rows:
+        legacy_rows = _table_rows(
+            lines,
+            "## Legacy tasks",
+            ("TASK-ID", "Класс", "Статус backfill", "Migration note", "Решение"),
+        )
+    for _, _, backfill_status, _, _ in legacy_rows:
         if backfill_status == "pending":
             pending_count += 1
         elif backfill_status == "manual-reference":
@@ -273,8 +280,8 @@ def upgrade_state_summary(project_root: Path) -> dict[str, object]:
         "state_path": str(state_path),
         "state_exists": True,
         "compatibility_epoch": passport.get("Эпоха совместимости", "module-core-v1"),
-        "upgrade_status": passport.get("Статус upgrade", "fully-upgraded"),
-        "execution_rollout": passport.get("Execution rollout", "single-writer"),
+        "upgrade_status": passport.get("Статус перехода", passport.get("Статус upgrade", "fully-upgraded")),
+        "execution_rollout": passport.get("Контур исполнения", passport.get("Execution rollout", "single-writer")),
         "legacy_pending_count": pending_count,
         "reference_manual_count": reference_count,
     }
@@ -934,7 +941,7 @@ def build_status_snapshot(project_root: Path) -> StatusSnapshot:
                         code="execution_rollout_partial",
                         severity="warning",
                         detail=(
-                            "Execution rollout ещё не доведён до single-writer; "
+                            "Контур исполнения ещё не доведён до single-writer; "
                             "репозиторий находится в dual-readiness состоянии."
                         ),
                         path=upgrade_governance["state_path"],

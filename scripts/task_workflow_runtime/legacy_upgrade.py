@@ -12,16 +12,21 @@ from .task_markdown import read_task_fields, split_markdown_row
 UPGRADE_STATE_RELATIVE = Path("knowledge/operations/task-centric-knowledge-upgrade.md")
 MIGRATION_NOTE_RELATIVE = Path("artifacts/migration/task-centric-knowledge-upgrade.md")
 PASSPORT_SECTION = "## Паспорт"
-LEGACY_TASKS_SECTION = "## Legacy tasks"
+LEGACY_TASKS_SECTION = "## Исторические задачи"
 PASSPORT_FIELDS = (
     "Система",
     "Эпоха совместимости",
-    "Статус upgrade",
-    "Execution rollout",
+    "Статус перехода",
+    "Контур исполнения",
     "Последняя задача перехода",
     "Дата обновления",
 )
-LEGACY_TASK_HEADERS = ("TASK-ID", "Класс", "Статус backfill", "Migration note", "Решение")
+LEGACY_TASK_HEADERS = ("TASK-ID", "Класс", "Статус совместимости", "Путь к заметке миграции", "Решение")
+LEGACY_TASKS_SECTION_ALIASES = (LEGACY_TASKS_SECTION, "## Legacy tasks")
+LEGACY_TASK_HEADERS_ALIASES = (
+    LEGACY_TASK_HEADERS,
+    ("TASK-ID", "Класс", "Статус backfill", "Migration note", "Решение"),
+)
 VALID_EPOCHS = {"legacy-v1", "module-core-v1"}
 VALID_UPGRADE_STATUSES = {"legacy-compatible", "partially-upgraded", "fully-upgraded"}
 VALID_EXECUTION_ROLLOUTS = {"legacy", "dual-readiness", "single-writer"}
@@ -99,6 +104,19 @@ def _table_rows(lines: list[str], title: str, headers: tuple[str, ...]) -> list[
     return rows
 
 
+def _table_rows_with_aliases(
+    lines: list[str],
+    titles: tuple[str, ...],
+    headers_variants: tuple[tuple[str, ...], ...],
+) -> list[tuple[str, ...]]:
+    for title in titles:
+        for headers in headers_variants:
+            rows = _table_rows(lines, title, headers)
+            if rows:
+                return rows
+    return []
+
+
 def classify_task_fields(fields: dict[str, str]) -> str:
     reference_mode = fields.get(REFERENCE_FIELD, "нет").strip()
     if reference_mode == REFERENCE_ENABLED:
@@ -116,10 +134,10 @@ def _default_backfill_status(task_class: str) -> str:
 
 def _default_decision(task_class: str, status: str) -> str:
     if status == "manual-reference":
-        return "Справочная задача исключена из auto-backfill и требует только ручного решения."
+        return "Справочная задача исключена из автоматического `compatibility-backfill` и требует только ручного решения."
     if task_class == "closed historical":
-        return "Требуется note-only compatibility-backfill без переписывания historical narrative."
-    return "Требуется controlled compatibility-backfill для active-задачи."
+        return "Требуется сценарий `note-only compatibility-backfill` без переписывания исторического описания задачи."
+    return "Требуется сценарий `controlled compatibility-backfill` для рабочей задачи."
 
 
 def _normalize_entry(task_id: str, task_class: str, existing: LegacyTaskEntry | None) -> LegacyTaskEntry:
@@ -210,7 +228,7 @@ def build_repo_upgrade_state(
 
 def render_repo_upgrade_state(state: RepoUpgradeState) -> str:
     lines = [
-        "# Upgrade-state task-centric-knowledge",
+        "# Состояние перехода task-centric-knowledge",
         "",
         "## Паспорт",
         "",
@@ -218,15 +236,15 @@ def render_repo_upgrade_state(state: RepoUpgradeState) -> str:
         "|------|----------|",
         f"| Система | `{state.system}` |",
         f"| Эпоха совместимости | `{state.compatibility_epoch}` |",
-        f"| Статус upgrade | `{state.upgrade_status}` |",
-        f"| Execution rollout | `{state.execution_rollout}` |",
+        f"| Статус перехода | `{state.upgrade_status}` |",
+        f"| Контур исполнения | `{state.execution_rollout}` |",
         f"| Последняя задача перехода | `{state.last_upgrade_task}` |",
         f"| Дата обновления | `{state.updated_at}` |",
         "",
-        "## Legacy tasks",
+        "## Исторические задачи",
         "",
-        "| TASK-ID | Класс | Статус backfill | Migration note | Решение |",
-        "|---------|-------|-----------------|----------------|---------|",
+        "| TASK-ID | Класс | Статус совместимости | Путь к заметке миграции | Решение |",
+        "|---------|-------|----------------------|--------------------------|---------|",
     ]
     if not state.entries:
         lines.append("| `—` | `—` | `—` | `—` | Репозиторий ещё не содержит task-local карточек. |")
@@ -249,12 +267,23 @@ def parse_repo_upgrade_state(state_path: Path) -> RepoUpgradeState:
     lines = state_path.read_text(encoding="utf-8").splitlines()
     passport_rows = _table_rows(lines, PASSPORT_SECTION, ("Поле", "Значение"))
     passport = {field: value for field, value in passport_rows}
-    for field in PASSPORT_FIELDS:
-        if field not in passport:
-            raise ValueError(f"В repo upgrade-state отсутствует поле {field!r}.")
+
+    def _passport_value(*aliases: str) -> str:
+        for alias in aliases:
+            if alias in passport:
+                return passport[alias]
+        raise ValueError(f"В состоянии перехода репозитория отсутствует поле {aliases[0]!r}.")
+
+    _passport_value("Система")
+    _passport_value("Эпоха совместимости")
+    _passport_value("Статус перехода", "Статус upgrade")
+    _passport_value("Контур исполнения", "Execution rollout")
+    _passport_value("Последняя задача перехода")
+    _passport_value("Дата обновления")
+
     epoch = passport["Эпоха совместимости"]
-    upgrade_status = passport["Статус upgrade"]
-    execution_rollout = passport["Execution rollout"]
+    upgrade_status = _passport_value("Статус перехода", "Статус upgrade")
+    execution_rollout = _passport_value("Контур исполнения", "Execution rollout")
     if epoch not in VALID_EPOCHS:
         raise ValueError(f"Некорректная эпоха совместимости: {epoch!r}.")
     if upgrade_status not in VALID_UPGRADE_STATUSES:
@@ -262,10 +291,10 @@ def parse_repo_upgrade_state(state_path: Path) -> RepoUpgradeState:
     if execution_rollout not in VALID_EXECUTION_ROLLOUTS:
         raise ValueError(f"Некорректный execution rollout: {execution_rollout!r}.")
     entries: list[LegacyTaskEntry] = []
-    for task_id, task_class, backfill_status, migration_note, decision in _table_rows(
+    for task_id, task_class, backfill_status, migration_note, decision in _table_rows_with_aliases(
         lines,
-        LEGACY_TASKS_SECTION,
-        LEGACY_TASK_HEADERS,
+        LEGACY_TASKS_SECTION_ALIASES,
+        LEGACY_TASK_HEADERS_ALIASES,
     ):
         if task_id == "—":
             continue
@@ -284,12 +313,12 @@ def parse_repo_upgrade_state(state_path: Path) -> RepoUpgradeState:
         )
     return RepoUpgradeState(
         path=state_path,
-        system=passport["Система"],
+        system=_passport_value("Система"),
         compatibility_epoch=epoch,
         upgrade_status=upgrade_status,
         execution_rollout=execution_rollout,
-        last_upgrade_task=passport["Последняя задача перехода"],
-        updated_at=passport["Дата обновления"],
+        last_upgrade_task=_passport_value("Последняя задача перехода"),
+        updated_at=_passport_value("Дата обновления"),
         entries=tuple(entries),
     )
 
@@ -409,7 +438,7 @@ def write_task_migration_note(
     note_path.write_text(
         "\n".join(
             [
-                "# Migration note task-centric-knowledge",
+                "# Заметка миграции task-centric-knowledge",
                 "",
                 "## Паспорт",
                 "",
@@ -417,7 +446,7 @@ def write_task_migration_note(
                 "|------|----------|",
                 f"| Эпоха до | `{epoch_before}` |",
                 f"| Эпоха после | `{epoch_after}` |",
-                f"| Класс legacy | `{task_class}` |",
+                f"| Класс legacy-задачи | `{task_class}` |",
                 f"| Основание/задача | `{basis_task_id}` |",
                 f"| Дата обновления | `{today or today_iso()}` |",
                 "",

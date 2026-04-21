@@ -177,20 +177,20 @@ class TaskCentricKnowledgeInstallerTests(unittest.TestCase):
             upgrade_state.parent.mkdir(parents=True, exist_ok=True)
             upgrade_state.write_text(
                 (
-                    "# Upgrade-state task-centric-knowledge\n\n"
+                    "# Состояние перехода task-centric-knowledge\n\n"
                     "## Паспорт\n\n"
                     "| Поле | Значение |\n"
                     "|------|----------|\n"
                     "| Система | `task-centric-knowledge` |\n"
                     "| Эпоха совместимости | `module-core-v1` |\n"
-                    "| Статус upgrade | `fully-upgraded` |\n"
-                    "| Execution rollout | `single-writer` |\n"
+                    "| Статус перехода | `fully-upgraded` |\n"
+                    "| Контур исполнения | `single-writer` |\n"
                     "| Последняя задача перехода | `TASK-2026-0024.7` |\n"
                     "| Дата обновления | `2026-04-20` |\n\n"
-                    "## Legacy tasks\n\n"
-                    "| TASK-ID | Класс | Статус backfill | Migration note | Решение |\n"
+                    "## Исторические задачи\n\n"
+                    "| TASK-ID | Класс | Статус совместимости | Путь к заметке миграции | Решение |\n"
                     "|---------|-------|-----------------|----------------|---------|\n"
-                    "| `TASK-2026-0998` | `closed historical` | `note-only` | `—` | Historical note only. |\n"
+                    "| `TASK-2026-0998` | `closed historical` | `note-only` | `—` | Задача закрыта сценарием `note-only compatibility-backfill`. |\n"
                 ),
                 encoding="utf-8",
             )

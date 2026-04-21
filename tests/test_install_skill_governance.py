@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import os
 import textwrap
 import unittest
 from pathlib import Path
@@ -235,6 +236,39 @@ class InstallSkillGovernanceTests(unittest.TestCase):
             manual_paths = {item["path"] for item in payload["manual_review"]}
             self.assertIn(str(snippet_path.absolute()), manual_paths)
             self.assertTrue(snippet_path.is_dir())
+
+    def test_migrate_cleanup_plan_text_cli_does_not_require_upgrade_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._init_repo(Path(tmp_dir))
+            self._write_managed_agents(project_root)
+            snippet_path = project_root / "AGENTS.task-centric-knowledge.generic.md"
+            snippet_path.write_text("snippet\n", encoding="utf-8")
+
+            env = os.environ.copy()
+            pythonpath_parts = [str(SCRIPTS_DIR)]
+            if env.get("PYTHONPATH"):
+                pythonpath_parts.append(env["PYTHONPATH"])
+            env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(INSTALL_SCRIPT),
+                    "--project-root",
+                    str(project_root),
+                    "--mode",
+                    "migrate-cleanup-plan",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertIn("mode=migrate-cleanup-plan", completed.stdout)
+            self.assertIn("TARGET_COUNT=1", completed.stdout)
+            self.assertIn("COUNT=1", completed.stdout)
+            self.assertIn("PLAN_FINGERPRINT=", completed.stdout)
 
     def test_migrate_cleanup_confirm_requires_fingerprint_and_yes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

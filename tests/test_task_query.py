@@ -215,21 +215,21 @@ class TaskQueryTests(TempRepoCase):
             upgrade_state.parent.mkdir(parents=True, exist_ok=True)
             upgrade_state.write_text(
                 (
-                    "# Upgrade-state task-centric-knowledge\n\n"
+                    "# Состояние перехода task-centric-knowledge\n\n"
                     "## Паспорт\n\n"
                     "| Поле | Значение |\n"
                     "|------|----------|\n"
                     "| Система | `task-centric-knowledge` |\n"
                     "| Эпоха совместимости | `module-core-v1` |\n"
-                    "| Статус upgrade | `partially-upgraded` |\n"
-                    "| Execution rollout | `dual-readiness` |\n"
+                    "| Статус перехода | `partially-upgraded` |\n"
+                    "| Контур исполнения | `dual-readiness` |\n"
                     "| Последняя задача перехода | `TASK-2026-0024.7` |\n"
                     "| Дата обновления | `2026-04-20` |\n\n"
-                    "## Legacy tasks\n\n"
-                    "| TASK-ID | Класс | Статус backfill | Migration note | Решение |\n"
+                    "## Исторические задачи\n\n"
+                    "| TASK-ID | Класс | Статус совместимости | Путь к заметке миграции | Решение |\n"
                     "|---------|-------|-----------------|----------------|---------|\n"
-                    "| `TASK-2026-1300` | `active` | `pending` | `—` | Требуется controlled compatibility-backfill. |\n"
-                    "| `TASK-2026-1301` | `reference` | `manual-reference` | `—` | Manual decision. |\n"
+                    "| `TASK-2026-1300` | `active` | `pending` | `—` | Требуется сценарий `controlled compatibility-backfill`. |\n"
+                    "| `TASK-2026-1301` | `reference` | `manual-reference` | `—` | Решение оставлено на ручной разбор. |\n"
                 ),
                 encoding="utf-8",
             )
