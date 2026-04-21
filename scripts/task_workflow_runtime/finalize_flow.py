@@ -171,99 +171,139 @@ def finalize_task(
 
     today_value = today or date.today().isoformat()
     results: list[StepResult] = []
-
-    if fields.get("Статус", "").strip() not in FINAL_TASK_STATUSES:
-        fields = update_task_file(
-            task_file,
-            selected_base_branch,
-            today=today_value,
-            status="завершена",
-        )
-        results.append(
-            StepResult(
-                "task_metadata",
-                "ok",
-                "task.md синхронизирован под итоговое локальное состояние задачи.",
-                str(task_file),
-            )
-        )
-    else:
-        fields = update_task_file(
-            task_file,
-            selected_base_branch,
-            today=today_value,
-            status=fields.get("Статус"),
-        )
-        results.append(
-            StepResult(
-                "task_metadata",
-                "ok",
-                "task.md уже был в финальном статусе; branch/date синхронизированы под итоговое локальное состояние.",
-                str(task_file),
-            )
-        )
-
-    update_registry(
-        project_root,
-        task_dir,
-        fields,
-        branch_name=selected_base_branch,
-        register_if_missing=False,
-        summary=None,
-    )
-    results.append(
-        StepResult(
-            "registry",
-            "ok",
-            "registry.md синхронизирован с финальным локальным branch-state задачи.",
-            str(project_root / "knowledge/tasks/registry.md"),
-        )
-    )
-
-    run_git(project_root, "add", "-A")
     commit_created = False
     commit_id: str | None = None
-    if _has_staged_changes(project_root):
-        run_git(project_root, "commit", "-m", commit_message or _default_commit_message(task_id, summary))
-        commit_created = True
-        commit_id = _head_commit(project_root)
-        results.append(
-            StepResult(
-                "commit",
-                "ok",
-                "Task-scoped commit создан перед локальным finalize.",
-                commit_id,
+    registry_path = project_root / "knowledge/tasks/registry.md"
+    original_task_text = task_file.read_text(encoding="utf-8")
+    original_registry_text = registry_path.read_text(encoding="utf-8")
+    try:
+        if fields.get("Статус", "").strip() not in FINAL_TASK_STATUSES:
+            fields = update_task_file(
+                task_file,
+                selected_base_branch,
+                today=today_value,
+                status="завершена",
             )
+            results.append(
+                StepResult(
+                    "task_metadata",
+                    "ok",
+                    "task.md синхронизирован под итоговое локальное состояние задачи.",
+                    str(task_file),
+                )
+            )
+        else:
+            fields = update_task_file(
+                task_file,
+                selected_base_branch,
+                today=today_value,
+                status=fields.get("Статус"),
+            )
+            results.append(
+                StepResult(
+                    "task_metadata",
+                    "ok",
+                    "task.md уже был в финальном статусе; branch/date синхронизированы под итоговое локальное состояние.",
+                    str(task_file),
+                )
+            )
+
+        update_registry(
+            project_root,
+            task_dir,
+            fields,
+            branch_name=selected_base_branch,
+            register_if_missing=False,
+            summary=None,
         )
-    else:
         results.append(
             StepResult(
-                "commit",
+                "registry",
                 "ok",
-                "Новых staged-изменений нет; finalize продолжен без дополнительного commit.",
-                None,
+                "registry.md синхронизирован с финальным локальным branch-state задачи.",
+                str(registry_path),
             )
         )
 
-    run_git(project_root, "checkout", selected_base_branch)
-    results.append(
-        StepResult(
-            "checkout",
-            "ok",
-            f"Переключение на base-ветку `{selected_base_branch}` выполнено.",
-            selected_base_branch,
+        run_git(project_root, "add", "-A")
+        if _has_staged_changes(project_root):
+            run_git(project_root, "commit", "-m", commit_message or _default_commit_message(task_id, summary))
+            commit_created = True
+            commit_id = _head_commit(project_root)
+            results.append(
+                StepResult(
+                    "commit",
+                    "ok",
+                    "Task-scoped commit создан перед локальным finalize.",
+                    commit_id,
+                )
+            )
+        else:
+            results.append(
+                StepResult(
+                    "commit",
+                    "ok",
+                    "Новых staged-изменений нет; finalize продолжен без дополнительного commit.",
+                    None,
+                )
+            )
+
+        run_git(project_root, "checkout", selected_base_branch)
+        results.append(
+            StepResult(
+                "checkout",
+                "ok",
+                f"Переключение на base-ветку `{selected_base_branch}` выполнено.",
+                selected_base_branch,
+            )
         )
-    )
-    run_git(project_root, "merge", "--ff-only", task_branch)
-    merge_commit = _head_commit(project_root)
-    results.append(
-        StepResult(
-            "merge",
-            "ok",
-            f"Local finalize завершён через fast-forward merge `{task_branch}` -> `{selected_base_branch}`.",
-            merge_commit,
+        run_git(project_root, "merge", "--ff-only", task_branch)
+        merge_commit = _head_commit(project_root)
+        results.append(
+            StepResult(
+                "merge",
+                "ok",
+                f"Local finalize завершён через fast-forward merge `{task_branch}` -> `{selected_base_branch}`.",
+                merge_commit,
+            )
         )
-    )
+    except Exception as error:  # noqa: BLE001
+        if not commit_created:
+            task_file.write_text(original_task_text, encoding="utf-8")
+            registry_path.write_text(original_registry_text, encoding="utf-8")
+            results.append(
+                StepResult(
+                    "rollback",
+                    "ok",
+                    "Task truth откатан после runtime-сбоя до создания commit.",
+                    str(task_file),
+                )
+            )
+        current_branch = current_git_branch(project_root) or DELIVERY_ROW_PLACEHOLDER
+        detail = f"Local finalize остановлен из-за ошибки git/runtime: {error}"
+        if not commit_created:
+            next_action = "Повторите finalize после устранения ошибки доступа к git; task truth уже восстановлен."
+        else:
+            next_action = "Проверьте локальный finalize commit и повторите merge/checkout после устранения ошибки git."
+        return {
+            "ok": False,
+            "outcome": "blocked",
+            "task_id": task_id,
+            "task_dir": str(task_dir),
+            "action": "finalize",
+            "branch": current_branch,
+            "branch_action": "blocked",
+            "task_branch": task_branch,
+            "base_branch": selected_base_branch,
+            "commit_created": commit_created,
+            "commit_id": commit_id,
+            "merge_commit": None,
+            "remote_present": has_remote(project_root),
+            "results": [asdict(item) for item in results],
+            "blockers": [_blocker("git_runtime_failure", detail, next_action=next_action)],
+            "next_actions": [next_action],
+        }
+
     if has_remote(project_root):
         results.append(
             StepResult(

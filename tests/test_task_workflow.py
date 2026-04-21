@@ -17,6 +17,7 @@ SCRIPTS_DIR = ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
+import task_workflow_runtime.finalize_flow as finalize_flow_module
 from task_workflow_runtime import backfill_task as runtime_backfill_task
 
 DEFAULT_HUMAN_DESCRIPTION = object()
@@ -358,6 +359,61 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             task_text = (task_dir / "task.md").read_text(encoding="utf-8")
             self.assertIn("| Статус | `в работе` |", task_text)
             self.assertIn("| Ветка | `task/task-2026-1501-finalize-blocked` |", task_text)
+
+    def test_finalize_task_rolls_back_task_truth_when_git_write_fails_before_commit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._init_repo(Path(tmp_dir))
+            git(project_root, "branch", "-M", "main")
+            self._write_registry(project_root)
+            task_dir = project_root / "knowledge/tasks/TASK-2026-1502-finalize-rollback"
+            self._write_task(
+                task_dir,
+                task_id="TASK-2026-1502",
+                slug="finalize-rollback",
+                branch="task/task-2026-1502-finalize-rollback",
+                status="на проверке",
+                human_description="Тестовая задача для rollback finalize.",
+            )
+            self._register_task(project_root, task_dir, "Тестовая задача для rollback finalize.")
+            self._commit_all(project_root, "prepare rollback finalize task")
+
+            git(project_root, "checkout", "-b", "task/task-2026-1502-finalize-rollback")
+            workflow_module.sync_task(
+                project_root,
+                task_dir,
+                create_branch=False,
+                register_if_missing=False,
+                summary=None,
+                branch_name="task/task-2026-1502-finalize-rollback",
+                inherit_branch_from_parent=False,
+                today="2026-04-21",
+            )
+            (project_root / "feature.txt").write_text("rollback\n", encoding="utf-8")
+            original_task_text = (task_dir / "task.md").read_text(encoding="utf-8")
+            original_registry_text = (project_root / "knowledge/tasks/registry.md").read_text(encoding="utf-8")
+            real_run_git = finalize_flow_module.run_git
+
+            def flaky_run_git(project_root_param: Path, *args: str, check: bool = True):
+                if args == ("add", "-A"):
+                    raise RuntimeError("fatal: simulated git add failure")
+                return real_run_git(project_root_param, *args, check=check)
+
+            with mock.patch.object(finalize_flow_module, "run_git", side_effect=flaky_run_git):
+                payload = workflow_module.finalize_task(
+                    project_root,
+                    task_dir,
+                    base_branch="main",
+                    commit_message="TASK-2026-1502: finalize",
+                    today="2026-04-21",
+                )
+
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["outcome"], "blocked")
+            self.assertEqual(payload["blockers"][0]["key"], "git_runtime_failure")
+            self.assertFalse(payload["commit_created"])
+            self.assertEqual(git(project_root, "branch", "--show-current"), "task/task-2026-1502-finalize-rollback")
+            self.assertEqual((task_dir / "task.md").read_text(encoding="utf-8"), original_task_text)
+            self.assertEqual((project_root / "knowledge/tasks/registry.md").read_text(encoding="utf-8"), original_registry_text)
 
     def test_sync_task_does_not_duplicate_existing_human_description(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
