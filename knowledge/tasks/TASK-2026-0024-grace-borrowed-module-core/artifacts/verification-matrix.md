@@ -1,0 +1,61 @@
+# Матрица проверки по задаче TASK-2026-0024
+
+## Когда использовать
+
+Для любой задачи, где обязателен `sdd.md`, эта матрица по умолчанию тоже обязательна.
+Её ведёт агент, а не пользователь.
+
+## Паспорт
+
+| Поле | Значение |
+|------|----------|
+| ID задачи | `TASK-2026-0024` |
+| Связанный SDD | `../sdd.md` |
+| Версия | `2` |
+| Дата обновления | `2026-04-21` |
+
+## 1. Канонические инварианты
+
+| Invariant ID | Описание | Источник истины | Где может сломаться |
+|--------------|----------|-----------------|---------------------|
+| `INV-01` | `Module Core` не подменяет `Task Core` как source-of-truth | `sdd.md`, `TASK-2026-0021`, `references/core-model.md` | новая задача начнёт обещать ownership над `task.md`, `registry.md` или статусами задач |
+| `INV-02` | borrowed-layer использует local-first `Pin + Local` refresh-governance | `sdd.md`, `task.md` | refresh-механизм окажется завязан на один путь или без preview/apply |
+| `INV-03` | capability-surface ограничен одной cross-cutting и пятью capability-подзадачами | `task.md`, `plan.md` | backlog разрастётся в неструктурированный full adapter-track |
+| `INV-04` | module-query и module-verification остаются read-only companion-слоем | `sdd.md`, `plan.md` | новый слой начнёт вмешиваться в task-routing или mutate task state |
+| `INV-05` | file-local contracts и anchors ограничены governed hot spots | `sdd.md` | в backlog появится repo-wide mandatory markup без отдельного product решения |
+| `INV-06` | `Module Core` остаётся language-agnostic и пригоден для `1С/BSL` наравне с другими языками | `sdd.md`, `task.md`, `plan.md` | planned capabilities начнут требовать language-specific parser, import graph или язык-специфичную модель модулей |
+| `INV-07` | versioned upgrade и legacy task backfill не переписывают исторический narrative завершённых задач | `sdd.md`, `plan.md`, `references/upgrade-transition.md` | новая версия потребует массового реткона старых задач вместо compatibility-backfill |
+| `INV-08` | Execution-контур работает как `main orchestrator + parallel read-only scouts + single sequential writer + read-only verifier` | `sdd.md`, `task.md`, подзадачи `24.1`, `24.5`, `24.6`, `24.7` | субагентный режим превратится в unrestricted multiwriter editing или потеряет роль главного агента как controller |
+| `INV-09` | Writer-subagent не владеет task-truth и не меняет `task.md`, `plan.md`, `sdd.md`, `registry.md`, shared governance docs | `sdd.md`, `plan.md`, `TASK-2026-0024.7` | writer начнёт менять source-of-truth задачи или исторические governance-документы |
+| `INV-10` | Writer-subagent может менять только явно выданный write-scope и возвращает расширение scope контроллеру как blocker | `sdd.md`, `plan.md`, `TASK-2026-0024.1`, `TASK-2026-0024.5` | writer начнёт менять файлы вне granted scope или молча расширять задачу |
+| `INV-11` | `ExecutionReadiness`, `VerificationExcerpt` и `FailureHandoff` связаны с module verification и блокируют небезопасный writer-pass | `sdd.md`, `TASK-2026-0024.5` | write-pass стартует без проверяемых критериев, evidence и stop conditions |
+| `INV-12` | `module show` читает shared/public truth, а `file show` читает file-local/private truth | `sdd.md`, `TASK-2026-0024.4`, `TASK-2026-0024.6` | private helper churn попадёт в shared passport или query layer смешает уровни truth |
+| `INV-13` | Execution/readiness rollout для legacy задач не создаёт ложный active target и не меняет historical branch/date/history | `sdd.md`, `TASK-2026-0024.7`, `TASK-2026-0024.7.1` | compatibility metadata создаст `current-task` ambiguity или разрушит historical integrity |
+
+## 2. Матрица покрытия
+
+| Invariant ID | Сценарий нарушения или переход | Автопроверка / команда | Статус покрытия | Примечание |
+|--------------|--------------------------------|------------------------|-----------------|------------|
+| `INV-01` | новая задача описывает `Module Core` как замену `Task Core` | `rg -n "companion-layer|не подменяет|Task Core|Module Core" knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/sdd.md` | `covered` | Task-local docs удерживают `Module Core` как companion-layer без перехвата task-truth |
+| `INV-02` | refresh описан через хрупкий абсолютный путь или без pinned manifest | `python3 -m unittest skills-global/task-centric-knowledge/tests/test_borrowings_runtime.py skills-global/task-centric-knowledge/tests/test_task_knowledge_cli.py` и `rg -n "origin_url|pinned_revision|local_checkout_override|plan -> apply|Pin \\+ Local" knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/plan.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/sdd.md skills-global/task-centric-knowledge/borrowings/grace/source.json skills-global/task-centric-knowledge/borrowings/grace/README.md` | `covered` | Реализация удерживает manifest, local checkout override и fingerprinted preview/apply |
+| `INV-03` | capability-подзадачи не созданы или не отражены в реестре | `python3 skills-global/task-centric-knowledge/scripts/task_query.py --project-root /home/prog7/РабочееПространство/work/AI/ai-agents-rules status --format json` | `covered` | Read-model видит верхнеуровневую задачу, все `24.1-24.7(.1)` и не поднимает registry drift |
+| `INV-04` | read-model task-layer меняет поведение при открытии нового backlog | `python3 skills-global/task-centric-knowledge/scripts/task_query.py --project-root /home/prog7/РабочееПространство/work/AI/ai-agents-rules current-task --format json` | `covered` | `current-task` остаётся branch-resolved без legacy warning `next_step_missing` |
+| `INV-05` | локальная разметка файла объявлена обязательной для всего репозитория | `rg -n "governed hot spots|repo-wide mandatory|semantic markup" knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/sdd.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.4-file-local-contracts-for-hotspots/task.md` | `covered` | File-local contracts по-прежнему ограничены governed hot spots и не навязываются repo-wide |
+| `INV-06` | task-local контур допускает language-specific assumptions и не гарантирует пригодность для `1С/BSL` | `rg -n "language-agnostic|1С/BSL|AST|import graph|language-specific" knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/plan.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/sdd.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/*/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/*/plan.md` | `covered` | Верхнеуровневые и task-local контракты удерживают language-agnostic surface с явной пригодностью для `1С/BSL` |
+| `INV-07` | migration policy разрешает переписывать narrative закрытых задач или не разводит `closed historical / active / reference` | `rg -n "compatibility-backfill|migration-note|закрытые задачи|активные и незавершённые|historical narrative|legacy task backfill" knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/plan.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/sdd.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.7-legacy-upgrade-and-task-backfill-governance/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.7-legacy-upgrade-and-task-backfill-governance/plan.md` | `covered` | Governance docs сохраняют compatibility-backfill без реткона закрытых задач |
+| `INV-08` | execution-контур допускает несколько writer-subagent или теряет main controller ownership | `rg -n "main orchestrator|single sequential writer|read-only scouts|read-only verifier|single-writer|главный агент" knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/plan.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/sdd.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/*/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/*/plan.md` | `covered` | Все task-local артефакты удерживают controller-guided single-writer execution-model |
+| `INV-09` | writer получает права на task-local source-of-truth или shared governance docs | `rg -n "writer-subagent|task-truth|shared governance|task.md|registry.md|sdd.md|plan.md" knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/plan.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/sdd.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.7-legacy-upgrade-and-task-backfill-governance/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.7-legacy-upgrade-and-task-backfill-governance/plan.md` | `covered` | Ownership split остаётся жёстким: writer не владеет task-truth и governance-документами |
+| `INV-10` | writer может менять не только granted scope или молча расширять scope | `rg -n "write-scope|granted scope|forbidden_expansion|расширение scope|writer-subagent может менять только" knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/sdd.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/plan.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.1-grace-borrowings-source-and-refresh-governance/plan.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.5-module-verification-catalog/plan.md` | `covered` | Packet-гранularity и stop-conditions удерживают write-scope без silent expansion |
+| `INV-11` | readiness gate отсутствует или failure handoff не связан с verification evidence | `python3 -m unittest skills-global.task-centric-knowledge.tests.test_module_verification_runtime` и `rg -n "ExecutionReadiness|VerificationExcerpt|FailureHandoff|readiness gate|failure handoff|verification excerpt" knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/sdd.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.5-module-verification-catalog/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.5-module-verification-catalog/plan.md` | `covered` | Runtime и task-local contract удерживают gate перед writer-pass |
+| `INV-12` | module/file query смешивает shared/public и file-local/private truth | `rg -n "shared/public|file-local/private|module show|file show|private/local truth|public/shared truth" knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/sdd.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.4-file-local-contracts-for-hotspots/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.6-module-query-read-model/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.6-module-query-read-model/plan.md` | `covered` | Query/docs удерживают жёсткий split shared/public vs file-local/private truth |
+| `INV-13` | legacy execution metadata создаёт ложную active-задачу или меняет historical fields | `rg -n "execution/readiness|false active|ложн|historical|branch/date/history|current-task|active target" knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/sdd.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.7-legacy-upgrade-and-task-backfill-governance/task.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.7-legacy-upgrade-and-task-backfill-governance/plan.md knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.7-legacy-upgrade-and-task-backfill-governance/subtasks/TASK-2026-0024.7.1-historical-task-sync-guard/task.md` | `covered` | Historical sync guard и legacy rollout contract не создают ложную active-задачу и не переписывают history |
+
+## 3. Остаточный риск и ручной остаток
+
+- `нет`
+
+## 4. Правило завершения
+
+- Задача не должна уходить в ревью, пока обязательные инварианты не связаны с проверками.
+- Финальный review-fix перевёл все обязательные инварианты в `covered`.
+- Review не заменяет эту матрицу и не считается первым местом обнаружения базовых инвариантных ошибок.

@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "task-knowledge-cli"
+version = "0.1.0"
+description = "Единый CLI для install/query/workflow контуров task-centric knowledge."
+requires-python = ">=3.11"
+
+[project.scripts]
+task-knowledge = "task_knowledge_cli:main"
+
+[tool.setuptools]
+py-modules = ["task_knowledge_cli"]
+
+[tool.setuptools.package-dir]
+"" = "scripts"
+
+[tool.setuptools.packages.find]
+where = ["scripts"]
