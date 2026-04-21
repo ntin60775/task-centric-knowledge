@@ -11,7 +11,7 @@
 | Технический ключ для новых именуемых сущностей | `task-centric-knowledge` |
 | Краткое имя | `task-centric-knowledge-standalone-bootstrap` |
 | Человекочитаемое описание | Зафиксировать bootstrap нового standalone-репозитория `task-centric-knowledge` после выноса из `ai-agents-rules`. |
-| Статус | `в работе` |
+| Статус | `завершена` |
 | Приоритет | `высокий` |
 | Ответственный | `Codex` |
 | Ветка | `main` |
@@ -50,7 +50,10 @@
 
 ## Текущий этап
 
-Bootstrap репозитория выполняется.
+Bootstrap репозитория завершён.
+Standalone-репозиторий опубликован и запушен,
+CLI smoke и тесты выполнены,
+task-история доступна через `task-knowledge`.
 
 ## Стратегия проверки
 
@@ -78,4 +81,10 @@ Bootstrap репозитория выполняется.
 
 ## Итог
 
-Заполняется после публикации.
+Репозиторий опубликован:
+`https://github.com/ntin60775/task-centric-knowledge`.
+SSH-адрес:
+`git@github.com:ntin60775/task-centric-knowledge.git`.
+Первый commit:
+`4e42d8b`.
+Временная `gh`-авторизация после публикации очищена.
