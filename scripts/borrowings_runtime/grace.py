@@ -11,6 +11,7 @@ from typing import Any
 SUPPORTED_SOURCE = "grace"
 CHECKOUT_ENV = "TASK_KNOWLEDGE_GRACE_CHECKOUT"
 ALLOWED_ACTIONS = {"create", "update", "noop"}
+GIT_TIMEOUT_SECONDS = 120
 
 
 class BorrowingsError(ValueError):
@@ -31,12 +32,16 @@ def _json_fingerprint(payload: dict[str, Any]) -> str:
 
 
 def _run_git(checkout: Path, *args: str) -> str | None:
-    completed = subprocess.run(
-        ["git", "-C", str(checkout), *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(checkout), *args],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return None
     if completed.returncode != 0:
         return None
     return completed.stdout.strip()
@@ -45,21 +50,25 @@ def _run_git(checkout: Path, *args: str) -> str | None:
 def _git_status_for_paths(checkout: Path, paths: list[Path]) -> str | None:
     if not paths:
         return ""
-    completed = subprocess.run(
-        [
-            "git",
-            "-C",
-            str(checkout),
-            "status",
-            "--porcelain=v1",
-            "--untracked-files=all",
-            "--",
-            *[path.as_posix() for path in paths],
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(checkout),
+                "status",
+                "--porcelain=v1",
+                "--untracked-files=all",
+                "--",
+                *[path.as_posix() for path in paths],
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return None
     if completed.returncode != 0:
         return None
     return completed.stdout.strip()

@@ -9,7 +9,7 @@ TESTS_DIR = Path(__file__).resolve().parent
 if str(TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(TESTS_DIR))
 
-from task_workflow_testlib import ROOT, TempRepoCase, git
+from task_workflow_testlib import ROOT, SUBPROCESS_TIMEOUT_SECONDS, TempRepoCase, git
 
 
 CLI_SCRIPT = ROOT / "scripts" / "task_knowledge_cli.py"
@@ -22,6 +22,7 @@ class TaskKnowledgeCliTests(TempRepoCase):
             capture_output=True,
             text=True,
             check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
         )
 
     def run_cli_json(self, *args: str) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:

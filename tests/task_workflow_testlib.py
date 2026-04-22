@@ -9,6 +9,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SUBPROCESS_TIMEOUT_SECONDS = 30
 SCRIPTS_DIR = ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
@@ -20,6 +21,7 @@ def git(project_root: Path, *args: str) -> str:
         capture_output=True,
         text=True,
         check=True,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
     )
     return completed.stdout.strip()
 
@@ -32,6 +34,7 @@ class TempRepoCase(unittest.TestCase):
         project_root = root / "project"
         project_root.mkdir()
         git(project_root, "init")
+        git(project_root, "branch", "-M", "main")
         git(project_root, "config", "user.name", "Test User")
         git(project_root, "config", "user.email", "test@example.com")
         (project_root / "README.md").write_text("repo\n", encoding="utf-8")

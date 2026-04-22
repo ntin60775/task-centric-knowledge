@@ -33,12 +33,16 @@ install_module = load_module("task_centric_knowledge_install_skill_governance", 
 doctor_runtime = importlib.import_module("install_skill_runtime.doctor")
 
 
+SUBPROCESS_TIMEOUT_SECONDS = 30
+
+
 def git(project_root: Path, *args: str) -> str:
     completed = subprocess.run(
         ["git", "-C", str(project_root), *args],
         capture_output=True,
         text=True,
         check=True,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
     )
     return completed.stdout.strip()
 
@@ -48,6 +52,7 @@ class InstallSkillGovernanceTests(unittest.TestCase):
         project_root = root / "project"
         project_root.mkdir()
         git(project_root, "init")
+        git(project_root, "branch", "-M", "main")
         git(project_root, "config", "user.name", "Test User")
         git(project_root, "config", "user.email", "test@example.com")
         (project_root / "README.md").write_text("repo\n", encoding="utf-8")
@@ -262,6 +267,7 @@ class InstallSkillGovernanceTests(unittest.TestCase):
                 text=True,
                 check=False,
                 env=env,
+                timeout=SUBPROCESS_TIMEOUT_SECONDS,
             )
 
             self.assertEqual(completed.returncode, 0, completed.stderr)

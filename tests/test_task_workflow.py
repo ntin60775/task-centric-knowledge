@@ -12,6 +12,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SUBPROCESS_TIMEOUT_SECONDS = 30
 WORKFLOW_SCRIPT = ROOT / "scripts" / "task_workflow.py"
 SCRIPTS_DIR = ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
@@ -42,6 +43,7 @@ def git(project_root: Path, *args: str) -> str:
         capture_output=True,
         text=True,
         check=True,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
     )
     return completed.stdout.strip()
 
@@ -51,6 +53,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
         project_root = root / "project"
         project_root.mkdir()
         git(project_root, "init")
+        git(project_root, "branch", "-M", "main")
         git(project_root, "config", "user.name", "Test User")
         git(project_root, "config", "user.email", "test@example.com")
         (project_root / "README.md").write_text("repo\n", encoding="utf-8")
@@ -150,6 +153,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             capture_output=True,
             text=True,
             check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
         )
 
     def test_sync_task_creates_branch_and_registry_row(self) -> None:

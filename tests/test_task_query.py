@@ -10,7 +10,7 @@ TESTS_DIR = Path(__file__).resolve().parent
 if str(TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(TESTS_DIR))
 
-from task_workflow_testlib import ROOT, TempRepoCase, git
+from task_workflow_testlib import ROOT, SUBPROCESS_TIMEOUT_SECONDS, TempRepoCase, git
 from task_workflow_runtime.task_markdown import parse_delivery_units
 
 
@@ -112,6 +112,7 @@ class TaskQueryTests(TempRepoCase):
             capture_output=True,
             text=True,
             check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
         )
 
     def run_json_query(self, project_root: Path, *args: str) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:

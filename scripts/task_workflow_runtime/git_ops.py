@@ -10,13 +10,47 @@ from urllib.parse import urlparse
 from .models import DELIVERY_ROW_PLACEHOLDER, VALID_HOSTS, VALID_PUBLICATION_TYPES
 
 
+SUBPROCESS_TIMEOUT_SECONDS = 120
+TIMEOUT_RETURN_CODE = 124
+
+
+def _timeout_stream(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value
+
+
+def _timeout_completed_process(
+    command: list[str],
+    error: subprocess.TimeoutExpired,
+    *,
+    kind: str,
+) -> subprocess.CompletedProcess[str]:
+    command_text = " ".join(command)
+    message = f"{kind} timed out after {SUBPROCESS_TIMEOUT_SECONDS}s: {command_text}"
+    stdout = _timeout_stream(error.stdout)
+    stderr = _timeout_stream(error.stderr)
+    if stderr:
+        stderr = f"{stderr.rstrip()}\n{message}"
+    else:
+        stderr = message
+    return subprocess.CompletedProcess(command, TIMEOUT_RETURN_CODE, stdout=stdout, stderr=stderr)
+
+
 def run_git(project_root: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
-    completed = subprocess.run(
-        ["git", "-C", str(project_root), *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    command = ["git", "-C", str(project_root), *args]
+    try:
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        completed = _timeout_completed_process(command, error, kind="git command")
     if check and completed.returncode != 0:
         stderr = completed.stderr.strip()
         stdout = completed.stdout.strip()
@@ -184,13 +218,18 @@ def run_command(
     *args: str,
     check: bool = True,
 ) -> subprocess.CompletedProcess[str]:
-    completed = subprocess.run(
-        list(args),
-        capture_output=True,
-        text=True,
-        cwd=project_root,
-        check=False,
-    )
+    command = list(args)
+    try:
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            cwd=project_root,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        completed = _timeout_completed_process(command, error, kind="command")
     if check and completed.returncode != 0:
         stderr = completed.stderr.strip()
         stdout = completed.stdout.strip()

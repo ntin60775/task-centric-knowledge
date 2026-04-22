@@ -58,6 +58,7 @@ class BorrowingsRuntimeTests(TempRepoCase):
         checkout = root / "checkout"
         checkout.mkdir()
         git(checkout, "init")
+        git(checkout, "branch", "-M", "main")
         git(checkout, "config", "user.name", "Test User")
         git(checkout, "config", "user.email", "test@example.com")
         source_path = checkout / "docs/example.md"

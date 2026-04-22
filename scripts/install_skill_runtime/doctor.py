@@ -29,17 +29,25 @@ from .models import (
 )
 
 
+GIT_TIMEOUT_SECONDS = 120
+
+
 def _command_exists(command: str) -> str | None:
     return shutil.which(command)
 
 
 def _git_output(project_root: Path, *args: str) -> tuple[bool, str]:
-    completed = subprocess.run(
-        ["git", "-C", str(project_root), *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    command = ["git", "-C", str(project_root), *args]
+    try:
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return False, f"git command timed out after {GIT_TIMEOUT_SECONDS}s: {' '.join(command)}"
     output = completed.stdout.strip() or completed.stderr.strip()
     return completed.returncode == 0, output
 
