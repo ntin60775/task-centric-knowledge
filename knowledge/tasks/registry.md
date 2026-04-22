@@ -5,8 +5,8 @@
 
 ## Как вести
 
-- одна строка на одну задачу;
-- одна строка на одну значимую подзадачу;
+- одна строка на одну фактически открытую задачу;
+- одна строка на одну фактически открытую значимую подзадачу;
 - для подзадачи указывать родительский `ID`;
 - статус и краткое описание должны совпадать с `task.md`;
 - колонка `Ветка` должна совпадать с полем `Ветка` в `task.md`;
@@ -42,3 +42,4 @@
 | `TASK-2026-0025` | `—` | `завершена` | `высокий` | `main` | `knowledge/tasks/TASK-2026-0025-task-centric-knowledge-local-upgrade/` | Обновить managed knowledge-систему этого репозитория до текущей версии skill-а task-centric-knowledge без потери project data. |
 | `TASK-2026-0026` | `—` | `завершена` | `высокий` | `main` | `knowledge/tasks/TASK-2026-0026-task-centric-knowledge-standalone-bootstrap/` | Зафиксировать bootstrap нового standalone-репозитория `task-centric-knowledge` после выноса из `ai-agents-rules`. |
 | `TASK-2026-0027` | `—` | `завершена` | `высокий` | `main` | `knowledge/tasks/TASK-2026-0027-local-auto-finalize/` | Добавить local auto-finalize helper: безопасный локальный `commit -> merge -> checkout main` или явный stop-report с причинами блокировки. |
+| `TASK-2026-0029` | `—` | `завершена` | `высокий` | `task/task-2026-0029-subtask-open-on-start` | `knowledge/tasks/TASK-2026-0029-subtask-open-on-start/` | Уточнить contract task-centric-knowledge: подзадача materialize только при фактическом открытии, а не при черновой декомпозиции в родительском плане. |
