@@ -20,4 +20,4 @@
 - [x] Исправить ложную timeout-диагностику `publish_remote` в `doctor`.
 - [x] Устранить order-dependent bootstrap в `test_task_workflow_registry.py`.
 - [x] Прогнать полный verify-контур и зафиксировать результаты в task-артефактах.
-- [ ] Повторно закрыть задачу через local finalize и подтвердить clean state на `main`.
+- [x] Повторно закрыть задачу через local finalize и подтвердить clean state на `main`.
