@@ -6,9 +6,9 @@
 |------|----------|
 | Система | `task-centric-knowledge` |
 | Эпоха совместимости | `module-core-v1` |
-| Статус перехода | `partially-upgraded` |
-| Контур исполнения | `dual-readiness` |
-| Последняя задача перехода | `TASK-2026-0006` |
+| Статус перехода | `fully-upgraded` |
+| Контур исполнения | `single-writer` |
+| Последняя задача перехода | `TASK-2026-0034` |
 | Дата обновления | `2026-04-23` |
 
 ## Исторические задачи
@@ -16,29 +16,33 @@
 | TASK-ID | Класс | Статус совместимости | Путь к заметке миграции | Решение |
 |---------|-------|----------------------|--------------------------|---------|
 | `TASK-2026-0004` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0004-task-centric-knowledge-git-flow/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
-| `TASK-2026-0004.1` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
+| `TASK-2026-0004.1` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0004-task-centric-knowledge-git-flow/subtasks/TASK-2026-0004.1-skill-upgrade-safety/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
 | `TASK-2026-0006` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0006-task-centric-testing-contract/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
-| `TASK-2026-0008` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0010` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0011` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0012` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0013` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0014` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0015` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0021` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0021.1` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0024` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0024.1` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0024.2` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0024.3` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0024.4` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0024.5` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0024.6` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0024.7` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0024.7.1` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0025` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0026` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0027` | `closed historical` | `pending` | `—` | Требуется note-only compatibility-backfill без переписывания historical narrative. |
-| `TASK-2026-0029` | `closed historical` | `pending` | `—` | Требуется сценарий `note-only compatibility-backfill` без переписывания исторического описания задачи. |
-| `TASK-2026-0030` | `closed historical` | `pending` | `—` | Требуется сценарий `note-only compatibility-backfill` без переписывания исторического описания задачи. |
-| `TASK-2026-0031` | `active` | `pending` | `—` | Требуется сценарий `controlled compatibility-backfill` для рабочей задачи. |
+| `TASK-2026-0008` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0008-task-centric-knowledge-roadmap-vnext/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0010` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0010-task-centric-vnext-core-contract/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0011` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0011-task-centric-vnext-helper-modularization/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0012` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0012-task-centric-vnext-doctor-cleanup-governance/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0013` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0013-task-centric-vnext-read-model-reporting/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0014` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0014-task-centric-vnext-field-validation/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0015` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0015-task-centric-knowledge-managed-refresh/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0021` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0021-task-centric-v1-release-productization/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0021.1` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0021-task-centric-v1-release-productization/subtasks/TASK-2026-0021.1-standalone-release-hardening/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0024` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0024.1` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.1-grace-borrowings-source-and-refresh-governance/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0024.2` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.2-module-passports-and-registry/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0024.3` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.3-lightweight-module-dependency-map/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0024.4` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.4-file-local-contracts-for-hotspots/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0024.5` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.5-module-verification-catalog/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0024.6` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.6-module-query-read-model/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0024.7` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.7-legacy-upgrade-and-task-backfill-governance/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0024.7.1` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0024-grace-borrowed-module-core/subtasks/TASK-2026-0024.7-legacy-upgrade-and-task-backfill-governance/subtasks/TASK-2026-0024.7.1-historical-task-sync-guard/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0025` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0025-task-centric-knowledge-local-upgrade/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0026` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0026-task-centric-knowledge-standalone-bootstrap/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0027` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0027-local-auto-finalize/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0028` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0028-cleanup-cli-payload-compat/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0029` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0029-subtask-open-on-start/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0030` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0030-project-review-hardening/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0031` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0031-repo-wide-review-fix-cycle/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0032` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0032-python-hardened-integration/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0033` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0033-repo-wide-review-rerun/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0034` | `active` | `compatibility-backfilled` | `knowledge/tasks/TASK-2026-0034-task-centric-knowledge-upgrade-completion/artifacts/migration/task-centric-knowledge-upgrade.md` | Active-задача прошла controlled compatibility-backfill и остаётся в обычном task lifecycle. |
