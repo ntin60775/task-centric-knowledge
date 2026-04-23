@@ -56,6 +56,15 @@ def _bullet_values(text: str, heading: str) -> list[str]:
     return values
 
 
+def _raw_bullet_values(text: str, heading: str) -> list[str]:
+    values: list[str] = []
+    for line in _section_body(text, heading):
+        stripped = line.strip()
+        if stripped.startswith("- "):
+            values.append(stripped[2:])
+    return values
+
+
 class ReleaseContractDocsTests(unittest.TestCase):
     def test_core_model_exists_and_covers_release_critical_sections(self) -> None:
         text = CORE_MODEL_PATH.read_text(encoding="utf-8")
@@ -129,6 +138,64 @@ class ReleaseContractDocsTests(unittest.TestCase):
             with self.subTest(marker=marker):
                 self.assertIn(marker, task_local_contract)
                 self.assertIn(marker, core_model)
+
+    def test_core_model_pins_exact_task_and_delivery_transitions(self) -> None:
+        core_model = CORE_MODEL_PATH.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            _raw_bullet_values(core_model, "### Статусы `Task` и `Subtask`"),
+            [
+                "`черновик`",
+                "`готова к работе`",
+                "`в работе`",
+                "`на проверке`",
+                "`ждёт пользователя`",
+                "`заблокирована`",
+                "`завершена`",
+                "`отменена`",
+                "`черновик -> готова к работе | отменена`",
+                "`готова к работе -> в работе | заблокирована | отменена`",
+                "`в работе -> на проверке | ждёт пользователя | заблокирована | отменена`",
+                "`на проверке -> завершена | в работе | ждёт пользователя | заблокирована | отменена`",
+                "`ждёт пользователя -> готова к работе | в работе | отменена`",
+                "`заблокирована -> готова к работе | в работе | отменена`",
+                "`завершена`",
+                "`отменена`",
+            ],
+        )
+        self.assertEqual(
+            _raw_bullet_values(core_model, "### Статусы `Delivery Unit`"),
+            [
+                "`planned`",
+                "`local`",
+                "`draft`",
+                "`review`",
+                "`merged`",
+                "`closed`",
+                "`planned -> local | closed`",
+                "`local -> draft | closed`",
+                "`draft -> review | closed`",
+                "`review -> merged | draft | closed`",
+                "`merged`",
+                "`closed`",
+                "delivery unit живёт только внутри `task.md`;",
+                "`registry.md` не получает отдельных строк для delivery units;",
+                "задача не может считаться окончательно закрытой, пока все delivery units не находятся в `merged` или `closed`.",
+            ],
+        )
+
+    def test_core_model_pins_cleanup_governance_contract(self) -> None:
+        core_model = CORE_MODEL_PATH.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            _raw_bullet_values(core_model, "### Правила cleanup-governance"),
+            [
+                "Любой cleanup в слое `Packaging / Governance` наследует модель `plan -> confirm`.",
+                "До подтверждения cleanup обязан раскрыть абсолютные пути, `TARGETS`, `TARGET_COUNT`, `COUNT`, `plan_fingerprint` и точную confirm-команду.",
+                "Cleanup не может молча расширять scope между `plan` и `confirm`.",
+                "`project data`, включая `AGENTS.md`, `knowledge/tasks/registry.md` и уже созданные task-каталоги, нельзя удалять или перезаписывать без явного и проверяемого шага подтверждения.",
+            ],
+        )
 
 
 if __name__ == "__main__":

@@ -94,10 +94,15 @@ def _normalize_project_file_ref(project_root: Path, value: str) -> str | None:
     normalized = normalize_table_value(value).replace("\\", "/")
     if not normalized or normalized == PLACEHOLDER or not _looks_like_file_path(normalized):
         return None
+    resolved_root = project_root.resolve()
     candidate = Path(normalized)
     if candidate.is_absolute():
         return None
-    return candidate.as_posix()
+    resolved = (resolved_root / candidate).resolve()
+    try:
+        return resolved.relative_to(resolved_root).as_posix()
+    except ValueError:
+        return None
 
 
 def _read_lines(path: Path) -> list[str]:

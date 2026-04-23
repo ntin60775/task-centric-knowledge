@@ -359,6 +359,37 @@ class ModuleQueryRuntimeTests(TempRepoCase):
             self.assertIn("file_local_policy_invalid", warning_codes)
             self.assertNotIn("file_contract_unavailable", warning_codes)
 
+    def test_module_show_rejects_owned_surface_path_outside_project(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = self.init_repo(Path(tmp_dir))
+            passport_text = _module_text("M-ALPHA", slug="alpha").replace("scripts/alpha.py", "../outside.py", 1)
+            self._write_module(
+                project_root,
+                "M-ALPHA",
+                "alpha",
+                passport_text=passport_text,
+            )
+
+            payload, exit_code = dispatch_module(
+                argparse.Namespace(
+                    project_root=project_root,
+                    module_command="show",
+                    selector="M-ALPHA",
+                    query=None,
+                    readiness=None,
+                    source_state=None,
+                    limit=20,
+                )
+            )
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["module"]["source_state"], "verification_only")
+            self.assertEqual(payload["module"]["public_truth"]["owned_surface"], [])
+            warning_codes = {item["code"] for item in payload["warnings"]}
+            self.assertIn("module_passport_invalid", warning_codes)
+            self.assertIn("module_passport_missing", warning_codes)
+
     def test_module_show_warns_when_registry_row_drifted_from_passport(self) -> None:
         with self.make_tempdir() as tmp_dir:
             project_root = self.init_repo(Path(tmp_dir))
@@ -701,6 +732,43 @@ class ModuleQueryRuntimeTests(TempRepoCase):
             self.assertEqual(file_payload["verification_anchors"][0]["evidence_ref"], "EVD-01")
             self.assertIn("knowledge/modules/M-ALPHA-alpha/verification.md#SCN-01", file_payload["failure_handoff_refs"])
             self.assertIn("knowledge/modules/M-ALPHA-alpha/verification.md#SCN-02", file_payload["failure_handoff_refs"])
+
+    def test_module_show_filters_outside_project_evidence_from_governed_paths(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = self.init_repo(Path(tmp_dir))
+            verification_text = _verification_text("M-ALPHA", slug="alpha").replace(
+                "| `EVD-01` | `test-file` | `tests/test_alpha.py` | `BLOCK_M-ALPHA` | Основной test file. |",
+                "| `EVD-01` | `test-file` | `/tmp/outside.py` | `BLOCK_M-ALPHA` | Outside path must not leak into governed surface. |",
+                1,
+            )
+            self._write_module(
+                project_root,
+                "M-ALPHA",
+                "alpha",
+                verification_text=verification_text,
+                passport_text=_module_text("M-ALPHA", slug="alpha"),
+            )
+
+            payload, exit_code = dispatch_module(
+                argparse.Namespace(
+                    project_root=project_root,
+                    module_command="show",
+                    selector="M-ALPHA",
+                    query=None,
+                    readiness=None,
+                    source_state=None,
+                    limit=20,
+                )
+            )
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            module = payload["module"]
+            self.assertNotIn("/tmp/outside.py", module["public_truth"]["governed_files"])
+            self.assertNotIn("/tmp/outside.py", module["public_truth"]["evidence_file_refs"])
+            self.assertNotIn("/tmp/outside.py", module["files"]["governed_files"])
+            self.assertNotIn("/tmp/outside.py", module["files"]["evidence_file_refs"])
+            self.assertNotIn("/tmp/outside.py", module["readiness"]["required_governed_files"])
 
     def test_file_show_prefers_passport_governed_state_when_owned_surface_present(self) -> None:
         with self.make_tempdir() as tmp_dir:

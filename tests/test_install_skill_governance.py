@@ -234,6 +234,7 @@ class InstallSkillGovernanceTests(unittest.TestCase):
             self.assertEqual(publish_remote["status"], "misconfigured")
             self.assertIn("git command timed out after 120s", publish_remote["detail"])
             self.assertNotIn("не найден", publish_remote["detail"])
+            self.assertIn("зависшего git-процесса", publish_remote["hint"])
             self.assertEqual(dependencies["gh"]["status"], "not-applicable")
 
     def test_doctor_deps_surfaces_broken_publish_remote_without_false_missing_remote_diagnostic(self) -> None:
@@ -266,6 +267,8 @@ class InstallSkillGovernanceTests(unittest.TestCase):
             self.assertEqual(publish_remote["status"], "misconfigured")
             self.assertIn("unable to read remote url", publish_remote["detail"])
             self.assertNotIn("не найден", publish_remote["detail"])
+            self.assertIn("конфигурацию `git remote`", publish_remote["hint"])
+            self.assertNotIn("зависшего git-процесса", publish_remote["hint"])
             self.assertEqual(dependencies["gh"]["status"], "not-applicable")
 
     def test_migrate_cleanup_plan_discloses_scope_and_protected_paths(self) -> None:

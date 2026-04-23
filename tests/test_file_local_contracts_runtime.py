@@ -15,7 +15,11 @@ SCRIPTS_DIR = TESTS_DIR.parent / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from module_core_runtime.file_local_contracts import load_file_local_policy, parse_file_local_contracts
+from module_core_runtime.file_local_contracts import (
+    FileLocalPolicyError,
+    load_file_local_policy,
+    parse_file_local_contracts,
+)
 
 
 def _policy_text(*rows: str) -> str:
@@ -180,6 +184,23 @@ class FileLocalContractsRuntimeTests(unittest.TestCase):
             self.assertTrue(parsed.contract_markers[0].present)
             self.assertEqual(parsed.blocks[0].block_id, "BLOCK_POSTING")
             self.assertTrue(parsed.blocks[0].present)
+
+    def test_load_policy_rejects_hotspot_path_outside_project(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = Path(tmp_dir)
+            policy_path = project_root / "knowledge/modules/M-ALPHA-alpha/file-local-policy.md"
+            policy_path.parent.mkdir(parents=True, exist_ok=True)
+            policy_path.write_text(
+                _policy_text(
+                    "| `../outside.py` | `required` | `MODULE_CONTRACT` | `BLOCK_VALIDATE_INPUT` | Outside path must be rejected. |",
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(FileLocalPolicyError) as error:
+                load_file_local_policy(project_root, policy_path)
+
+            self.assertIn("project-relative путь", str(error.exception))
 
 
 if __name__ == "__main__":

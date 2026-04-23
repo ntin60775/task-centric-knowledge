@@ -93,21 +93,21 @@ def _git_repository_check(project_root: Path, git_path: str | None) -> Dependenc
     )
 
 
-def _first_remote(project_root: Path) -> tuple[str | None, str | None, str | None]:
+def _first_remote(project_root: Path) -> tuple[str | None, str | None, str | None, str | None]:
     ok, output, reason = _git_output(project_root, "remote")
     if reason == "timeout":
-        return None, None, output
+        return None, None, output, reason
     if not ok:
-        return None, None, output or "Не удалось прочитать список git remote."
+        return None, None, output or "Не удалось прочитать список git remote.", None
     if not output:
-        return None, None, None
+        return None, None, None, None
     remote_name = output.splitlines()[0].strip()
     ok, remote_url, reason = _git_output(project_root, "remote", "get-url", remote_name)
     if reason == "timeout":
-        return remote_name, None, remote_url
+        return remote_name, None, remote_url, reason
     if not ok:
-        return remote_name, None, remote_url or f"Не удалось прочитать URL git remote `{remote_name}`."
-    return remote_name, remote_url, None
+        return remote_name, None, remote_url or f"Не удалось прочитать URL git remote `{remote_name}`.", None
+    return remote_name, remote_url, None, None
 
 
 def _detect_remote_host(remote_url: str | None) -> str | None:
@@ -261,8 +261,8 @@ def build_dependency_checks(project_root: Path, source_root: Path, report: Exist
     python_path = _command_exists("python3")
     git_path = _command_exists("git")
     git_repo_check = _git_repository_check(project_root, git_path)
-    remote_name, remote_url, remote_error = (
-        _first_remote(project_root) if git_repo_check.status == DEPENDENCY_STATUS_OK else (None, None, None)
+    remote_name, remote_url, remote_error, remote_error_reason = (
+        _first_remote(project_root) if git_repo_check.status == DEPENDENCY_STATUS_OK else (None, None, None, None)
     )
     remote_host = _detect_remote_host(remote_url)
     gh_path = _command_exists("gh")
@@ -313,7 +313,10 @@ def build_dependency_checks(project_root: Path, source_root: Path, report: Exist
     if git_repo_check.status == DEPENDENCY_STATUS_OK and remote_error:
         remote_detail = f"Git remote не удалось проверить: {remote_error}"
         remote_status = DEPENDENCY_STATUS_MISCONFIGURED
-        remote_hint = "Повторите диагностику после устранения зависшего git-процесса или проблем окружения."
+        if remote_error_reason == "timeout":
+            remote_hint = "Повторите диагностику после устранения зависшего git-процесса или проблем окружения."
+        else:
+            remote_hint = "Проверьте конфигурацию `git remote` и доступность URL, затем повторите диагностику."
     elif git_repo_check.status == DEPENDENCY_STATUS_OK and remote_url:
         remote_detail = f"Найден git remote `{remote_name}`: {remote_url}"
         remote_status = DEPENDENCY_STATUS_OK

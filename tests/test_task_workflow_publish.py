@@ -1,6 +1,15 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
+
+SCRIPTS_DIR = TESTS_DIR.parent / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
 
 from task_workflow_runtime.models import DeliveryUnit
 from task_workflow_runtime.publish_flow import branch_for_task_context, resolve_publish_snapshot

@@ -343,6 +343,9 @@ def dispatch(args: argparse.Namespace) -> tuple[dict[str, object], int]:
         return payload, 2
     task = matches[0] if matches else exact_task_snapshot(project_root, selector)
     if task is None:
+        detail = "Поддерживаются только точный TASK-ID или `current`."
+        if selector.strip() and all(not char.isspace() for char in selector) and "/" not in selector and "\\" not in selector:
+            detail = f"Задача с ID `{selector}` не найдена."
         payload = {
             "ok": False,
             "command": "task show",
@@ -353,7 +356,7 @@ def dispatch(args: argparse.Namespace) -> tuple[dict[str, object], int]:
                 {
                     "code": "task_not_found",
                     "severity": "error",
-                    "detail": "Поддерживаются только точный TASK-ID или `current`.",
+                    "detail": detail,
                     "path": None,
                 }
             ],

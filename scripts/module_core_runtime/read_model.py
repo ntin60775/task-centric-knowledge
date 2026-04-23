@@ -261,13 +261,29 @@ def _normalize_project_file_ref(project_root: Path, value: str) -> str | None:
     normalized = normalize_table_value(value).replace("\\", "/")
     if not normalized or normalized == PLACEHOLDER or not _looks_like_file_path(normalized):
         return None
+    resolved_root = project_root.resolve()
     candidate = Path(normalized)
     if candidate.is_absolute():
         try:
-            return candidate.relative_to(project_root).as_posix()
+            return candidate.resolve().relative_to(resolved_root).as_posix()
         except ValueError:
-            return candidate.as_posix()
-    return candidate.as_posix()
+            return None
+    resolved = (resolved_root / candidate).resolve()
+    if not _is_within_project(resolved, resolved_root):
+        return None
+    return resolved.relative_to(resolved_root).as_posix()
+
+
+def _normalize_project_file_refs(project_root: Path, values: list[str] | tuple[str, ...]) -> list[str]:
+    normalized_refs: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        normalized = _normalize_project_file_ref(project_root, value)
+        if normalized is None or normalized in seen:
+            continue
+        normalized_refs.append(normalized)
+        seen.add(normalized)
+    return normalized_refs
 
 
 def _normalize_catalog_ref(project_root: Path, directory_path: Path) -> str:
@@ -987,12 +1003,13 @@ def _record_from_directory(
                 )
 
     source_state = _source_state(passport=passport, verification_ref=verification_ref)
+    readiness_governed_files = _normalize_project_file_refs(project_root, readiness_payload.required_governed_files)
     if passport is not None:
         governed_files = list(
             dict.fromkeys(
                 [
                     *(item.path_ref for item in passport.owned_surface),
-                    *(_normalize_project_file_ref(project_root, path) or path for path in readiness_payload.required_governed_files),
+                    *readiness_governed_files,
                     *evidence_file_refs,
                 ]
             )
@@ -1015,7 +1032,7 @@ def _record_from_directory(
         governed_files = list(
             dict.fromkeys(
                 [
-                    *(_normalize_project_file_ref(project_root, path) or path for path in readiness_payload.required_governed_files),
+                    *readiness_governed_files,
                     *evidence_file_refs,
                 ]
             )
@@ -1089,7 +1106,7 @@ def _record_from_directory(
             "status": readiness_payload.status,
             "blocking_reasons": list(readiness_payload.blocking_reasons),
             "required_verification_refs": list(readiness_payload.required_verification_refs),
-            "required_governed_files": list(readiness_payload.required_governed_files),
+            "required_governed_files": readiness_governed_files,
             "residual_manual_risk": list(readiness_payload.residual_manual_risk),
         },
         relations={

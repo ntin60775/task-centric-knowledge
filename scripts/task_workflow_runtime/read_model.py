@@ -414,6 +414,45 @@ def task_files_map(project_root: Path, task_dir: Path) -> dict[str, str]:
     return files
 
 
+def task_requires_sdd(fields: dict[str, str]) -> bool:
+    return normalize_table_value(fields.get("Требуется SDD", "")) == "да"
+
+
+def legacy_upgrade_entries(project_root: Path) -> dict[str, dict[str, str]]:
+    state_path = project_root / UPGRADE_STATE_RELATIVE
+    if not state_path.exists():
+        return {}
+    lines = state_path.read_text(encoding="utf-8").splitlines()
+    legacy_rows = _table_rows(
+        lines,
+        "## Исторические задачи",
+        ("TASK-ID", "Класс", "Статус совместимости", "Путь к заметке миграции", "Решение"),
+    )
+    if not legacy_rows:
+        legacy_rows = _table_rows(
+            lines,
+            "## Legacy tasks",
+            ("TASK-ID", "Класс", "Статус backfill", "Migration note", "Решение"),
+        )
+    entries: dict[str, dict[str, str]] = {}
+    for task_id, task_class, backfill_status, migration_note, decision in legacy_rows:
+        entries[task_id] = {
+            "task_class": task_class,
+            "backfill_status": backfill_status,
+            "migration_note": migration_note,
+            "decision": decision,
+        }
+    return entries
+
+
+def note_only_legacy_backfill(task_dir: Path, entry: dict[str, str] | None) -> bool:
+    if entry is None:
+        return False
+    if entry.get("task_class") != "closed historical" or entry.get("backfill_status") != "note-only":
+        return False
+    return (task_dir / "artifacts/migration/task-centric-knowledge-upgrade.md").exists()
+
+
 def validate_delivery_units(task: TaskSnapshot, *, project_root: Path, has_parse_errors: bool = False) -> None:
     for unit in task.delivery_units:
         try:
@@ -474,6 +513,7 @@ def build_task_snapshot(
     project_root: Path,
     task_dir: Path,
     registry_rows: dict[str, dict[str, str]],
+    upgrade_entries: dict[str, dict[str, str]],
 ) -> TaskSnapshot:
     task_file = task_dir / "task.md"
     lines, fields = read_task_fields(task_file)
@@ -529,6 +569,32 @@ def build_task_snapshot(
         verify_manual=block_list(subsection_lines(lines, "## Стратегия проверки", "### Остаётся на ручную проверку")),
         warnings=warnings,
     )
+    legacy_entry = upgrade_entries.get(task_id)
+    if task_requires_sdd(fields):
+        if "sdd.md" not in snapshot.files:
+            snapshot.warnings.append(
+                WarningItem(
+                    code="sdd_file_missing",
+                    severity="warning",
+                    detail="В task passport указано `Требуется SDD = да`, но файл `sdd.md` отсутствует.",
+                    path=relative_path(project_root, task_dir / "sdd.md"),
+                )
+            )
+        if (
+            "artifacts/verification-matrix.md" not in snapshot.files
+            and not note_only_legacy_backfill(task_dir, legacy_entry)
+        ):
+            snapshot.warnings.append(
+                WarningItem(
+                    code="verification_matrix_missing",
+                    severity="warning",
+                    detail=(
+                        "Для задачи с обязательным `SDD` отсутствует "
+                        "`artifacts/verification-matrix.md`."
+                    ),
+                    path=relative_path(project_root, task_dir / "artifacts/verification-matrix.md"),
+                )
+            )
     for error_detail in delivery_parse_errors:
         snapshot.warnings.append(
             WarningItem(
@@ -683,9 +749,10 @@ def dedupe_warnings(items: list[WarningItem]) -> list[WarningItem]:
 
 def discover_tasks(project_root: Path) -> dict[str, TaskSnapshot]:
     registry_rows = parse_registry_rows(project_root / REGISTRY_RELATIVE)
+    upgrade_entries = legacy_upgrade_entries(project_root)
     snapshots: dict[str, TaskSnapshot] = {}
     for task_dir in task_file_directories(project_root):
-        snapshot = build_task_snapshot(project_root, task_dir, registry_rows)
+        snapshot = build_task_snapshot(project_root, task_dir, registry_rows, upgrade_entries)
         snapshots[snapshot.summary.path] = snapshot
     for snapshot in snapshots.values():
         task_dir = project_root / snapshot.summary.path

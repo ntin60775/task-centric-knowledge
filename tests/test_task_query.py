@@ -770,6 +770,17 @@ class TaskQueryTests(TempRepoCase):
             self.assertIn("task_not_found", result.stdout)
             self.assertNotIn("Traceback", result.stderr)
 
+    def test_task_show_json_reports_precise_not_found_for_exact_selector(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = self.init_repo(Path(tmp_dir))
+            self.write_registry(project_root)
+
+            result, payload = self.run_json_query(project_root, "task", "show", "TASK-9999-404", "--format", "json")
+
+            self.assertEqual(result.returncode, 2)
+            self.assertEqual(payload["warnings"][0]["code"], "task_not_found")
+            self.assertEqual(payload["warnings"][0]["detail"], "Задача с ID `TASK-9999-404` не найдена.")
+
     def test_task_show_reports_drift_and_open_delivery_warning(self) -> None:
         with self.make_tempdir() as tmp_dir:
             project_root = self.init_repo(Path(tmp_dir))
@@ -937,6 +948,150 @@ class TaskQueryTests(TempRepoCase):
             self.assertIn("delivery_unit_parse_error", warning_codes)
             self.assertIn("final_task_with_open_delivery_units", warning_codes)
             self.assertEqual(payload["task"]["delivery_units"], [])
+
+    def test_task_show_warns_when_sdd_required_but_sdd_file_missing(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = self.init_repo(Path(tmp_dir))
+            self.write_registry(project_root)
+
+            task_dir = project_root / "knowledge/tasks/TASK-2026-1570-missing-sdd"
+            self.write_task(
+                task_dir,
+                task_id="TASK-2026-1570",
+                slug="missing-sdd",
+                branch="task/task-2026-1570-missing-sdd",
+                human_description="Missing SDD warning summary",
+            )
+            self.rewrite_task_field(task_dir, "Требуется SDD", "да")
+            self.rewrite_task_field(task_dir, "Статус SDD", "в работе")
+            self.rewrite_task_field(task_dir, "Ссылка на SDD", "sdd.md")
+            self.enrich_task(
+                task_dir,
+                current_stage="Нужно восстановить архитектурный контракт.",
+                automated_checks=["python3 -m unittest"],
+                manual_checks=["не требуется"],
+            )
+            self.write_plan(task_dir, unchecked_steps=["Добавить sdd.md."])
+            self.write_registry_row(
+                project_root,
+                task_dir,
+                task_id="TASK-2026-1570",
+                summary="Missing SDD warning summary",
+                branch="task/task-2026-1570-missing-sdd",
+            )
+
+            result, payload = self.run_json_query(project_root, "task", "show", "TASK-2026-1570", "--format", "json")
+            warning_codes = {warning["code"] for warning in payload["warnings"]}
+
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("sdd_file_missing", warning_codes)
+            self.assertIn("verification_matrix_missing", warning_codes)
+
+    def test_task_show_warns_when_verification_matrix_missing_for_sdd_task(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = self.init_repo(Path(tmp_dir))
+            self.write_registry(project_root)
+
+            task_dir = project_root / "knowledge/tasks/TASK-2026-1571-missing-matrix"
+            self.write_task(
+                task_dir,
+                task_id="TASK-2026-1571",
+                slug="missing-matrix",
+                branch="task/task-2026-1571-missing-matrix",
+                human_description="Missing verification matrix summary",
+            )
+            self.rewrite_task_field(task_dir, "Требуется SDD", "да")
+            self.rewrite_task_field(task_dir, "Статус SDD", "завершено")
+            self.rewrite_task_field(task_dir, "Ссылка на SDD", "sdd.md")
+            (task_dir / "sdd.md").write_text("# SDD\n", encoding="utf-8")
+            self.enrich_task(
+                task_dir,
+                current_stage="Нужно восстановить evidence matrix.",
+                automated_checks=["python3 -m unittest"],
+                manual_checks=["не требуется"],
+            )
+            self.write_plan(task_dir, unchecked_steps=["Добавить verification-matrix.md."])
+            self.write_registry_row(
+                project_root,
+                task_dir,
+                task_id="TASK-2026-1571",
+                summary="Missing verification matrix summary",
+                branch="task/task-2026-1571-missing-matrix",
+            )
+
+            result, payload = self.run_json_query(project_root, "task", "show", "TASK-2026-1571", "--format", "json")
+            warning_codes = {warning["code"] for warning in payload["warnings"]}
+
+            self.assertEqual(result.returncode, 0)
+            self.assertNotIn("sdd_file_missing", warning_codes)
+            self.assertIn("verification_matrix_missing", warning_codes)
+            self.assertNotIn("artifacts/verification-matrix.md", payload["task"]["files"])
+
+    def test_task_show_accepts_note_only_legacy_backfill_without_verification_matrix(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = self.init_repo(Path(tmp_dir))
+            self.write_registry(project_root)
+
+            task_dir = project_root / "knowledge/tasks/TASK-2026-1572-note-only"
+            self.write_task(
+                task_dir,
+                task_id="TASK-2026-1572",
+                slug="note-only",
+                branch="task/task-2026-1572-note-only",
+                status="завершена",
+                human_description="Closed historical note-only backfill summary",
+            )
+            self.rewrite_task_field(task_dir, "Требуется SDD", "да")
+            self.rewrite_task_field(task_dir, "Статус SDD", "завершено")
+            self.rewrite_task_field(task_dir, "Ссылка на SDD", "sdd.md")
+            (task_dir / "sdd.md").write_text("# SDD\n", encoding="utf-8")
+            migration_note = task_dir / "artifacts/migration/task-centric-knowledge-upgrade.md"
+            migration_note.parent.mkdir(parents=True, exist_ok=True)
+            migration_note.write_text("# Migration note\n", encoding="utf-8")
+            self.enrich_task(
+                task_dir,
+                current_stage="Historical task preserved via note-only backfill.",
+                automated_checks=["python3 -m unittest"],
+                manual_checks=["не требуется"],
+            )
+            self.write_plan(task_dir, unchecked_steps=[])
+            self.write_registry_row(
+                project_root,
+                task_dir,
+                task_id="TASK-2026-1572",
+                summary="Closed historical note-only backfill summary",
+                status="завершена",
+                branch="task/task-2026-1572-note-only",
+            )
+            upgrade_state = project_root / "knowledge/operations/task-centric-knowledge-upgrade.md"
+            upgrade_state.parent.mkdir(parents=True, exist_ok=True)
+            upgrade_state.write_text(
+                (
+                    "# Состояние перехода task-centric-knowledge\n\n"
+                    "## Паспорт\n\n"
+                    "| Поле | Значение |\n"
+                    "|------|----------|\n"
+                    "| Система | `task-centric-knowledge` |\n"
+                    "| Эпоха совместимости | `module-core-v1` |\n"
+                    "| Статус перехода | `partially-upgraded` |\n"
+                    "| Контур исполнения | `dual-readiness` |\n"
+                    "| Последняя задача перехода | `TASK-2026-1572` |\n"
+                    "| Дата обновления | `2026-04-23` |\n\n"
+                    "## Исторические задачи\n\n"
+                    "| TASK-ID | Класс | Статус совместимости | Путь к заметке миграции | Решение |\n"
+                    "|---------|-------|----------------------|--------------------------|---------|\n"
+                    "| `TASK-2026-1572` | `closed historical` | `note-only` | "
+                    "`knowledge/tasks/TASK-2026-1572-note-only/artifacts/migration/task-centric-knowledge-upgrade.md` | "
+                    "Закрытая historical-задача получила только migration note без переписывания protected fields. |\n"
+                ),
+                encoding="utf-8",
+            )
+
+            result, payload = self.run_json_query(project_root, "task", "show", "TASK-2026-1572", "--format", "json")
+            warning_codes = {warning["code"] for warning in payload["warnings"]}
+
+            self.assertEqual(result.returncode, 0)
+            self.assertNotIn("verification_matrix_missing", warning_codes)
 
     def test_waiting_task_raises_stage_into_blockers(self) -> None:
         with self.make_tempdir() as tmp_dir:
