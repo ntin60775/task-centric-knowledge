@@ -202,6 +202,23 @@ class FileLocalContractsRuntimeTests(unittest.TestCase):
 
             self.assertIn("project-relative путь", str(error.exception))
 
+    def test_load_policy_accepts_top_level_makefile_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = Path(tmp_dir)
+            (project_root / "Makefile").write_text("all:\n\t@true\n", encoding="utf-8")
+            policy_path = project_root / "knowledge/modules/M-ALPHA-alpha/file-local-policy.md"
+            policy_path.parent.mkdir(parents=True, exist_ok=True)
+            policy_path.write_text(
+                _policy_text(
+                    "| `Makefile` | `advisory` | `CHANGE_SUMMARY` | `BLOCK_BUILD` | Top-level governed file. |",
+                ),
+                encoding="utf-8",
+            )
+
+            policy = load_file_local_policy(project_root, policy_path)
+
+            self.assertEqual(policy.hot_spots_by_path["Makefile"].path_ref, "Makefile")
+
 
 if __name__ == "__main__":
     unittest.main()

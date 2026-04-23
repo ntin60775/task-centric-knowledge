@@ -244,10 +244,11 @@ def _is_within_project(path: Path, project_root: Path) -> bool:
 
 
 def _looks_like_file_path(value: str) -> bool:
-    normalized = value.strip()
-    return "/" in normalized or "\\" in normalized or normalized.endswith(
-        (".md", ".txt", ".json", ".yaml", ".yml", ".log", ".xml", ".py", ".bsl")
-    )
+    normalized = value.strip().replace("\\", "/")
+    if not normalized or normalized.endswith("/"):
+        return False
+    parts = [part for part in normalized.split("/") if part]
+    return bool(parts) and all(part not in {".", ".."} for part in parts)
 
 
 def _normalize_optional(value: str) -> str | None:
@@ -260,6 +261,8 @@ def _normalize_optional(value: str) -> str | None:
 def _normalize_project_file_ref(project_root: Path, value: str) -> str | None:
     normalized = normalize_table_value(value).replace("\\", "/")
     if not normalized or normalized == PLACEHOLDER or not _looks_like_file_path(normalized):
+        return None
+    if re.fullmatch(r"[A-Za-z]:/.*", normalized):
         return None
     resolved_root = project_root.resolve()
     candidate = Path(normalized)

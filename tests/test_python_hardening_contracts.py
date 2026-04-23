@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import ast
+import subprocess
+import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,9 +30,38 @@ class PythonHardeningContractsTests(unittest.TestCase):
 
     def test_makefile_keeps_offline_fallback_for_local_install(self) -> None:
         makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
-        self.assertIn("import setuptools", makefile)
+        self.assertIn("PYTHON_EXTERNALLY_MANAGED", makefile)
+        self.assertIn("PYTHON_HAS_SETUPTOOLS", makefile)
         self.assertIn("task_knowledge_local.pth", makefile)
         self.assertIn("install-wrapper", makefile)
+
+    def test_make_install_local_uses_wrapper_for_managed_python(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            user_bin = Path(tmp_dir) / "bin"
+            python_site = Path(tmp_dir) / "site-packages"
+            result = subprocess.run(
+                [
+                    "make",
+                    "install-local",
+                    f"PYTHON={sys.executable}",
+                    f"USER_BIN={user_bin}",
+                    f"PYTHON_SITE={python_site}",
+                    "PYTHON_EXTERNALLY_MANAGED=1",
+                    "PYTHON_HAS_PIP=1",
+                    "PYTHON_HAS_SETUPTOOLS=1",
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
+            wrapper_path = user_bin / "task-knowledge"
+            self.assertTrue(wrapper_path.exists())
+            self.assertIn("scripts/task_knowledge_cli.py", wrapper_path.read_text(encoding="utf-8"))
+            pth_path = python_site / "task_knowledge_local.pth"
+            self.assertEqual(pth_path.read_text(encoding="utf-8").strip(), str(ROOT / "scripts"))
 
     def test_primary_runtime_hotspots_remain_decomposed(self) -> None:
         limits = {

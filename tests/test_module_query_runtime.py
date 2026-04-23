@@ -316,6 +316,44 @@ class ModuleQueryRuntimeTests(TempRepoCase):
             self.assertEqual(module["relations"]["status"], "ready")
             self.assertEqual(module["relations"]["summary"]["depends_on_total"], 0)
 
+    def test_module_show_accepts_top_level_makefile_owned_surface(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = self.init_repo(Path(tmp_dir))
+            passport_text = _module_text("M-ALPHA", slug="alpha").replace(
+                "| `runtime` | `scripts/alpha.py` | `entrypoint` | Runtime path governed module. |",
+                "| `runtime` | `Makefile` | `build` | Top-level governed file. |",
+            )
+            self._write_module(
+                project_root,
+                "M-ALPHA",
+                "alpha",
+                passport_text=passport_text,
+            )
+            self._write_registry(
+                project_root,
+                "| `M-ALPHA` | `alpha` | `passport_ready` | `ready` | `knowledge/modules/M-ALPHA-alpha/module.md` | `knowledge/modules/M-ALPHA-alpha/verification.md` | `—` | `knowledge/modules/M-ALPHA-alpha/` | Shared passport truth for governed module. |",
+            )
+            (project_root / "Makefile").write_text("all:\n\t@true\n", encoding="utf-8")
+
+            payload, exit_code = dispatch_module(
+                argparse.Namespace(
+                    project_root=project_root,
+                    module_command="show",
+                    selector="M-ALPHA",
+                    query=None,
+                    readiness=None,
+                    source_state=None,
+                    limit=20,
+                )
+            )
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(payload["ok"])
+            module = payload["module"]
+            self.assertEqual(module["public_truth"]["owned_surface"][0]["path_ref"], "Makefile")
+            self.assertIn("Makefile", module["public_truth"]["governed_files"])
+            self.assertIn("Makefile", module["files"]["governed_files"])
+
     def test_module_show_warns_about_invalid_file_local_policy(self) -> None:
         with self.make_tempdir() as tmp_dir:
             project_root = self.init_repo(Path(tmp_dir))

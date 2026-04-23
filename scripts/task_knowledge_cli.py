@@ -292,6 +292,7 @@ def _add_borrowings_commands(subparsers) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
+        prog=COMMAND_NAME,
         description="Единый CLI для install/query/workflow контуров task-centric knowledge.",
         allow_abbrev=False,
     )
@@ -307,6 +308,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_workflow_commands(subparsers)
     _add_borrowings_commands(subparsers)
     return parser
+
 
 def _render_json(payload: dict[str, object]) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -580,6 +582,8 @@ def _workflow(args: argparse.Namespace) -> tuple[dict[str, object], int]:
     except Exception as error:  # noqa: BLE001
         payload = {
             "ok": False,
+            "command": "workflow",
+            "action": args.action if args.workflow_command == "publish" else args.workflow_command,
             "outcome": "failed",
             "task_id": None,
             "task_dir": str(task_dir),
@@ -594,6 +598,8 @@ def _workflow(args: argparse.Namespace) -> tuple[dict[str, object], int]:
                 }
             ],
         }
+    payload.setdefault("command", "workflow")
+    payload.setdefault("action", args.action if args.workflow_command == "publish" else args.workflow_command)
     return payload, 0 if payload["ok"] else 2
 
 

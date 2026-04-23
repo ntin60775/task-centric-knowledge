@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -16,17 +17,22 @@ CLI_SCRIPT = ROOT / "scripts" / "task_knowledge_cli.py"
 
 
 class TaskKnowledgeCliTests(TempRepoCase):
-    def run_cli(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def run_cli(self, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [sys.executable, str(CLI_SCRIPT), *args],
             capture_output=True,
             text=True,
             check=False,
             timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            env=env,
         )
 
-    def run_cli_json(self, *args: str) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
-        result = self.run_cli("--json", *args)
+    def run_cli_json(
+        self,
+        *args: str,
+        env: dict[str, str] | None = None,
+    ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
+        result = self.run_cli("--json", *args, env=env)
         return result, json.loads(result.stdout)
 
     def test_doctor_reports_project_and_runtime(self) -> None:
@@ -142,6 +148,29 @@ class TaskKnowledgeCliTests(TempRepoCase):
             self.assertEqual(payload["branch"], "main")
             self.assertEqual(git(project_root, "branch", "--show-current"), "main")
 
+    def test_workflow_publish_error_payload_keeps_command_and_action(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = self.init_repo(Path(tmp_dir))
+
+            result, payload = self.run_cli_json(
+                "workflow",
+                "publish",
+                "start",
+                "--project-root",
+                str(project_root),
+                "--task-dir",
+                str(project_root / "knowledge/tasks/TASK-2026-1399-missing"),
+                "--purpose",
+                "Broken publish fixture.",
+            )
+
+            self.assertEqual(result.returncode, 2)
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["command"], "workflow")
+            self.assertEqual(payload["action"], "start")
+            self.assertEqual(payload["outcome"], "failed")
+            self.assertEqual(payload["branch_action"], "failed")
+
     def test_borrowings_status_reports_missing_checkout_without_network(self) -> None:
         with self.make_tempdir() as tmp_dir:
             project_root = self.init_repo(Path(tmp_dir))
@@ -216,6 +245,32 @@ class TaskKnowledgeCliTests(TempRepoCase):
             self.assertEqual(payload["command"], "module find")
             self.assertEqual(payload["count"], 1)
             self.assertEqual(payload["items"][0]["module_id"], "M-ALPHA")
+
+    def test_help_surface_uses_canonical_command_name_for_all_entrypoints(self) -> None:
+        env = dict(os.environ)
+        pythonpath_parts = [str(ROOT / "scripts")]
+        existing_pythonpath = env.get("PYTHONPATH")
+        if existing_pythonpath:
+            pythonpath_parts.append(existing_pythonpath)
+        env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
+
+        script_help = self.run_cli("--help", env=env)
+        module_help = subprocess.run(
+            [sys.executable, "-m", "task_knowledge", "--help"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            cwd=ROOT,
+            env=env,
+        )
+
+        self.assertEqual(script_help.returncode, 0)
+        self.assertEqual(module_help.returncode, 0)
+        self.assertIn("usage: task-knowledge", script_help.stdout)
+        self.assertIn("usage: task-knowledge", module_help.stdout)
+        self.assertNotIn("task_knowledge_cli.py", script_help.stdout)
+        self.assertNotIn("__main__.py", module_help.stdout)
 
     def test_module_show_text_can_render_relations_section(self) -> None:
         with self.make_tempdir() as tmp_dir:
