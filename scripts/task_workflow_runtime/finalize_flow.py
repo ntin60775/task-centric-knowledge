@@ -71,6 +71,61 @@ def _default_commit_message(task_id: str, summary: str | None) -> str:
     return f"{task_id}: {suffix}"
 
 
+def _safe_current_git_branch(project_root: Path) -> str | None:
+    try:
+        return current_git_branch(project_root)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _safe_has_remote(project_root: Path) -> bool:
+    try:
+        return has_remote(project_root)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _detect_remote_presence(project_root: Path) -> tuple[bool, str | None]:
+    try:
+        return has_remote(project_root), None
+    except Exception as error:  # noqa: BLE001
+        return False, str(error)
+
+
+def _runtime_failure_payload(
+    *,
+    task_id: str,
+    task_dir: Path,
+    active_branch: str | None,
+    task_branch: str | None,
+    base_branch: str | None,
+    commit_created: bool,
+    commit_id: str | None,
+    detail: str,
+    next_action: str,
+    results: list[StepResult],
+    project_root: Path,
+) -> dict[str, object]:
+    return {
+        "ok": False,
+        "outcome": "blocked",
+        "task_id": task_id,
+        "task_dir": str(task_dir),
+        "action": "finalize",
+        "branch": active_branch or DELIVERY_ROW_PLACEHOLDER,
+        "branch_action": "blocked",
+        "task_branch": task_branch or DELIVERY_ROW_PLACEHOLDER,
+        "base_branch": base_branch or DELIVERY_ROW_PLACEHOLDER,
+        "commit_created": commit_created,
+        "commit_id": commit_id,
+        "merge_commit": None,
+        "remote_present": _safe_has_remote(project_root),
+        "results": [asdict(item) for item in results],
+        "blockers": [_blocker("git_runtime_failure", detail, next_action=next_action)],
+        "next_actions": [next_action],
+    }
+
+
 def finalize_task(
     project_root: Path,
     task_dir: Path,
@@ -91,11 +146,31 @@ def finalize_task(
     if not task_id or not short_name:
         raise ValueError("В task.md должны быть заполнены поля `ID задачи` и `Краткое имя`.")
 
-    active_branch = current_git_branch(project_root)
-    selected_base_branch = base_branch or infer_base_branch(project_root)
-    task_branch = _resolve_task_branch(fields)
+    active_branch: str | None = None
+    selected_base_branch: str | None = None
+    task_branch: str | None = None
     summary = task_summary_from_fields(fields) or derive_goal_summary_from_lines(lines) or short_name
     blockers: list[dict[str, str | None]] = []
+    try:
+        active_branch = current_git_branch(project_root)
+        selected_base_branch = base_branch or infer_base_branch(project_root)
+        task_branch = _resolve_task_branch(fields)
+    except Exception as error:  # noqa: BLE001
+        detail = f"Local finalize остановлен из-за ошибки git/runtime: {error}"
+        next_action = "Повторите finalize после устранения ошибки доступа к git и повторной проверки branch/base preflight."
+        return _runtime_failure_payload(
+            task_id=task_id,
+            task_dir=task_dir,
+            active_branch=active_branch,
+            task_branch=task_branch,
+            base_branch=selected_base_branch,
+            commit_created=False,
+            commit_id=None,
+            detail=detail,
+            next_action=next_action,
+            results=[],
+            project_root=project_root,
+        )
 
     if not active_branch:
         blockers.append(
@@ -122,37 +197,55 @@ def finalize_task(
             )
         )
 
-    if not branch_exists(project_root, selected_base_branch):
-        blockers.append(
-            _blocker(
-                "base_branch_missing",
-                f"Base-ветка `{selected_base_branch}` не найдена локально.",
-                next_action="Создайте или явно укажите существующую base-ветку через `--base-branch`.",
-            )
-        )
-
-    delivery_units = collect_delivery_units(project_root, task_dir, fields, lines)
-    open_units = [unit for unit in delivery_units if unit.status in OPEN_DELIVERY_STATUSES]
-    if open_units:
-        unit_ids = ", ".join(unit.unit_id for unit in open_units)
-        blockers.append(
-            _blocker(
-                "open_delivery_units",
-                f"Нельзя завершить задачу, пока delivery units не закрыты: {unit_ids}.",
-                next_action="Доведите все delivery units до `merged` или `closed`, затем повторите finalize.",
-                path=str(task_file),
-            )
-        )
-
-    if active_branch and active_branch != selected_base_branch and branch_exists(project_root, selected_base_branch):
-        if not _is_ancestor(project_root, selected_base_branch, active_branch):
+    try:
+        base_branch_exists = branch_exists(project_root, selected_base_branch)
+        if not base_branch_exists:
             blockers.append(
                 _blocker(
-                    "base_branch_diverged",
-                    f"Base-ветка `{selected_base_branch}` ушла вперёд и fast-forward finalize небезопасен.",
-                    next_action="Сначала вручную синхронизируйте task-ветку с base-веткой, затем повторите finalize.",
+                    "base_branch_missing",
+                    f"Base-ветка `{selected_base_branch}` не найдена локально.",
+                    next_action="Создайте или явно укажите существующую base-ветку через `--base-branch`.",
                 )
             )
+
+        delivery_units = collect_delivery_units(project_root, task_dir, fields, lines)
+        open_units = [unit for unit in delivery_units if unit.status in OPEN_DELIVERY_STATUSES]
+        if open_units:
+            unit_ids = ", ".join(unit.unit_id for unit in open_units)
+            blockers.append(
+                _blocker(
+                    "open_delivery_units",
+                    f"Нельзя завершить задачу, пока delivery units не закрыты: {unit_ids}.",
+                    next_action="Доведите все delivery units до `merged` или `closed`, затем повторите finalize.",
+                    path=str(task_file),
+                )
+            )
+
+        if active_branch and active_branch != selected_base_branch and base_branch_exists:
+            if not _is_ancestor(project_root, selected_base_branch, active_branch):
+                blockers.append(
+                    _blocker(
+                        "base_branch_diverged",
+                        f"Base-ветка `{selected_base_branch}` ушла вперёд и fast-forward finalize небезопасен.",
+                        next_action="Сначала вручную синхронизируйте task-ветку с base-веткой, затем повторите finalize.",
+                    )
+                )
+    except Exception as error:  # noqa: BLE001
+        detail = f"Local finalize остановлен из-за ошибки git/runtime: {error}"
+        next_action = "Повторите finalize после устранения ошибки доступа к git и повторной проверки preflight-инвариантов."
+        return _runtime_failure_payload(
+            task_id=task_id,
+            task_dir=task_dir,
+            active_branch=active_branch,
+            task_branch=task_branch,
+            base_branch=selected_base_branch,
+            commit_created=False,
+            commit_id=None,
+            detail=detail,
+            next_action=next_action,
+            results=[],
+            project_root=project_root,
+        )
 
     if blockers:
         return {
@@ -167,7 +260,7 @@ def finalize_task(
             "base_branch": selected_base_branch,
             "commit_created": False,
             "merge_commit": None,
-            "remote_present": has_remote(project_root),
+            "remote_present": _safe_has_remote(project_root),
             "results": [],
             "blockers": blockers,
             "next_actions": [item["next_action"] for item in blockers],
@@ -285,32 +378,37 @@ def finalize_task(
                     str(task_file),
                 )
             )
-        current_branch = current_git_branch(project_root) or DELIVERY_ROW_PLACEHOLDER
+        current_branch = _safe_current_git_branch(project_root) or active_branch or DELIVERY_ROW_PLACEHOLDER
         detail = f"Local finalize остановлен из-за ошибки git/runtime: {error}"
         if not commit_created:
             next_action = "Повторите finalize после устранения ошибки доступа к git; task truth уже восстановлен."
         else:
             next_action = "Проверьте локальный finalize commit и повторите merge/checkout после устранения ошибки git."
-        return {
-            "ok": False,
-            "outcome": "blocked",
-            "task_id": task_id,
-            "task_dir": str(task_dir),
-            "action": "finalize",
-            "branch": current_branch,
-            "branch_action": "blocked",
-            "task_branch": task_branch,
-            "base_branch": selected_base_branch,
-            "commit_created": commit_created,
-            "commit_id": commit_id,
-            "merge_commit": None,
-            "remote_present": has_remote(project_root),
-            "results": [asdict(item) for item in results],
-            "blockers": [_blocker("git_runtime_failure", detail, next_action=next_action)],
-            "next_actions": [next_action],
-        }
+        return _runtime_failure_payload(
+            task_id=task_id,
+            task_dir=task_dir,
+            active_branch=current_branch,
+            task_branch=task_branch,
+            base_branch=selected_base_branch,
+            commit_created=commit_created,
+            commit_id=commit_id,
+            detail=detail,
+            next_action=next_action,
+            results=results,
+            project_root=project_root,
+        )
 
-    if has_remote(project_root):
+    remote_present, remote_error = _detect_remote_presence(project_root)
+    if remote_error:
+        results.append(
+            StepResult(
+                "remote",
+                "warning",
+                f"Не удалось проверить связанный remote после local finalize: {remote_error}",
+                None,
+            )
+        )
+    elif remote_present:
         results.append(
             StepResult(
                 "remote",
@@ -333,7 +431,7 @@ def finalize_task(
         "commit_created": commit_created,
         "commit_id": commit_id,
         "merge_commit": merge_commit,
-        "remote_present": has_remote(project_root),
+        "remote_present": remote_present,
         "results": [asdict(item) for item in results],
         "blockers": [],
         "next_actions": [],

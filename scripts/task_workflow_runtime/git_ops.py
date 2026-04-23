@@ -11,7 +11,6 @@ from .models import DELIVERY_ROW_PLACEHOLDER, VALID_HOSTS, VALID_PUBLICATION_TYP
 
 
 SUBPROCESS_TIMEOUT_SECONDS = 120
-TIMEOUT_RETURN_CODE = 124
 
 
 def _timeout_stream(value: str | bytes | None) -> str:
@@ -33,10 +32,10 @@ def _timeout_completed_process(
     stdout = _timeout_stream(error.stdout)
     stderr = _timeout_stream(error.stderr)
     if stderr:
-        stderr = f"{stderr.rstrip()}\n{message}"
-    else:
-        stderr = message
-    return subprocess.CompletedProcess(command, TIMEOUT_RETURN_CODE, stdout=stdout, stderr=stderr)
+        return f"{message}\n{stderr.rstrip()}"
+    if stdout:
+        return f"{message}\n{stdout.rstrip()}"
+    return message
 
 
 def run_git(project_root: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -50,7 +49,7 @@ def run_git(project_root: Path, *args: str, check: bool = True) -> subprocess.Co
             timeout=SUBPROCESS_TIMEOUT_SECONDS,
         )
     except subprocess.TimeoutExpired as error:
-        completed = _timeout_completed_process(command, error, kind="git command")
+        raise RuntimeError(_timeout_completed_process(command, error, kind="git command")) from error
     if check and completed.returncode != 0:
         stderr = completed.stderr.strip()
         stdout = completed.stdout.strip()
@@ -229,7 +228,7 @@ def run_command(
             timeout=SUBPROCESS_TIMEOUT_SECONDS,
         )
     except subprocess.TimeoutExpired as error:
-        completed = _timeout_completed_process(command, error, kind="command")
+        raise RuntimeError(_timeout_completed_process(command, error, kind="command")) from error
     if check and completed.returncode != 0:
         stderr = completed.stderr.strip()
         stdout = completed.stdout.strip()

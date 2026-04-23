@@ -420,6 +420,186 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self.assertEqual((task_dir / "task.md").read_text(encoding="utf-8"), original_task_text)
             self.assertEqual((project_root / "knowledge/tasks/registry.md").read_text(encoding="utf-8"), original_registry_text)
 
+    def test_finalize_task_reports_git_runtime_failure_when_base_branch_probe_times_out(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._init_repo(Path(tmp_dir))
+            git(project_root, "branch", "-M", "main")
+            self._write_registry(project_root)
+            task_dir = project_root / "knowledge/tasks/TASK-2026-1503-finalize-timeout"
+            self._write_task(
+                task_dir,
+                task_id="TASK-2026-1503",
+                slug="finalize-timeout",
+                branch="task/task-2026-1503-finalize-timeout",
+                status="в работе",
+                human_description="Тестовая задача для timeout preflight finalize.",
+            )
+            self._register_task(project_root, task_dir, "Тестовая задача для timeout preflight finalize.")
+            self._commit_all(project_root, "prepare finalize timeout task")
+
+            git(project_root, "checkout", "-b", "task/task-2026-1503-finalize-timeout")
+            workflow_module.sync_task(
+                project_root,
+                task_dir,
+                create_branch=False,
+                register_if_missing=False,
+                summary=None,
+                branch_name="task/task-2026-1503-finalize-timeout",
+                inherit_branch_from_parent=False,
+                today="2026-04-23",
+            )
+            original_task_text = (task_dir / "task.md").read_text(encoding="utf-8")
+            original_registry_text = (project_root / "knowledge/tasks/registry.md").read_text(encoding="utf-8")
+            def flaky_infer_base_branch(project_root_param: Path) -> str:
+                raise RuntimeError("git command timed out after 120s: git -C /tmp/project symbolic-ref --quiet refs/remotes/origin/HEAD")
+
+            with mock.patch.object(finalize_flow_module, "infer_base_branch", side_effect=flaky_infer_base_branch):
+                with mock.patch.object(
+                    finalize_flow_module,
+                    "has_remote",
+                    side_effect=RuntimeError("git command timed out after 120s: git -C /tmp/project remote"),
+                ):
+                    payload = workflow_module.finalize_task(
+                        project_root,
+                        task_dir,
+                        base_branch=None,
+                        commit_message="TASK-2026-1503: finalize",
+                        today="2026-04-23",
+                    )
+
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["outcome"], "blocked")
+            self.assertEqual(payload["blockers"][0]["key"], "git_runtime_failure")
+            self.assertIn("git command timed out after 120s", payload["blockers"][0]["detail"])
+            self.assertFalse(payload["commit_created"])
+            self.assertFalse(payload["remote_present"])
+            self.assertEqual(git(project_root, "branch", "--show-current"), "task/task-2026-1503-finalize-timeout")
+            self.assertEqual((task_dir / "task.md").read_text(encoding="utf-8"), original_task_text)
+            self.assertEqual((project_root / "knowledge/tasks/registry.md").read_text(encoding="utf-8"), original_registry_text)
+
+    def test_finalize_task_reports_structured_runtime_failure_when_late_preflight_probe_times_out(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._init_repo(Path(tmp_dir))
+            git(project_root, "branch", "-M", "main")
+            self._write_registry(project_root)
+            task_dir = project_root / "knowledge/tasks/TASK-2026-1504-finalize-late-timeout"
+            self._write_task(
+                task_dir,
+                task_id="TASK-2026-1504",
+                slug="finalize-late-timeout",
+                branch="task/task-2026-1504-finalize-late-timeout",
+                status="в работе",
+                human_description="Тестовая задача для позднего timeout в finalize preflight.",
+            )
+            self._register_task(project_root, task_dir, "Тестовая задача для позднего timeout в finalize preflight.")
+            self._commit_all(project_root, "prepare late finalize timeout task")
+
+            git(project_root, "checkout", "-b", "task/task-2026-1504-finalize-late-timeout")
+            workflow_module.sync_task(
+                project_root,
+                task_dir,
+                create_branch=False,
+                register_if_missing=False,
+                summary=None,
+                branch_name="task/task-2026-1504-finalize-late-timeout",
+                inherit_branch_from_parent=False,
+                today="2026-04-23",
+            )
+
+            with mock.patch.object(
+                finalize_flow_module,
+                "branch_exists",
+                side_effect=RuntimeError("git command timed out after 120s: git -C /tmp/project branch --list main"),
+            ):
+                with mock.patch.object(
+                    finalize_flow_module,
+                    "has_remote",
+                    side_effect=RuntimeError("git command timed out after 120s: git -C /tmp/project remote"),
+                ):
+                    payload = workflow_module.finalize_task(
+                        project_root,
+                        task_dir,
+                        base_branch="main",
+                        commit_message="TASK-2026-1504: finalize",
+                        today="2026-04-23",
+                    )
+
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["outcome"], "blocked")
+            self.assertEqual(payload["blockers"][0]["key"], "git_runtime_failure")
+            self.assertIn("git command timed out after 120s", payload["blockers"][0]["detail"])
+            self.assertFalse(payload["remote_present"])
+            self.assertEqual(payload["branch"], "task/task-2026-1504-finalize-late-timeout")
+
+    def test_finalize_task_runtime_failure_payload_survives_error_path_branch_probe_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._init_repo(Path(tmp_dir))
+            git(project_root, "branch", "-M", "main")
+            self._write_registry(project_root)
+            task_dir = project_root / "knowledge/tasks/TASK-2026-1505-finalize-error-timeout"
+            self._write_task(
+                task_dir,
+                task_id="TASK-2026-1505",
+                slug="finalize-error-timeout",
+                branch="task/task-2026-1505-finalize-error-timeout",
+                status="в работе",
+                human_description="Тестовая задача для timeout в error-path finalize.",
+            )
+            self._register_task(project_root, task_dir, "Тестовая задача для timeout в error-path finalize.")
+            self._commit_all(project_root, "prepare finalize error-path timeout task")
+
+            git(project_root, "checkout", "-b", "task/task-2026-1505-finalize-error-timeout")
+            workflow_module.sync_task(
+                project_root,
+                task_dir,
+                create_branch=False,
+                register_if_missing=False,
+                summary=None,
+                branch_name="task/task-2026-1505-finalize-error-timeout",
+                inherit_branch_from_parent=False,
+                today="2026-04-23",
+            )
+            original_task_text = (task_dir / "task.md").read_text(encoding="utf-8")
+            original_registry_text = (project_root / "knowledge/tasks/registry.md").read_text(encoding="utf-8")
+            real_run_git = finalize_flow_module.run_git
+            real_current_git_branch = finalize_flow_module.current_git_branch
+            branch_calls = 0
+
+            def flaky_run_git(project_root_param: Path, *args: str, check: bool = True):
+                if args == ("add", "-A"):
+                    raise RuntimeError("fatal: simulated git add failure")
+                return real_run_git(project_root_param, *args, check=check)
+
+            def flaky_current_git_branch(project_root_param: Path) -> str:
+                nonlocal branch_calls
+                branch_calls += 1
+                if branch_calls >= 2:
+                    raise RuntimeError("git command timed out after 120s: git -C /tmp/project branch --show-current")
+                return real_current_git_branch(project_root_param)
+
+            with mock.patch.object(finalize_flow_module, "run_git", side_effect=flaky_run_git):
+                with mock.patch.object(finalize_flow_module, "current_git_branch", side_effect=flaky_current_git_branch):
+                    with mock.patch.object(
+                        finalize_flow_module,
+                        "has_remote",
+                        side_effect=RuntimeError("git command timed out after 120s: git -C /tmp/project remote"),
+                    ):
+                        payload = workflow_module.finalize_task(
+                            project_root,
+                            task_dir,
+                            base_branch="main",
+                            commit_message="TASK-2026-1505: finalize",
+                            today="2026-04-23",
+                        )
+
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["outcome"], "blocked")
+            self.assertEqual(payload["blockers"][0]["key"], "git_runtime_failure")
+            self.assertFalse(payload["remote_present"])
+            self.assertEqual(payload["branch"], "task/task-2026-1505-finalize-error-timeout")
+            self.assertEqual((task_dir / "task.md").read_text(encoding="utf-8"), original_task_text)
+            self.assertEqual((project_root / "knowledge/tasks/registry.md").read_text(encoding="utf-8"), original_registry_text)
+
     def test_sync_task_does_not_duplicate_existing_human_description(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             project_root = self._init_repo(Path(tmp_dir))

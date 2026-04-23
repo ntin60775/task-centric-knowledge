@@ -152,6 +152,122 @@ class InstallSkillGovernanceTests(unittest.TestCase):
             dependencies = {item["name"]: item for item in payload["dependencies"]}
             self.assertEqual(dependencies["knowledge_contour"]["status"], "misconfigured")
 
+    def test_doctor_deps_surfaces_git_timeout_without_false_non_repo_diagnostic(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._init_repo(Path(tmp_dir))
+            which_map = {
+                "python3": shutil.which("python3"),
+                "git": shutil.which("git"),
+                "gh": None,
+                "glab": None,
+            }
+            with mock.patch.object(
+                doctor_runtime,
+                "_command_exists",
+                side_effect=lambda command: which_map.get(command),
+            ):
+                with mock.patch.object(
+                    doctor_runtime,
+                    "_git_output",
+                    return_value=(False, "git command timed out after 120s: git -C /tmp/demo rev-parse --git-dir", "timeout"),
+                ):
+                    payload = install_module.doctor_deps(project_root, ROOT, "generic")
+
+            self.assertFalse(payload["ok"])
+            dependencies = {item["name"]: item for item in payload["dependencies"]}
+            git_repository = dependencies["git_repository"]
+            self.assertEqual(git_repository["status"], "misconfigured")
+            self.assertIn("git command timed out after 120s", git_repository["detail"])
+            self.assertNotIn("не выглядит git-репозиторием", git_repository["detail"])
+            self.assertEqual(dependencies["publish_remote"]["status"], "not-applicable")
+
+    def test_doctor_deps_keeps_non_repo_diagnosis_for_directory_without_git(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = Path(tmp_dir) / "project"
+            project_root.mkdir()
+            which_map = {
+                "python3": shutil.which("python3"),
+                "git": shutil.which("git"),
+                "gh": None,
+                "glab": None,
+            }
+            with mock.patch.object(
+                doctor_runtime,
+                "_command_exists",
+                side_effect=lambda command: which_map.get(command),
+            ):
+                payload = install_module.doctor_deps(project_root, ROOT, "generic")
+
+            self.assertFalse(payload["ok"])
+            dependencies = {item["name"]: item for item in payload["dependencies"]}
+            git_repository = dependencies["git_repository"]
+            self.assertEqual(git_repository["status"], "misconfigured")
+            self.assertIn("не выглядит git-репозиторием", git_repository["detail"])
+
+    def test_doctor_deps_surfaces_publish_remote_timeout_without_false_missing_remote_diagnostic(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._init_repo(Path(tmp_dir))
+            which_map = {
+                "python3": shutil.which("python3"),
+                "git": shutil.which("git"),
+                "gh": None,
+                "glab": None,
+            }
+            with mock.patch.object(
+                doctor_runtime,
+                "_command_exists",
+                side_effect=lambda command: which_map.get(command),
+            ):
+                with mock.patch.object(
+                    doctor_runtime,
+                    "_git_output",
+                    side_effect=[
+                        (True, ".git", None),
+                        (True, "origin", None),
+                        (False, "git command timed out after 120s: git -C /tmp/demo remote get-url origin", "timeout"),
+                    ],
+                ):
+                    payload = install_module.doctor_deps(project_root, ROOT, "generic")
+
+            dependencies = {item["name"]: item for item in payload["dependencies"]}
+            publish_remote = dependencies["publish_remote"]
+            self.assertEqual(publish_remote["status"], "misconfigured")
+            self.assertIn("git command timed out after 120s", publish_remote["detail"])
+            self.assertNotIn("не найден", publish_remote["detail"])
+            self.assertEqual(dependencies["gh"]["status"], "not-applicable")
+
+    def test_doctor_deps_surfaces_broken_publish_remote_without_false_missing_remote_diagnostic(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._init_repo(Path(tmp_dir))
+            which_map = {
+                "python3": shutil.which("python3"),
+                "git": shutil.which("git"),
+                "gh": None,
+                "glab": None,
+            }
+            with mock.patch.object(
+                doctor_runtime,
+                "_command_exists",
+                side_effect=lambda command: which_map.get(command),
+            ):
+                with mock.patch.object(
+                    doctor_runtime,
+                    "_git_output",
+                    side_effect=[
+                        (True, ".git", None),
+                        (True, "origin", None),
+                        (False, "fatal: unable to read remote url for origin", None),
+                    ],
+                ):
+                    payload = install_module.doctor_deps(project_root, ROOT, "generic")
+
+            dependencies = {item["name"]: item for item in payload["dependencies"]}
+            publish_remote = dependencies["publish_remote"]
+            self.assertEqual(publish_remote["status"], "misconfigured")
+            self.assertIn("unable to read remote url", publish_remote["detail"])
+            self.assertNotIn("не найден", publish_remote["detail"])
+            self.assertEqual(dependencies["gh"]["status"], "not-applicable")
+
     def test_migrate_cleanup_plan_discloses_scope_and_protected_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             project_root = self._init_repo(Path(tmp_dir))

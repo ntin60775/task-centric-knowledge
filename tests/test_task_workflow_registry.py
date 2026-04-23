@@ -1,8 +1,18 @@
 from __future__ import annotations
 
+import sys
+import unittest.mock as mock
 import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS_DIR = ROOT / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
 
 from task_workflow_runtime.models import DeliveryUnit, DeliveryUnitVersion
+from task_workflow_runtime import registry_sync
 from task_workflow_runtime.registry_sync import merge_delivery_unit_versions, preferred_registry_summary
 
 
@@ -56,6 +66,17 @@ class TaskWorkflowRegistryTests:
         assert merged.publication_type == "pr"
         assert merged.url == "https://example.test/pr/1"
         assert merged.cleanup == "ожидается"
+
+    def test_read_registry_lines_timeout_is_not_treated_as_missing_ref(self) -> None:
+        with mock.patch.object(
+            registry_sync,
+            "run_git",
+            side_effect=RuntimeError("git command timed out after 120s: git -C /tmp/project show main:knowledge/tasks/registry.md"),
+        ):
+            with self.assertRaises(RuntimeError) as error_ctx:
+                registry_sync.read_registry_lines(Path("/tmp/project"), ref_name="main")
+
+        assert "git command timed out after 120s" in str(error_ctx.exception)
 
 
 class TestTaskWorkflowRegistry(TaskWorkflowRegistryTests, unittest.TestCase):

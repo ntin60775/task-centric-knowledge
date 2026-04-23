@@ -1,4 +1,4 @@
-# SDD TASK-2026-0030 — project-review-hardening
+# Спецификация TASK-2026-0030 — project-review-hardening
 
 ## Контекст
 
@@ -6,6 +6,8 @@
 
 1. Временные git-репозитории в тестах создавались через `git init` без нормализации ветки. Это делало regression-сценарии зависимыми от глобальной настройки `init.defaultBranch` и ломало проверки, где task metadata ожидает ветку `main`.
 2. Ряд subprocess/git-вызовов в тестовом контуре и runtime-helper-ах выполнялся без timeout. При зависшем дочернем процессе regression-run мог блокироваться без диагностичного выхода.
+3. После первого fix-pass сохранилась ложная диагностика timeout-сценариев: `doctor` мог сообщать `не git-репозиторий` или `remote не найден`, а `git_ops` при `check=False` мог маскировать timeout под отсутствие ветки, ref или remote.
+4. `finalize_flow` и `test_task_workflow_registry.py` сохраняли fail-safe пробелы: structured blocker-payload мог сорваться при повторном timeout в error-path, а isolated discover отдельного registry-test зависел от побочного `sys.path` bootstrap.
 
 ## Границы изменения
 
@@ -28,14 +30,21 @@
 - `INV-04`: subprocess-based тестовые helper-ы не должны блокировать regression-run бесконечно.
 - `INV-05`: runtime git/command helper-ы должны иметь bounded timeout и сохранять существующую модель ошибок.
 - `INV-06`: исправление не должно ломать импорт, синтаксис и полный unittest regression-контур.
+- `INV-07`: `doctor-deps` должен отличать timeout git-проверок от реальных `non-repo` и `missing remote` сценариев и не выдавать ложную remediation.
+- `INV-08`: timeout в `run_git(..., check=False)` и `run_command(..., check=False)` должен подниматься как runtime-ошибка, а не интерпретироваться вызывающим кодом как `missing ref/branch/remote`.
+- `INV-09`: local `finalize` обязан возвращать structured `git_runtime_failure` payload даже при timeout в позднем preflight, error-path и remote-проверке.
+- `INV-10`: `tests/test_task_workflow_registry.py` должен запускаться standalone через `unittest discover` без скрытой зависимости от импорта других тестов.
 
 ## Реализация
 
 - В `tests/task_workflow_testlib.py`, `tests/test_task_workflow.py`, `tests/test_install_skill_governance.py` и `tests/test_borrowings_runtime.py` нормализована ветка временных git-репозиториев через `git branch -M main`.
 - В subprocess-based тестовых helper-ах добавлен `SUBPROCESS_TIMEOUT_SECONDS = 30`.
-- В `scripts/task_workflow_runtime/git_ops.py` добавлена timeout-обработка для `run_git` и `run_command` с return code `124` при `check=False` и `RuntimeError` при `check=True`.
+- В `scripts/task_workflow_runtime/git_ops.py` timeout-обработка ужесточена: `run_git` и `run_command` поднимают `RuntimeError` даже при `check=False`, чтобы timeout не маскировался под штатный `returncode != 0`.
 - В `scripts/borrowings_runtime/grace.py` добавлена timeout-обработка git status/rev-parse; при timeout helper возвращает тот же safe-failure результат, что и при невозможности получить git-состояние.
-- В `scripts/install_skill_runtime/doctor.py` git diagnostics ограничены timeout и возвращают misconfigured diagnostic вместо зависания.
+- В `scripts/install_skill_runtime/doctor.py` git diagnostics ограничены timeout, `_git_repository_check()` различает machine-readable timeout reason и реальный `non-repo` сценарий, а `_first_remote()` больше не маскирует timeout или сбой `git remote get-url` под отсутствие remote.
+- В `scripts/task_workflow_runtime/finalize_flow.py` добавлены safe-helper-ы для branch/remote failure-path и structured blocker-payload для поздних git timeout.
+- `tests/test_task_workflow_registry.py` получил собственный `scripts/` bootstrap и теперь проходит isolated discover без порядка импорта.
+- Добавлены регрессии `tests/test_git_ops_runtime.py`, новые doctor-сценарии в `tests/test_install_skill_governance.py` и timeout/failure-path сценарии в `tests/test_task_workflow.py`.
 
 ## Проверки
 
