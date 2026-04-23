@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
 
@@ -26,6 +26,22 @@ from .registry_sync import (
     update_registry,
 )
 from .task_markdown import read_task_fields, task_summary_from_fields, update_task_file
+
+
+
+@dataclass(frozen=True)
+class BackfillContext:
+    project_root: Path
+    task_dir: Path
+    task_file: Path
+    scope: str
+    summary: str | None
+    today: str
+    task_id: str
+    task_class: str
+    fields: dict[str, str]
+    canonical_summary: str
+    recorded_branch: str
 
 
 VALID_BACKFILL_SCOPES = {"compatibility"}
@@ -75,200 +91,240 @@ def resolve_target_branch(
     return default_branch_name(task_id, short_name)
 
 
-def backfill_task(
+def _resolve_task_dir(project_root: Path, task_dir: Path) -> Path:
+    if task_dir.is_absolute():
+        return task_dir.resolve()
+    return (project_root / task_dir).resolve()
+
+
+def _load_backfill_context(
     project_root: Path,
     task_dir: Path,
     *,
     scope: str,
     summary: str | None,
-    today: str | None = None,
-) -> dict[str, object]:
+    today: str | None,
+) -> BackfillContext:
     if scope not in VALID_BACKFILL_SCOPES:
         raise ValueError(f"Некорректный backfill scope: {scope!r}.")
 
     project_root = project_root.resolve()
-    task_dir = (project_root / task_dir).resolve() if not task_dir.is_absolute() else task_dir.resolve()
+    task_dir = _resolve_task_dir(project_root, task_dir)
     task_file = task_dir / "task.md"
     if not task_file.exists():
         raise ValueError(f"Не найден task.md по пути {task_file}.")
 
-    today_value = today or date.today().isoformat()
-    task_id = task_id_from_task_file(task_file)
-    task_class = task_class_from_task_file(task_file)
     _, fields = read_task_fields(task_file)
-    canonical_summary = task_summary_from_fields(fields) or summary or "—"
-    results: list[StepResult] = []
-    branch = fields.get("Ветка", "").strip()
-    branch_action = "backfill_only"
-
-    if task_class == "reference":
-        state = ensure_repo_upgrade_state(
-            project_root,
-            epoch="module-core-v1",
-            last_upgrade_task=task_id,
-            today=today_value,
-        )
-        state = update_entry_status(
-            state,
-            task_id=task_id,
-            backfill_status="manual-reference",
-            migration_note="—",
-            decision="Справочная задача исключена из auto-backfill и оставлена на ручное решение.",
-            last_upgrade_task=task_id,
-            today=today_value,
-        )
-        write_repo_upgrade_state(state)
-        results.append(
-            StepResult(
-                "reference",
-                "ok",
-                "Reference-задача не мутировалась; в repo upgrade-state зафиксировано manual-reference решение.",
-                str(task_file),
-            )
-        )
-        results.append(
-            StepResult(
-                "upgrade_state",
-                "ok",
-                "Repo upgrade-state обновлён после manual-reference решения.",
-                str(state.path),
-            )
-        )
-        return {
-            "ok": True,
-            "task_id": task_id,
-            "task_dir": str(task_dir),
-            "action": "backfill",
-            "scope": scope,
-            "task_class": task_class,
-            "backfill_status": "manual-reference",
-            "branch": branch,
-            "branch_action": branch_action,
-            "results": [asdict(item) for item in results],
-        }
-
-    if task_class == "closed historical":
-        note_rel = write_task_migration_note(
-            project_root,
-            task_dir,
-            epoch_before="legacy-v1",
-            epoch_after="module-core-v1",
-            task_class=task_class,
-            updated_items=[
-                "Создан task-local migration note.",
-                "Repo upgrade-state синхронизирован с controlled backfill.",
-            ],
-            untouched_items=[
-                "Historical narrative, даты, delivery fields и protected metadata не переписывались.",
-            ],
-            basis_task_id=task_id,
-            today=today_value,
-        )
-        results.append(
-            StepResult(
-                "migration_note",
-                "ok",
-                "Task-local migration note создан.",
-                str(task_dir / "artifacts/migration/task-centric-knowledge-upgrade.md"),
-            )
-        )
-        state = ensure_repo_upgrade_state(
-            project_root,
-            epoch="module-core-v1",
-            last_upgrade_task=task_id,
-            today=today_value,
-        )
-        state = update_entry_status(
-            state,
-            task_id=task_id,
-            backfill_status="note-only",
-            migration_note=note_rel,
-            decision="Закрытая historical-задача получила только migration note без переписывания protected fields.",
-            last_upgrade_task=task_id,
-            today=today_value,
-        )
-        write_repo_upgrade_state(state)
-        branch = historical_branch_from_fields(fields)
-        results.append(
-            StepResult(
-                "historical_task",
-                "ok",
-                "Closed historical задача оставлена без изменения task-truth; применён только note-only backfill.",
-                str(task_file),
-            )
-        )
-        results.append(
-            StepResult(
-                "upgrade_state",
-                "ok",
-                "Repo upgrade-state обновлён после note-only backfill.",
-                str(state.path),
-            )
-        )
-        return {
-            "ok": True,
-            "task_id": task_id,
-            "task_dir": str(task_dir),
-            "action": "backfill",
-            "scope": scope,
-            "task_class": task_class,
-            "backfill_status": "note-only",
-            "branch": branch,
-            "branch_action": branch_action,
-            "results": [asdict(item) for item in results],
-        }
-
-    sync_payload = sync_task(
-        project_root,
-        task_dir,
-        create_branch=False,
-        register_if_missing=True,
-        summary=summary or canonical_summary if canonical_summary != "—" else None,
-        branch_name=None,
-        inherit_branch_from_parent=False,
-        today=today_value,
+    task_id = task_id_from_task_file(task_file)
+    return BackfillContext(
+        project_root=project_root,
+        task_dir=task_dir,
+        task_file=task_file,
+        scope=scope,
+        summary=summary,
+        today=today or date.today().isoformat(),
+        task_id=task_id,
+        task_class=task_class_from_task_file(task_file),
+        fields=fields,
+        canonical_summary=task_summary_from_fields(fields) or summary or "—",
+        recorded_branch=fields.get("Ветка", "").strip(),
     )
-    note_rel = write_task_migration_note(
-        project_root,
-        task_dir,
+
+
+def _backfill_payload(
+    ctx: BackfillContext,
+    *,
+    backfill_status: str,
+    branch: object,
+    branch_action: str,
+    results: list[StepResult],
+    remote_present: object | None = None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "ok": True,
+        "task_id": ctx.task_id,
+        "task_dir": str(ctx.task_dir),
+        "action": "backfill",
+        "scope": ctx.scope,
+        "task_class": ctx.task_class,
+        "backfill_status": backfill_status,
+        "branch": branch,
+        "branch_action": branch_action,
+        "results": [asdict(item) for item in results],
+    }
+    if remote_present is not None:
+        payload["remote_present"] = remote_present
+    return payload
+
+
+def _record_upgrade_state(
+    ctx: BackfillContext,
+    *,
+    backfill_status: str,
+    migration_note: str,
+    decision: str,
+):
+    state = ensure_repo_upgrade_state(
+        ctx.project_root,
+        epoch="module-core-v1",
+        last_upgrade_task=ctx.task_id,
+        today=ctx.today,
+    )
+    state = update_entry_status(
+        state,
+        task_id=ctx.task_id,
+        backfill_status=backfill_status,
+        migration_note=migration_note,
+        decision=decision,
+        last_upgrade_task=ctx.task_id,
+        today=ctx.today,
+    )
+    write_repo_upgrade_state(state)
+    return state
+
+
+def _backfill_reference_task(ctx: BackfillContext) -> dict[str, object]:
+    results: list[StepResult] = []
+    state = _record_upgrade_state(
+        ctx,
+        backfill_status="manual-reference",
+        migration_note="—",
+        decision="Справочная задача исключена из auto-backfill и оставлена на ручное решение.",
+    )
+    results.append(
+        StepResult(
+            "reference",
+            "ok",
+            "Reference-задача не мутировалась; в repo upgrade-state зафиксировано manual-reference решение.",
+            str(ctx.task_file),
+        )
+    )
+    results.append(
+        StepResult(
+            "upgrade_state",
+            "ok",
+            "Repo upgrade-state обновлён после manual-reference решения.",
+            str(state.path),
+        )
+    )
+    return _backfill_payload(
+        ctx,
+        backfill_status="manual-reference",
+        branch=ctx.recorded_branch,
+        branch_action="backfill_only",
+        results=results,
+    )
+
+
+def _write_backfill_migration_note(ctx: BackfillContext, *, active_task: bool) -> str:
+    updated_items = [
+        "Создан task-local migration note.",
+        "Repo upgrade-state синхронизирован с controlled backfill.",
+    ]
+    untouched_items = [
+        "Historical narrative, даты, delivery fields и protected metadata не переписывались.",
+    ]
+    if active_task:
+        updated_items.append("Task sync обновил allowlisted summary/branch metadata для active-задачи.")
+        untouched_items = ["Narrative-секции задачи не переписывались автоматически."]
+    return write_task_migration_note(
+        ctx.project_root,
+        ctx.task_dir,
         epoch_before="legacy-v1",
         epoch_after="module-core-v1",
-        task_class=task_class,
-        updated_items=[
-            "Создан task-local migration note.",
-            "Repo upgrade-state синхронизирован с controlled backfill.",
-            "Task sync обновил allowlisted summary/branch metadata для active-задачи.",
-        ],
-        untouched_items=[
-            "Narrative-секции задачи не переписывались автоматически.",
-        ],
-        basis_task_id=task_id,
-        today=today_value,
+        task_class=ctx.task_class,
+        updated_items=updated_items,
+        untouched_items=untouched_items,
+        basis_task_id=ctx.task_id,
+        today=ctx.today,
     )
+
+
+def _backfill_historical_task(ctx: BackfillContext) -> dict[str, object]:
+    results: list[StepResult] = []
+    note_rel = _write_backfill_migration_note(ctx, active_task=False)
     results.append(
         StepResult(
             "migration_note",
             "ok",
             "Task-local migration note создан.",
-            str(task_dir / "artifacts/migration/task-centric-knowledge-upgrade.md"),
+            str(ctx.task_dir / "artifacts/migration/task-centric-knowledge-upgrade.md"),
         )
     )
-    state = ensure_repo_upgrade_state(
-        project_root,
-        epoch="module-core-v1",
-        last_upgrade_task=task_id,
-        today=today_value,
+    state = _record_upgrade_state(
+        ctx,
+        backfill_status="note-only",
+        migration_note=note_rel,
+        decision="Закрытая historical-задача получила только migration note без переписывания protected fields.",
     )
-    state = load_repo_upgrade_state(project_root)
+    results.append(
+        StepResult(
+            "historical_task",
+            "ok",
+            "Closed historical задача оставлена без изменения task-truth; применён только note-only backfill.",
+            str(ctx.task_file),
+        )
+    )
+    results.append(
+        StepResult(
+            "upgrade_state",
+            "ok",
+            "Repo upgrade-state обновлён после note-only backfill.",
+            str(state.path),
+        )
+    )
+    return _backfill_payload(
+        ctx,
+        backfill_status="note-only",
+        branch=historical_branch_from_fields(ctx.fields),
+        branch_action="backfill_only",
+        results=results,
+    )
+
+
+def _sync_summary_for_active_backfill(ctx: BackfillContext) -> str | None:
+    if ctx.canonical_summary == "—":
+        return None
+    return ctx.summary or ctx.canonical_summary
+
+
+def _backfill_active_task(ctx: BackfillContext) -> dict[str, object]:
+    results: list[StepResult] = []
+    sync_payload = sync_task(
+        ctx.project_root,
+        ctx.task_dir,
+        create_branch=False,
+        register_if_missing=True,
+        summary=_sync_summary_for_active_backfill(ctx),
+        branch_name=None,
+        inherit_branch_from_parent=False,
+        today=ctx.today,
+    )
+    note_rel = _write_backfill_migration_note(ctx, active_task=True)
+    results.append(
+        StepResult(
+            "migration_note",
+            "ok",
+            "Task-local migration note создан.",
+            str(ctx.task_dir / "artifacts/migration/task-centric-knowledge-upgrade.md"),
+        )
+    )
+    ensure_repo_upgrade_state(
+        ctx.project_root,
+        epoch="module-core-v1",
+        last_upgrade_task=ctx.task_id,
+        today=ctx.today,
+    )
+    state = load_repo_upgrade_state(ctx.project_root)
     assert state is not None
     state = update_entry_status(
         state,
-        task_id=task_id,
+        task_id=ctx.task_id,
         backfill_status="compatibility-backfilled",
         migration_note=note_rel,
         decision="Active-задача прошла controlled compatibility-backfill и остаётся в обычном task lifecycle.",
-        last_upgrade_task=task_id,
-        today=today_value,
+        last_upgrade_task=ctx.task_id,
+        today=ctx.today,
     )
     write_repo_upgrade_state(state)
     results.extend(StepResult(**item) for item in sync_payload["results"])
@@ -280,20 +336,30 @@ def backfill_task(
             str(state.path),
         )
     )
-    return {
-        "ok": True,
-        "task_id": task_id,
-        "task_dir": str(task_dir),
-        "action": "backfill",
-        "scope": scope,
-        "task_class": task_class,
-        "backfill_status": "compatibility-backfilled",
-        "branch": sync_payload["branch"],
-        "branch_action": "backfill_sync",
-        "remote_present": sync_payload.get("remote_present"),
-        "results": [asdict(item) for item in results],
-    }
+    return _backfill_payload(
+        ctx,
+        backfill_status="compatibility-backfilled",
+        branch=sync_payload["branch"],
+        branch_action="backfill_sync",
+        results=results,
+        remote_present=sync_payload.get("remote_present"),
+    )
 
+
+def backfill_task(
+    project_root: Path,
+    task_dir: Path,
+    *,
+    scope: str,
+    summary: str | None,
+    today: str | None = None,
+) -> dict[str, object]:
+    ctx = _load_backfill_context(project_root, task_dir, scope=scope, summary=summary, today=today)
+    if ctx.task_class == "reference":
+        return _backfill_reference_task(ctx)
+    if ctx.task_class == "closed historical":
+        return _backfill_historical_task(ctx)
+    return _backfill_active_task(ctx)
 
 def sync_task(
     project_root: Path,

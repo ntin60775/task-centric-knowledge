@@ -1,0 +1,67 @@
+{
+  "command": "file show",
+  "file": {
+    "blocks": [],
+    "contract_markers": [],
+    "failure_handoff_refs": [
+      "knowledge/modules/M-GOLDEN-golden/verification.md#SCN-01"
+    ],
+    "governance_state": "verification_evidence_only",
+    "owner_modules": [
+      {
+        "module_id": "M-GOLDEN",
+        "passport_ref": null,
+        "readiness_status": "ready",
+        "slug": "golden",
+        "source_state": "verification_only",
+        "verification_ref": "knowledge/modules/M-GOLDEN-golden/verification.md"
+      }
+    ],
+    "resolved_path": "tests/test_golden.py",
+    "verification_anchors": [
+      {
+        "anchor": "BLOCK_GOLDEN",
+        "evidence_ref": "EVD-01",
+        "kind": "test-file",
+        "module_id": "M-GOLDEN",
+        "value": "tests/test_golden.py",
+        "verification_ref": "knowledge/modules/M-GOLDEN-golden/verification.md"
+      }
+    ]
+  },
+  "ok": true,
+  "path": "tests/test_golden.py",
+  "project_root": "<PROJECT_ROOT>",
+  "warnings": [
+    {
+      "code": "module_passport_missing",
+      "detail": "Паспорт модуля ещё не внедрён; shared/public truth ограничен verification layer.",
+      "path": "knowledge/modules/M-GOLDEN-golden/verification.md",
+      "severity": "warning"
+    },
+    {
+      "code": "module_registry_missing_row",
+      "detail": "Для governed module отсутствует строка в `knowledge/modules/registry.md`.",
+      "path": "knowledge/modules/M-GOLDEN-golden/verification.md",
+      "severity": "warning"
+    },
+    {
+      "code": "file_contract_unavailable",
+      "detail": "File-local contracts ещё не реализованы; будут возвращены только verification-derived anchors.",
+      "path": "knowledge/modules/M-GOLDEN-golden/verification.md",
+      "severity": "warning"
+    },
+    {
+      "code": "partial_governed_scope",
+      "detail": "Read-model работает в partial rollout: passports, relations и file-local contracts могут отсутствовать.",
+      "path": "knowledge/modules/M-GOLDEN-golden/verification.md",
+      "severity": "warning"
+    },
+    {
+      "code": "file_contract_unavailable",
+      "detail": "Для выбранного владельца file-local policy ещё не подключена.",
+      "path": "tests/test_golden.py",
+      "severity": "warning"
+    }
+  ]
+}

@@ -879,57 +879,80 @@ def _build_relation_payloads(module_index: ModuleIndex) -> None:
         }
 
 
-def _record_from_directory(
+def _load_passport_projection(
     project_root: Path,
-    directory_path: Path,
-    registry_rows: dict[str, RegistryRow],
-) -> ModuleRecord:
-    passport_path = directory_path / PASSPORT_FILENAME
-    verification_path = directory_path / VERIFICATION_FILENAME
-    passport_ref = _relative_path(project_root, passport_path) if passport_path.exists() else None
-    verification_ref = _relative_path(project_root, verification_path) if verification_path.exists() else None
-    warnings: list[WarningItem] = []
+    passport_path: Path,
+    passport_ref: str | None,
+    warnings: list[WarningItem],
+) -> ModulePassport | None:
+    if not passport_path.exists():
+        return None
+    try:
+        return load_module_passport(project_root, passport_path)
+    except ModulePassportError as error:
+        warnings.append(_module_warning("module_passport_invalid", str(error), path=passport_ref))
+        return None
 
-    passport: ModulePassport | None = None
-    if passport_path.exists():
-        try:
-            passport = load_module_passport(project_root, passport_path)
-        except ModulePassportError as error:
-            warnings.append(_module_warning("module_passport_invalid", str(error), path=passport_ref))
 
-    readiness_payload: ExecutionReadiness
-    verification_record: ModuleVerificationRecord | None = None
-    verification_excerpt: dict[str, object] | None = None
-    file_local_policy: FileLocalPolicy | None = None
-    anchors_by_path: dict[str, list[dict[str, str]]] = {}
-    handoff_refs_by_path: dict[str, list[str]] = {}
-    evidence_file_refs: list[str] = []
+def _verification_governed_files(passport: ModulePassport | None) -> tuple[str, ...]:
+    if passport is None:
+        return ()
+    return tuple(item.path_ref for item in passport.owned_surface)
 
-    if verification_path.exists():
-        readiness_payload = resolve_execution_readiness(verification_path)
-        try:
-            verification_record = load_module_verification(
-                verification_path,
-                expected_verification_ref=(passport.verification_ref if passport is not None else None),
-                governed_files=tuple(item.path_ref for item in passport.owned_surface) if passport is not None else (),
-            )
-            verification_excerpt = _serialize_verification_excerpt(verification_record)
-            anchors_by_path, handoff_refs_by_path, evidence_file_refs = _collect_path_anchors(project_root, verification_record)
-        except ModuleVerificationError as error:
-            warnings.append(_module_warning("verification_invalid", str(error), path=verification_ref))
-            readiness_payload = resolve_execution_readiness(
-                verification_path,
-                expected_verification_ref=(passport.verification_ref if passport is not None else None),
-                governed_files=tuple(item.path_ref for item in passport.owned_surface) if passport is not None else (),
-            )
-    else:
-        readiness_payload = _readiness_without_verification(passport, passport_ref)
 
-    module_id = passport.module_id if passport is not None else (
-        verification_record.module_id if verification_record is not None else directory_path.name
-    )
-    slug = passport.slug if passport is not None else _derive_slug(directory_path.name, module_id)
+def _load_verification_projection(
+    project_root: Path,
+    verification_path: Path,
+    verification_ref: str | None,
+    passport: ModulePassport | None,
+    warnings: list[WarningItem],
+) -> tuple[
+    ExecutionReadiness,
+    ModuleVerificationRecord | None,
+    dict[str, object] | None,
+    dict[str, list[dict[str, str]]],
+    dict[str, list[str]],
+    list[str],
+]:
+    if not verification_path.exists():
+        return _readiness_without_verification(passport, verification_ref), None, None, {}, {}, []
 
+    readiness_payload = resolve_execution_readiness(verification_path)
+    try:
+        verification_record = load_module_verification(
+            verification_path,
+            expected_verification_ref=(passport.verification_ref if passport is not None else None),
+            governed_files=_verification_governed_files(passport),
+        )
+        anchors_by_path, handoff_refs_by_path, evidence_file_refs = _collect_path_anchors(
+            project_root,
+            verification_record,
+        )
+        return (
+            readiness_payload,
+            verification_record,
+            _serialize_verification_excerpt(verification_record),
+            anchors_by_path,
+            handoff_refs_by_path,
+            evidence_file_refs,
+        )
+    except ModuleVerificationError as error:
+        warnings.append(_module_warning("verification_invalid", str(error), path=verification_ref))
+        readiness_payload = resolve_execution_readiness(
+            verification_path,
+            expected_verification_ref=(passport.verification_ref if passport is not None else None),
+            governed_files=_verification_governed_files(passport),
+        )
+        return readiness_payload, None, None, {}, {}, []
+
+
+def _append_source_consistency_warnings(
+    *,
+    warnings: list[WarningItem],
+    passport: ModulePassport | None,
+    passport_ref: str | None,
+    verification_ref: str | None,
+) -> None:
     if passport is not None and verification_ref is None:
         warnings.append(
             _module_warning(
@@ -954,90 +977,110 @@ def _record_from_directory(
                 path=passport_ref,
             )
         )
-    if (
-        passport is not None
-        and verification_record is not None
-        and verification_record.module_id != passport.module_id
-    ):
-        warnings.append(
-            _module_warning(
-                "module_passport_verification_module_mismatch",
-                "MODULE-ID в module passport расходится с MODULE-ID внутри verification.md.",
-                path=passport_ref,
-            )
-        )
-        readiness_payload = _blocked_readiness(
-            reason="MODULE-ID в `module.md` и `verification.md` расходятся; execution context ненадёжен.",
-            expected_verification_ref=verification_ref,
-            governed_files=tuple(item.path_ref for item in passport.owned_surface),
-            residual_manual_risk=("module_identity_mismatch",),
-        )
-    if passport is not None and passport.execution_readiness_status != readiness_payload.status:
-        warnings.append(
-            _module_warning(
-                "module_passport_readiness_stale",
-                "Кэш readiness в module passport расходится с readiness, вычисленным из verification.md.",
-                path=passport_ref,
-            )
-        )
-    if passport is not None and passport.file_local_policy_ref is not None:
-        policy_path = (project_root / passport.file_local_policy_ref).resolve()
-        if not _is_within_project(policy_path, project_root) or not policy_path.exists() or not policy_path.is_file():
-            warnings.append(
-                _module_warning(
-                    "file_local_policy_missing",
-                    "Канонический `file-local-policy.md` указан в module passport, но файл не найден.",
-                    path=passport.file_local_policy_ref,
-                )
-            )
-        else:
-            try:
-                file_local_policy = load_file_local_policy(project_root, policy_path)
-            except FileLocalPolicyError as error:
-                warnings.append(
-                    _module_warning(
-                        "file_local_policy_invalid",
-                        str(error),
-                        path=passport.file_local_policy_ref,
-                    )
-                )
 
-    source_state = _source_state(passport=passport, verification_ref=verification_ref)
-    readiness_governed_files = _normalize_project_file_refs(project_root, readiness_payload.required_governed_files)
-    if passport is not None:
-        governed_files = list(
-            dict.fromkeys(
-                [
-                    *(item.path_ref for item in passport.owned_surface),
-                    *readiness_governed_files,
-                    *evidence_file_refs,
-                ]
+
+def _apply_identity_readiness_guard(
+    *,
+    warnings: list[WarningItem],
+    passport: ModulePassport | None,
+    passport_ref: str | None,
+    verification_ref: str | None,
+    verification_record: ModuleVerificationRecord | None,
+    readiness_payload: ExecutionReadiness,
+) -> ExecutionReadiness:
+    if passport is None or verification_record is None or verification_record.module_id == passport.module_id:
+        return readiness_payload
+    warnings.append(
+        _module_warning(
+            "module_passport_verification_module_mismatch",
+            "MODULE-ID в module passport расходится с MODULE-ID внутри verification.md.",
+            path=passport_ref,
+        )
+    )
+    return _blocked_readiness(
+        reason="MODULE-ID в `module.md` и `verification.md` расходятся; execution context ненадёжен.",
+        expected_verification_ref=verification_ref,
+        governed_files=tuple(item.path_ref for item in passport.owned_surface),
+        residual_manual_risk=("module_identity_mismatch",),
+    )
+
+
+def _append_readiness_cache_warning(
+    *,
+    warnings: list[WarningItem],
+    passport: ModulePassport | None,
+    passport_ref: str | None,
+    readiness_payload: ExecutionReadiness,
+) -> None:
+    if passport is None or passport.execution_readiness_status == readiness_payload.status:
+        return
+    warnings.append(
+        _module_warning(
+            "module_passport_readiness_stale",
+            "Кэш readiness в module passport расходится с readiness, вычисленным из verification.md.",
+            path=passport_ref,
+        )
+    )
+
+
+def _load_file_local_policy_from_passport(
+    project_root: Path,
+    passport: ModulePassport | None,
+    warnings: list[WarningItem],
+) -> FileLocalPolicy | None:
+    if passport is None or passport.file_local_policy_ref is None:
+        return None
+    policy_path = (project_root / passport.file_local_policy_ref).resolve()
+    if not _is_within_project(policy_path, project_root) or not policy_path.exists() or not policy_path.is_file():
+        warnings.append(
+            _module_warning(
+                "file_local_policy_missing",
+                "Канонический `file-local-policy.md` указан в module passport, но файл не найден.",
+                path=passport.file_local_policy_ref,
             )
         )
-        public_truth = {
-            "passport_ref": passport_ref,
-            "verification_ref": verification_ref,
-            "file_local_policy_ref": passport.file_local_policy_ref,
-            "purpose_summary": passport.purpose_summary,
-            "scope_summary": passport.scope_text,
-            "owned_surface": [asdict(item) for item in passport.owned_surface],
-            "public_contracts": [asdict(item) for item in passport.public_contracts],
-            "governed_files": governed_files,
-            "evidence_file_refs": evidence_file_refs,
-            "origin_task_ref": passport.origin_task_ref,
-            "last_updated_task_ref": passport.last_updated_task_ref,
-            "execution_readiness_summary": passport.execution_readiness_summary,
-        }
-    else:
-        governed_files = list(
-            dict.fromkeys(
-                [
-                    *readiness_governed_files,
-                    *evidence_file_refs,
-                ]
+        return None
+    try:
+        return load_file_local_policy(project_root, policy_path)
+    except FileLocalPolicyError as error:
+        warnings.append(
+            _module_warning(
+                "file_local_policy_invalid",
+                str(error),
+                path=passport.file_local_policy_ref,
             )
         )
-        public_truth = {
+        return None
+
+def _governed_files_from_sources(
+    project_root: Path,
+    *,
+    passport: ModulePassport | None,
+    readiness_payload: ExecutionReadiness,
+    evidence_file_refs: list[str],
+) -> list[str]:
+    passport_files = [] if passport is None else [item.path_ref for item in passport.owned_surface]
+    readiness_files = _normalize_project_file_refs(project_root, readiness_payload.required_governed_files)
+    return list(dict.fromkeys([*passport_files, *readiness_files, *evidence_file_refs]))
+
+
+def _build_public_truth_payload(
+    project_root: Path,
+    *,
+    passport: ModulePassport | None,
+    passport_ref: str | None,
+    verification_ref: str | None,
+    readiness_payload: ExecutionReadiness,
+    evidence_file_refs: list[str],
+) -> tuple[list[str], dict[str, object]]:
+    governed_files = _governed_files_from_sources(
+        project_root,
+        passport=passport,
+        readiness_payload=readiness_payload,
+        evidence_file_refs=evidence_file_refs,
+    )
+    if passport is None:
+        return governed_files, {
             "passport_ref": passport_ref,
             "verification_ref": verification_ref,
             "file_local_policy_ref": None,
@@ -1051,7 +1094,35 @@ def _record_from_directory(
             "last_updated_task_ref": None,
             "execution_readiness_summary": None,
         }
+    return governed_files, {
+        "passport_ref": passport_ref,
+        "verification_ref": verification_ref,
+        "file_local_policy_ref": passport.file_local_policy_ref,
+        "purpose_summary": passport.purpose_summary,
+        "scope_summary": passport.scope_text,
+        "owned_surface": [asdict(item) for item in passport.owned_surface],
+        "public_contracts": [asdict(item) for item in passport.public_contracts],
+        "governed_files": governed_files,
+        "evidence_file_refs": evidence_file_refs,
+        "origin_task_ref": passport.origin_task_ref,
+        "last_updated_task_ref": passport.last_updated_task_ref,
+        "execution_readiness_summary": passport.execution_readiness_summary,
+    }
 
+
+def _append_registry_row_warnings(
+    *,
+    project_root: Path,
+    directory_path: Path,
+    registry_rows: dict[str, RegistryRow],
+    warnings: list[WarningItem],
+    module_id: str,
+    passport: ModulePassport | None,
+    passport_ref: str | None,
+    verification_ref: str | None,
+    source_state: str,
+    readiness_status: str,
+) -> None:
     warnings.extend(
         _compare_registry_row(
             registry_rows.get(module_id),
@@ -1062,13 +1133,22 @@ def _record_from_directory(
                 passport_ref=passport_ref,
                 verification_ref=verification_ref,
                 source_state=source_state,
-                readiness_status=readiness_payload.status,
+                readiness_status=readiness_status,
                 purpose_summary=passport.purpose_summary if passport is not None else None,
             ),
             path=passport_ref or verification_ref,
         )
     )
 
+
+def _append_rollout_warnings(
+    *,
+    warnings: list[WarningItem],
+    passport: ModulePassport | None,
+    public_truth: dict[str, object],
+    passport_ref: str | None,
+    verification_ref: str | None,
+) -> None:
     if passport is None or public_truth["file_local_policy_ref"] is None:
         warnings.append(
             _module_warning(
@@ -1086,6 +1166,105 @@ def _record_from_directory(
             )
         )
 
+
+def _module_identity(
+    directory_path: Path,
+    passport: ModulePassport | None,
+    verification_record: ModuleVerificationRecord | None,
+) -> tuple[str, str]:
+    module_id = passport.module_id if passport is not None else (
+        verification_record.module_id if verification_record is not None else directory_path.name
+    )
+    slug = passport.slug if passport is not None else _derive_slug(directory_path.name, module_id)
+    return module_id, slug
+
+
+def _readiness_dict(
+    project_root: Path,
+    readiness_payload: ExecutionReadiness,
+) -> dict[str, object]:
+    return {
+        "status": readiness_payload.status,
+        "blocking_reasons": list(readiness_payload.blocking_reasons),
+        "required_verification_refs": list(readiness_payload.required_verification_refs),
+        "required_governed_files": _normalize_project_file_refs(project_root, readiness_payload.required_governed_files),
+        "residual_manual_risk": list(readiness_payload.residual_manual_risk),
+    }
+
+
+def _record_from_directory(
+    project_root: Path,
+    directory_path: Path,
+    registry_rows: dict[str, RegistryRow],
+) -> ModuleRecord:
+    passport_path = directory_path / PASSPORT_FILENAME
+    verification_path = directory_path / VERIFICATION_FILENAME
+    passport_ref = _relative_path(project_root, passport_path) if passport_path.exists() else None
+    verification_ref = _relative_path(project_root, verification_path) if verification_path.exists() else None
+    warnings: list[WarningItem] = []
+
+    passport = _load_passport_projection(project_root, passport_path, passport_ref, warnings)
+    (
+        readiness_payload,
+        verification_record,
+        verification_excerpt,
+        anchors_by_path,
+        handoff_refs_by_path,
+        evidence_file_refs,
+    ) = _load_verification_projection(project_root, verification_path, verification_ref, passport, warnings)
+    module_id, slug = _module_identity(directory_path, passport, verification_record)
+
+    _append_source_consistency_warnings(
+        warnings=warnings,
+        passport=passport,
+        passport_ref=passport_ref,
+        verification_ref=verification_ref,
+    )
+    readiness_payload = _apply_identity_readiness_guard(
+        warnings=warnings,
+        passport=passport,
+        passport_ref=passport_ref,
+        verification_ref=verification_ref,
+        verification_record=verification_record,
+        readiness_payload=readiness_payload,
+    )
+    _append_readiness_cache_warning(
+        warnings=warnings,
+        passport=passport,
+        passport_ref=passport_ref,
+        readiness_payload=readiness_payload,
+    )
+    file_local_policy = _load_file_local_policy_from_passport(project_root, passport, warnings)
+
+    source_state = _source_state(passport=passport, verification_ref=verification_ref)
+    governed_files, public_truth = _build_public_truth_payload(
+        project_root,
+        passport=passport,
+        passport_ref=passport_ref,
+        verification_ref=verification_ref,
+        readiness_payload=readiness_payload,
+        evidence_file_refs=evidence_file_refs,
+    )
+    _append_registry_row_warnings(
+        project_root=project_root,
+        directory_path=directory_path,
+        registry_rows=registry_rows,
+        warnings=warnings,
+        module_id=module_id,
+        passport=passport,
+        passport_ref=passport_ref,
+        verification_ref=verification_ref,
+        source_state=source_state,
+        readiness_status=readiness_payload.status,
+    )
+    _append_rollout_warnings(
+        warnings=warnings,
+        passport=passport,
+        public_truth=public_truth,
+        passport_ref=passport_ref,
+        verification_ref=verification_ref,
+    )
+
     summary = ModuleSummary(
         module_id=module_id,
         slug=slug,
@@ -1102,13 +1281,7 @@ def _record_from_directory(
         verification_record=verification_record,
         verification_excerpt=verification_excerpt,
         public_truth=public_truth,
-        readiness={
-            "status": readiness_payload.status,
-            "blocking_reasons": list(readiness_payload.blocking_reasons),
-            "required_verification_refs": list(readiness_payload.required_verification_refs),
-            "required_governed_files": readiness_governed_files,
-            "residual_manual_risk": list(readiness_payload.residual_manual_risk),
-        },
+        readiness=_readiness_dict(project_root, readiness_payload),
         relations={
             "status": "unavailable",
             "items": [],
@@ -1126,7 +1299,6 @@ def _record_from_directory(
         has_valid_passport=(passport is not None),
         file_local_policy=file_local_policy,
     )
-
 
 def build_module_index(project_root: Path) -> ModuleIndex:
     modules_root = project_root / MODULES_ROOT

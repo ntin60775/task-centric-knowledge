@@ -1,0 +1,173 @@
+{
+  "command": "module show",
+  "module": {
+    "files": {
+      "evidence_file_refs": [
+        "tests/test_golden.py"
+      ],
+      "governed_files": [
+        "tests/test_golden.py"
+      ],
+      "passport_file": null,
+      "verification_file": "knowledge/modules/M-GOLDEN-golden/verification.md"
+    },
+    "governed_files": [
+      "tests/test_golden.py"
+    ],
+    "module_id": "M-GOLDEN",
+    "passport_ref": null,
+    "public_truth": {
+      "evidence_file_refs": [
+        "tests/test_golden.py"
+      ],
+      "execution_readiness_summary": null,
+      "file_local_policy_ref": null,
+      "governed_files": [
+        "tests/test_golden.py"
+      ],
+      "last_updated_task_ref": null,
+      "origin_task_ref": null,
+      "owned_surface": [],
+      "passport_ref": null,
+      "public_contracts": [],
+      "purpose_summary": null,
+      "scope_summary": null,
+      "verification_ref": "knowledge/modules/M-GOLDEN-golden/verification.md"
+    },
+    "purpose_summary": null,
+    "readiness": {
+      "blocking_reasons": [],
+      "required_governed_files": [
+        "tests/test_golden.py"
+      ],
+      "required_verification_refs": [
+        "knowledge/modules/M-GOLDEN-golden/verification.md",
+        "knowledge/modules/M-GOLDEN-golden/verification.md#SCN-01",
+        "knowledge/modules/M-GOLDEN-golden/verification.md#CHK-01",
+        "knowledge/modules/M-GOLDEN-golden/verification.md#EVD-01"
+      ],
+      "residual_manual_risk": [
+        "RISK-01"
+      ],
+      "status": "ready"
+    },
+    "relations": {
+      "outgoing": [],
+      "reason": "Module passport недоступен или невалиден; relation-truth не может быть собран.",
+      "status": "unavailable",
+      "summary": {
+        "depends_on_informational": 0,
+        "depends_on_planned": 0,
+        "depends_on_required": 0,
+        "depends_on_total": 0,
+        "used_by_total": 0
+      },
+      "used_by": []
+    },
+    "slug": "golden",
+    "source_state": "verification_only",
+    "verification_excerpt": {
+      "blocking_reasons": [],
+      "manual_residual": [
+        {
+          "applies_to": "нет",
+          "controller_action": "Не требуется.",
+          "reason": "Нет ручного остатка.",
+          "ref": "RISK-01"
+        }
+      ],
+      "readiness_status": "ready",
+      "required_evidence": [
+        {
+          "anchor_ref": "BLOCK_GOLDEN",
+          "kind": "test-file",
+          "notes": "Test file.",
+          "ref": "EVD-01",
+          "value": "tests/test_golden.py"
+        }
+      ],
+      "required_scenarios": [
+        {
+          "blocking": true,
+          "description": "Success path.",
+          "kind": "success",
+          "ref": "SCN-01",
+          "required_check_refs": [
+            "CHK-01"
+          ],
+          "required_evidence_refs": [
+            "EVD-01"
+          ]
+        }
+      ],
+      "task_followups": [],
+      "verification_ref": "knowledge/modules/M-GOLDEN-golden/verification.md",
+      "writer_checks": [
+        {
+          "blocking": true,
+          "command": "python3 -m unittest tests/test_golden.py",
+          "gate": "writer",
+          "kind": "command",
+          "purpose": "Writer path.",
+          "ref": "CHK-01"
+        }
+      ]
+    },
+    "verification_ref": "knowledge/modules/M-GOLDEN-golden/verification.md",
+    "warnings": [
+      {
+        "code": "module_passport_missing",
+        "detail": "Паспорт модуля ещё не внедрён; shared/public truth ограничен verification layer.",
+        "path": "knowledge/modules/M-GOLDEN-golden/verification.md",
+        "severity": "warning"
+      },
+      {
+        "code": "module_registry_missing_row",
+        "detail": "Для governed module отсутствует строка в `knowledge/modules/registry.md`.",
+        "path": "knowledge/modules/M-GOLDEN-golden/verification.md",
+        "severity": "warning"
+      },
+      {
+        "code": "file_contract_unavailable",
+        "detail": "File-local contracts ещё не реализованы; будут возвращены только verification-derived anchors.",
+        "path": "knowledge/modules/M-GOLDEN-golden/verification.md",
+        "severity": "warning"
+      },
+      {
+        "code": "partial_governed_scope",
+        "detail": "Read-model работает в partial rollout: passports, relations и file-local contracts могут отсутствовать.",
+        "path": "knowledge/modules/M-GOLDEN-golden/verification.md",
+        "severity": "warning"
+      }
+    ]
+  },
+  "ok": true,
+  "project_root": "<PROJECT_ROOT>",
+  "selector": "M-GOLDEN",
+  "warnings": [
+    {
+      "code": "module_passport_missing",
+      "detail": "Паспорт модуля ещё не внедрён; shared/public truth ограничен verification layer.",
+      "path": "knowledge/modules/M-GOLDEN-golden/verification.md",
+      "severity": "warning"
+    },
+    {
+      "code": "module_registry_missing_row",
+      "detail": "Для governed module отсутствует строка в `knowledge/modules/registry.md`.",
+      "path": "knowledge/modules/M-GOLDEN-golden/verification.md",
+      "severity": "warning"
+    },
+    {
+      "code": "file_contract_unavailable",
+      "detail": "File-local contracts ещё не реализованы; будут возвращены только verification-derived anchors.",
+      "path": "knowledge/modules/M-GOLDEN-golden/verification.md",
+      "severity": "warning"
+    },
+    {
+      "code": "partial_governed_scope",
+      "detail": "Read-model работает в partial rollout: passports, relations и file-local contracts могут отсутствовать.",
+      "path": "knowledge/modules/M-GOLDEN-golden/verification.md",
+      "severity": "warning"
+    }
+  ]
+}

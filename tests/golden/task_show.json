@@ -1,0 +1,50 @@
+{
+  "command": "task show",
+  "ok": true,
+  "project_root": "<PROJECT_ROOT>",
+  "selector": "TASK-2026-1400",
+  "task": {
+    "blockers": [],
+    "branch": "task/task-2026-1400-golden-contract",
+    "current_stage": "Черновик.",
+    "delivery_units": [],
+    "files": {
+      "task.md": "knowledge/tasks/TASK-2026-1400-golden-contract/task.md"
+    },
+    "goal": "Проверить стабильность JSON-контракта CLI.",
+    "manual_remainder": [],
+    "next_step": null,
+    "parent_id": "—",
+    "priority": "средний",
+    "registry_branch": "task/task-2026-1400-golden-contract",
+    "registry_summary": "Golden contract CLI task.",
+    "status": "в работе",
+    "subtasks": [],
+    "summary": {
+      "human_description": "Golden contract CLI task.",
+      "path": "knowledge/tasks/TASK-2026-1400-golden-contract",
+      "short_name": "golden-contract",
+      "task_id": "TASK-2026-1400"
+    },
+    "verify": {
+      "automated": [],
+      "manual": []
+    },
+    "warnings": [
+      {
+        "code": "next_step_missing",
+        "detail": "В `plan.md` не найден следующий незавершённый шаг.",
+        "path": "knowledge/tasks/TASK-2026-1400-golden-contract",
+        "severity": "warning"
+      }
+    ]
+  },
+  "warnings": [
+    {
+      "code": "next_step_missing",
+      "detail": "В `plan.md` не найден следующий незавершённый шаг.",
+      "path": "knowledge/tasks/TASK-2026-1400-golden-contract",
+      "severity": "warning"
+    }
+  ]
+}

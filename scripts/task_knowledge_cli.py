@@ -63,28 +63,30 @@ def _common_workflow_parent() -> argparse.ArgumentParser:
     return parser
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Единый CLI для install/query/workflow контуров task-centric knowledge.",
-        allow_abbrev=False,
+def _add_doctor_command(subparsers) -> None:
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        parents=[_common_install_parent()],
+        help="Проверить runtime, source-root и целевой проект.",
     )
-    parser.add_argument("--json", action="store_true", help="Вернуть машиночитаемый JSON.")
-    parser.add_argument("--version", action="version", version=f"%(prog)s {CLI_VERSION}")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    doctor_parser = subparsers.add_parser("doctor", parents=[_common_install_parent()], help="Проверить runtime, source-root и целевой проект.")
     doctor_parser.add_argument(
         "--check-command-path",
         action="store_true",
         help="Отмечать отсутствие команды в PATH как проблему окружения.",
     )
 
+
+def _add_install_commands(subparsers) -> None:
     install_parser = subparsers.add_parser("install", help="Install/upgrade governance контур.")
     install_subparsers = install_parser.add_subparsers(dest="install_command", required=True)
 
     install_subparsers.add_parser("check", parents=[_common_install_parent()], help="Read-only проверка проекта и source-root.")
 
-    apply_parser = install_subparsers.add_parser("apply", parents=[_common_install_parent()], help="Установить или обновить knowledge-систему.")
+    apply_parser = install_subparsers.add_parser(
+        "apply",
+        parents=[_common_install_parent()],
+        help="Установить или обновить knowledge-систему.",
+    )
     apply_parser.add_argument("--force", action="store_true", help="Перезаписать обновляемые managed-файлы шаблонами из дистрибутива.")
     apply_parser.add_argument(
         "--existing-system-mode",
@@ -93,8 +95,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Как вести себя при обнаружении существующей системы хранения.",
     )
 
-    install_subparsers.add_parser("doctor-deps", parents=[_common_install_parent()], help="Диагностика install/upgrade зависимостей.")
+    install_subparsers.add_parser(
+        "doctor-deps",
+        parents=[_common_install_parent()],
+        help="Диагностика install/upgrade зависимостей.",
+    )
+    _add_install_cleanup_commands(install_subparsers)
 
+
+def _add_install_cleanup_commands(install_subparsers) -> None:
     cleanup_plan_parser = install_subparsers.add_parser(
         "cleanup-plan",
         parents=[_common_install_parent()],
@@ -121,6 +130,8 @@ def build_parser() -> argparse.ArgumentParser:
     cleanup_confirm_parser.add_argument("--confirm-fingerprint", required=True, help="Fingerprint ранее показанного cleanup-plan.")
     cleanup_confirm_parser.add_argument("--yes", action="store_true", help="Явно подтвердить применение cleanup-plan.")
 
+
+def _add_task_commands(subparsers) -> None:
     task_parser = subparsers.add_parser("task", help="Read-only отчётность по knowledge-задачам.")
     task_subparsers = task_parser.add_subparsers(dest="task_command", required=True)
     task_status_parser = task_subparsers.add_parser("status", help="Сводка knowledge-системы и активной задачи.")
@@ -131,6 +142,8 @@ def build_parser() -> argparse.ArgumentParser:
     task_show_parser.add_argument("--project-root", required=True, help="Абсолютный путь к корню проекта.")
     task_show_parser.add_argument("selector", help="Точный TASK-ID или `current`.")
 
+
+def _add_module_commands(subparsers) -> None:
     module_parser = subparsers.add_parser("module", help="Read-only навигация по Module Core.")
     module_subparsers = module_parser.add_subparsers(dest="module_command", required=True)
     module_find_parser = module_subparsers.add_parser("find", help="Найти governed module.")
@@ -147,6 +160,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("verification_only", "passport_ready", "partial"),
         help="Фильтр по состоянию provider merge.",
     )
+
     module_show_parser = module_subparsers.add_parser("show", help="Показать read-model модуля.")
     module_show_parser.add_argument("--project-root", required=True, help="Абсолютный путь к корню проекта.")
     module_show_parser.add_argument("selector", help="Точный MODULE-ID или уникальный slug.")
@@ -159,6 +173,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Дополнительные секции text-вывода.",
     )
 
+
+def _add_file_commands(subparsers) -> None:
     file_parser = subparsers.add_parser("file", help="Read-only навигация по governed files.")
     file_subparsers = file_parser.add_subparsers(dest="file_command", required=True)
     file_show_parser = file_subparsers.add_parser("show", help="Показать file-local read-model.")
@@ -176,10 +192,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Показать секцию block anchors из file-local contract layer.",
     )
 
+
+def _add_workflow_commands(subparsers) -> None:
     workflow_parser = subparsers.add_parser("workflow", help="Синхронизация задач и publish helper.")
     workflow_subparsers = workflow_parser.add_subparsers(dest="workflow_command", required=True)
+    _add_workflow_sync_command(workflow_subparsers)
+    _add_workflow_backfill_command(workflow_subparsers)
+    _add_workflow_finalize_command(workflow_subparsers)
+    _add_workflow_publish_command(workflow_subparsers)
 
-    workflow_sync_parser = workflow_subparsers.add_parser("sync", parents=[_common_workflow_parent()], help="Синхронизировать git-контекст и registry/task.md.")
+
+def _add_workflow_sync_command(workflow_subparsers) -> None:
+    workflow_sync_parser = workflow_subparsers.add_parser(
+        "sync",
+        parents=[_common_workflow_parent()],
+        help="Синхронизировать git-контекст и registry/task.md.",
+    )
     workflow_sync_parser.add_argument("--create-branch", action="store_true", help="Создать или переключить task-ветку.")
     workflow_sync_parser.add_argument("--register-if-missing", action="store_true", help="Создать строку в registry.md, если она отсутствует.")
     workflow_sync_parser.add_argument("--summary", help="Legacy-fallback описание для registry.md.")
@@ -189,6 +217,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Для подзадачи использовать ветку родителя вместо отдельной ветки.",
     )
+
+
+def _add_workflow_backfill_command(workflow_subparsers) -> None:
     workflow_backfill_parser = workflow_subparsers.add_parser(
         "backfill",
         parents=[_common_workflow_parent()],
@@ -202,6 +233,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     workflow_backfill_parser.add_argument("--summary", help="Явная summary для active legacy-задачи, если нужен controlled backfill.")
 
+
+def _add_workflow_finalize_command(workflow_subparsers) -> None:
     workflow_finalize_parser = workflow_subparsers.add_parser(
         "finalize",
         parents=[_common_workflow_parent()],
@@ -210,7 +243,13 @@ def build_parser() -> argparse.ArgumentParser:
     workflow_finalize_parser.add_argument("--base-branch", help="Целевая base-ветка для local finalize.")
     workflow_finalize_parser.add_argument("--commit-message", help="Явное сообщение commit для local finalize.")
 
-    workflow_publish_parser = workflow_subparsers.add_parser("publish", parents=[_common_workflow_parent()], help="Publish helper поверх delivery unit.")
+
+def _add_workflow_publish_command(workflow_subparsers) -> None:
+    workflow_publish_parser = workflow_subparsers.add_parser(
+        "publish",
+        parents=[_common_workflow_parent()],
+        help="Publish helper поверх delivery unit.",
+    )
     workflow_publish_parser.add_argument("action", choices=("start", "publish", "sync", "merge", "close"), help="Publish-helper действие.")
     workflow_publish_parser.add_argument("--unit-id", help="Delivery unit в формате `DU-01`.")
     workflow_publish_parser.add_argument("--purpose", help="Назначение delivery unit для `start` или нового unit.")
@@ -230,6 +269,8 @@ def build_parser() -> argparse.ArgumentParser:
     workflow_publish_parser.add_argument("--body", help="Тело публикации для `--create-publication`.")
     workflow_publish_parser.add_argument("--summary", help="Legacy-fallback описание для registry.md.")
 
+
+def _add_borrowings_commands(subparsers) -> None:
     borrowings_parser = subparsers.add_parser("borrowings", help="Local-first borrowed-layer governance.")
     borrowings_subparsers = borrowings_parser.add_subparsers(dest="borrowings_command", required=True)
 
@@ -240,12 +281,32 @@ def build_parser() -> argparse.ArgumentParser:
 
     borrowings_subparsers.add_parser("status", parents=[borrowings_parent], help="Показать состояние borrowed manifest и checkout.")
     borrowings_subparsers.add_parser("refresh-plan", parents=[borrowings_parent], help="Построить preview borrowed refresh.")
-    refresh_apply_parser = borrowings_subparsers.add_parser("refresh-apply", parents=[borrowings_parent], help="Применить подтверждённый borrowed refresh-plan.")
+    refresh_apply_parser = borrowings_subparsers.add_parser(
+        "refresh-apply",
+        parents=[borrowings_parent],
+        help="Применить подтверждённый borrowed refresh-plan.",
+    )
     refresh_apply_parser.add_argument("--plan-fingerprint", required=True, help="Fingerprint ранее построенного refresh-plan.")
     refresh_apply_parser.add_argument("--yes", action="store_true", help="Явно подтвердить применение refresh-plan.")
 
-    return parser
 
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Единый CLI для install/query/workflow контуров task-centric knowledge.",
+        allow_abbrev=False,
+    )
+    parser.add_argument("--json", action="store_true", help="Вернуть машиночитаемый JSON.")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {CLI_VERSION}")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    _add_doctor_command(subparsers)
+    _add_install_commands(subparsers)
+    _add_task_commands(subparsers)
+    _add_module_commands(subparsers)
+    _add_file_commands(subparsers)
+    _add_workflow_commands(subparsers)
+    _add_borrowings_commands(subparsers)
+    return parser
 
 def _render_json(payload: dict[str, object]) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=2))

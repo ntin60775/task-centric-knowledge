@@ -1,0 +1,84 @@
+{
+  "active_branch": "task/task-2026-1400-golden-contract",
+  "command": "status",
+  "current_task": {
+    "candidates": [],
+    "reason": "branch",
+    "state": "resolved",
+    "task": {
+      "blockers": [],
+      "branch": "task/task-2026-1400-golden-contract",
+      "current_stage": "Черновик.",
+      "delivery_units": [],
+      "files": {
+        "task.md": "knowledge/tasks/TASK-2026-1400-golden-contract/task.md"
+      },
+      "goal": "Проверить стабильность JSON-контракта CLI.",
+      "manual_remainder": [],
+      "next_step": null,
+      "parent_id": "—",
+      "priority": "средний",
+      "registry_branch": "task/task-2026-1400-golden-contract",
+      "registry_summary": "Golden contract CLI task.",
+      "status": "в работе",
+      "subtasks": [],
+      "summary": {
+        "human_description": "Golden contract CLI task.",
+        "path": "knowledge/tasks/TASK-2026-1400-golden-contract",
+        "short_name": "golden-contract",
+        "task_id": "TASK-2026-1400"
+      },
+      "verify": {
+        "automated": [],
+        "manual": []
+      },
+      "warnings": [
+        {
+          "code": "next_step_missing",
+          "detail": "В `plan.md` не найден следующий незавершённый шаг.",
+          "path": "knowledge/tasks/TASK-2026-1400-golden-contract",
+          "severity": "warning"
+        }
+      ]
+    },
+    "warnings": [
+      {
+        "code": "next_step_missing",
+        "detail": "В `plan.md` не найден следующий незавершённый шаг.",
+        "path": "knowledge/tasks/TASK-2026-1400-golden-contract",
+        "severity": "warning"
+      }
+    ]
+  },
+  "high_priority_open": [],
+  "knowledge_health": {
+    "knowledge_exists": true,
+    "managed_block_state": "absent",
+    "registry_exists": true,
+    "task_count": 1
+  },
+  "ok": true,
+  "open_delivery_units": [],
+  "project_root": "<PROJECT_ROOT>",
+  "review_tasks": [],
+  "task_counters": {
+    "в работе": 1
+  },
+  "upgrade_governance": {
+    "compatibility_epoch": "module-core-v1",
+    "execution_rollout": "single-writer",
+    "legacy_pending_count": 0,
+    "reference_manual_count": 0,
+    "state_exists": false,
+    "state_path": "<PROJECT_ROOT>/knowledge/operations/task-centric-knowledge-upgrade.md",
+    "upgrade_status": "fully-upgraded"
+  },
+  "warnings": [
+    {
+      "code": "next_step_missing",
+      "detail": "В `plan.md` не найден следующий незавершённый шаг.",
+      "path": "knowledge/tasks/TASK-2026-1400-golden-contract",
+      "severity": "warning"
+    }
+  ]
+}
