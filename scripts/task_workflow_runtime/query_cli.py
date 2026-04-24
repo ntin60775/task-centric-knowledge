@@ -59,7 +59,7 @@ def format_status_payload(payload: dict[str, object]) -> str:
         "Repository / branch",
         [
             f"project_root={payload['project_root']}",
-            f"active_branch={payload['active_branch']}",
+            f"active_branch={payload['active_branch'] or '—'}",
         ],
     )
     health = payload["knowledge_health"]

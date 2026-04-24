@@ -109,7 +109,7 @@ task-knowledge workflow sync \
 
 - Глобальный флаг `--json` включает стабильный машиночитаемый вывод.
 - В JSON верхний уровень всегда содержит `ok` и `command` либо режим install/runtime, чтобы внешний агент мог ветвить обработку без парсинга текста.
-- Для `doctor` JSON включает диагностические поля окружения и вложенные payload'ы `install_check` и `dependency_check`.
+- Для `doctor` JSON включает диагностические поля окружения, `source_root_valid` / `source_root_mode` и вложенные payload'ы `install_check` и `dependency_check`.
 - Для `install`, `task`, `module`, `file` и `workflow` JSON сохраняет payload существующих runtime-слоёв без потери деталей.
 - Ошибки в `--json` не должны требовать парсинга текста и не должны содержать секреты.
 

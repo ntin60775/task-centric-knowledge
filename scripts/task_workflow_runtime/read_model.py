@@ -116,7 +116,7 @@ class CurrentTaskResolution:
 @dataclass
 class StatusSnapshot:
     project_root: str
-    active_branch: str
+    active_branch: str | None
     knowledge_health: dict[str, object]
     upgrade_governance: dict[str, object]
     current_task: CurrentTaskResolution
@@ -831,7 +831,6 @@ def knowledge_health(project_root: Path, tasks: dict[str, TaskSnapshot]) -> tupl
 
 
 def resolve_current_task(project_root: Path, tasks: dict[str, TaskSnapshot]) -> CurrentTaskResolution:
-    active_branch = current_git_branch(project_root)
     if not tasks:
         warning = WarningItem(
             code="current_task_unresolved",
@@ -839,6 +838,19 @@ def resolve_current_task(project_root: Path, tasks: dict[str, TaskSnapshot]) -> 
             detail="Активная задача не определена: task-контур пуст.",
         )
         return CurrentTaskResolution("unresolved", "no_tasks", None, warnings=[warning])
+
+    active_branch = safe_current_git_branch(project_root)
+    if active_branch is None:
+        warning = WarningItem(
+            code="git_context_unavailable",
+            severity="warning",
+            detail=(
+                "Git-контур проекта недоступен; active branch и task-scoped diff не используются. "
+                "Read-model работает в archive/zip режиме."
+            ),
+            path=str(project_root),
+        )
+        return CurrentTaskResolution("unresolved", "git_unavailable", None, warnings=[warning])
 
     scored = [(branch_match_score(snapshot, active_branch), snapshot) for snapshot in tasks.values()]
     best_score = max(score for score, _ in scored)
@@ -931,6 +943,14 @@ def resolve_current_task(project_root: Path, tasks: dict[str, TaskSnapshot]) -> 
     return CurrentTaskResolution("unresolved", "no_match", None, warnings=[warning])
 
 
+def safe_current_git_branch(project_root: Path) -> str | None:
+    try:
+        active_branch = current_git_branch(project_root)
+    except RuntimeError:
+        return None
+    return active_branch or None
+
+
 def sorted_task_counters(tasks: dict[str, TaskSnapshot]) -> dict[str, int]:
     counter = Counter(snapshot.status for snapshot in tasks.values())
     ordered: dict[str, int] = {}
@@ -966,6 +986,7 @@ def build_status_snapshot(project_root: Path) -> StatusSnapshot:
     health, health_warnings = knowledge_health(project_root, tasks)
     upgrade_governance = upgrade_state_summary(project_root)
     current_task = resolve_current_task(project_root, tasks)
+    active_branch = safe_current_git_branch(project_root)
     high_priority_open = [
         snapshot.preview()
         for snapshot in tasks.values()
@@ -1024,7 +1045,7 @@ def build_status_snapshot(project_root: Path) -> StatusSnapshot:
     )
     return StatusSnapshot(
         project_root=str(project_root),
-        active_branch=current_git_branch(project_root),
+        active_branch=active_branch,
         knowledge_health=health,
         upgrade_governance=upgrade_governance,
         current_task=current_task,

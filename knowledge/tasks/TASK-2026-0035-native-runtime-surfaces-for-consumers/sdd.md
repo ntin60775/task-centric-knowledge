@@ -65,6 +65,8 @@
 
 - paired downstream repo `oh-my-openagent-fork` остаётся `mixed_system` по strict install check из-за `.sisyphus`;
 - текущий upstream subset покрывает query/workflow, но не весь runtime use-case surface, нужный для полной downstream-миграции.
+- review-маркер 3.1: `task status` в archive/zip срезе без `.git` должен возвращать JSON warning, а не traceback.
+- review-маркер 3.2: `doctor` должен явно различать project root consumer-а и standalone source root skill-а, не требуя source-файлы skill-а от project-local mirror.
 
 ## 3. Изменения данных / схемы / metadata
 
