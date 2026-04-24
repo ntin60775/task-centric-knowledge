@@ -6,6 +6,7 @@
 - read-only операторскую отчётность по knowledge-задачам;
 - read-only query layer по `Module Core`;
 - workflow / publish helper для task-веток, compatibility-backfill и delivery units.
+- versioned consumer runtime contract для проектов, которые встраивают минимальный runtime subset.
 
 ## Установка
 
@@ -109,15 +110,26 @@ task-knowledge workflow sync \
 
 - Глобальный флаг `--json` включает стабильный машиночитаемый вывод.
 - В JSON верхний уровень всегда содержит `ok` и `command` либо режим install/runtime, чтобы внешний агент мог ветвить обработку без парсинга текста.
-- Для `doctor` JSON включает диагностические поля окружения, `source_root_valid` / `source_root_mode` и вложенные payload'ы `install_check` и `dependency_check`.
+- Для `doctor` JSON включает диагностические поля окружения, `runtime_root`, `source_root_valid` / `source_root_mode` и вложенные payload'ы `install_check` и `dependency_check`.
 - Для `install`, `task`, `module`, `file` и `workflow` JSON сохраняет payload существующих runtime-слоёв без потери деталей.
 - Ошибки в `--json` не должны требовать парсинга текста и не должны содержать секреты.
+
+## Контракт потребительского runtime
+
+Consumer repos могут использовать `task-knowledge` двумя способами:
+
+- установленная команда `task-knowledge task status --project-root /abs/project`;
+- consumer-owned embedded subset с явным manifest-ом и собственным update script-ом.
+
+Контракт `consumer-runtime-v1` описан в `references/consumer-runtime-v1.md`.
+Он фиксирует стабильный CLI/JSON surface, manifest-поля embedded subset-а и границу `project_root` / `runtime_root` / `source_root`.
+`task-centric-knowledge` не добавляет upstream-команду, которая сама обновляет файлы consumer repo: обновление embedded subset-а остаётся обязанностью потребителя.
 
 
 ## Владение standalone-репозиторием
 
 Этот репозиторий является каноническим домом `task-centric-knowledge`.
 Потребители не должны копировать реализацию в свои `skills-global/`;
-ожидаемый интерфейс интеграции — команда `task-knowledge --project-root /abs/project`.
+ожидаемый интерфейс интеграции — CLI `task-knowledge ... --project-root /abs/project`.
 
 Product history хранится в `knowledge/tasks/` и импортирована из исходного `ai-agents-rules` только для задач, которые описывают развитие самого `task-centric-knowledge`.

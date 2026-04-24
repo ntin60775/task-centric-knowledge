@@ -167,14 +167,237 @@ class TaskKnowledgeCliTests(TempRepoCase):
 
             self.assertEqual(result.returncode, 2)
             self.assertFalse(payload["ok"])
+            self.assertEqual(payload["runtime_root"], str((project_root / "scripts").resolve()))
             self.assertEqual(payload["source_root"], str(project_root.resolve()))
             self.assertFalse(payload["source_root_valid"])
-            self.assertEqual(payload["source_root_mode"], "unavailable")
+            self.assertEqual(payload["source_root_mode"], "embedded")
+            self.assertEqual(payload["consumer_runtime_contract"], "consumer-runtime-v1")
             self.assertFalse(payload["install_check"]["source_root_valid"])
+            self.assertEqual(payload["install_check"]["source_root_mode"], "embedded")
             self.assertIn("standalone-дистрибутив", payload["install_check"]["results"][0]["detail"])
             result_paths = [item.get("path", "") for item in payload["results"]]
             self.assertNotIn(str(project_root / "SKILL.md"), result_paths)
             self.assertNotIn(str(project_root / "assets/knowledge/README.md"), result_paths)
+
+    def test_install_check_reports_single_source_root_blocker_for_embedded_runtime(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = Path(tmp_dir) / "project"
+            project_root.mkdir()
+            self.write_registry(project_root)
+            shutil.copytree(
+                ROOT / "scripts",
+                project_root / "scripts",
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(project_root / "scripts/task_knowledge_cli.py"),
+                    "--json",
+                    "install",
+                    "check",
+                    "--project-root",
+                    str(project_root),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            )
+            payload = json.loads(result.stdout)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["runtime_root"], str((project_root / "scripts").resolve()))
+            self.assertFalse(payload["source_root_valid"])
+            self.assertEqual(payload["source_root_mode"], "embedded")
+            source_results = [item for item in payload["results"] if item["key"] in {"source", "source_root_unavailable"}]
+            self.assertEqual(len(source_results), 1)
+            self.assertEqual(source_results[0]["key"], "source_root_unavailable")
+            self.assertIn("embedded runtime subset", source_results[0]["detail"])
+
+    def test_embedded_runtime_allows_consumer_owned_assets_and_references(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = Path(tmp_dir) / "project"
+            project_root.mkdir()
+            self.write_registry(project_root)
+            (project_root / "assets/product").mkdir(parents=True)
+            (project_root / "assets/product/logo.txt").write_text("consumer asset\n", encoding="utf-8")
+            (project_root / "references").mkdir()
+            (project_root / "references/product.md").write_text("# Consumer reference\n", encoding="utf-8")
+            shutil.copytree(
+                ROOT / "scripts",
+                project_root / "scripts",
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(project_root / "scripts/task_knowledge_cli.py"),
+                    "--json",
+                    "install",
+                    "check",
+                    "--project-root",
+                    str(project_root),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            )
+            payload = json.loads(result.stdout)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["source_root_mode"], "embedded")
+            source_results = [item for item in payload["results"] if item["key"] in {"source", "source_root_unavailable"}]
+            self.assertEqual(len(source_results), 1)
+            self.assertEqual(source_results[0]["key"], "source_root_unavailable")
+
+    def test_install_doctor_deps_reports_single_source_root_blocker_for_embedded_runtime(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = Path(tmp_dir) / "project"
+            project_root.mkdir()
+            self.write_registry(project_root)
+            shutil.copytree(
+                ROOT / "scripts",
+                project_root / "scripts",
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(project_root / "scripts/task_knowledge_cli.py"),
+                    "--json",
+                    "install",
+                    "doctor-deps",
+                    "--project-root",
+                    str(project_root),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            )
+            payload = json.loads(result.stdout)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["runtime_root"], str((project_root / "scripts").resolve()))
+            self.assertFalse(payload["source_root_valid"])
+            self.assertEqual(payload["source_root_mode"], "embedded")
+            source_results = [item for item in payload["results"] if item["key"] in {"source", "source_root_unavailable"}]
+            self.assertEqual(len(source_results), 1)
+            self.assertEqual(source_results[0]["key"], "source_root_unavailable")
+            dependencies = {item["name"]: item for item in payload["dependencies"]}
+            self.assertEqual(dependencies["skill_source"]["status"], "misconfigured")
+
+    def test_embedded_runtime_accepts_explicit_external_source_root_for_install_check(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = Path(tmp_dir) / "project"
+            project_root.mkdir()
+            self.write_registry(project_root)
+            shutil.copytree(
+                ROOT / "scripts",
+                project_root / "scripts",
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(project_root / "scripts/task_knowledge_cli.py"),
+                    "--json",
+                    "install",
+                    "check",
+                    "--project-root",
+                    str(project_root),
+                    "--source-root",
+                    str(ROOT),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            )
+            payload = json.loads(result.stdout)
+
+            self.assertEqual(result.returncode, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["runtime_root"], str((project_root / "scripts").resolve()))
+            self.assertTrue(payload["source_root_valid"])
+            self.assertEqual(payload["source_root_mode"], "external")
+            self.assertEqual(payload["source_root"], str(ROOT.resolve()))
+
+    def test_damaged_standalone_source_is_not_reported_as_embedded_runtime(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = Path(tmp_dir) / "project"
+            project_root.mkdir()
+            self.write_registry(project_root)
+            source_root = Path(tmp_dir) / "damaged-source"
+            shutil.copytree(
+                ROOT,
+                source_root,
+                ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+            )
+            (source_root / "references/consumer-runtime-v1.md").unlink()
+
+            result, payload = self.run_cli_json(
+                "install",
+                "check",
+                "--project-root",
+                str(project_root),
+                "--source-root",
+                str(source_root),
+            )
+
+            self.assertEqual(result.returncode, 2)
+            self.assertFalse(payload["ok"])
+            self.assertFalse(payload["source_root_valid"])
+            self.assertEqual(payload["source_root_mode"], "unavailable")
+            self.assertNotIn("source_root_unavailable", {item["key"] for item in payload["results"]})
+            missing_sources = [
+                item for item in payload["results"]
+                if item["key"] == "source" and item["status"] == "error"
+            ]
+            self.assertEqual(len(missing_sources), 1)
+            self.assertTrue(missing_sources[0]["path"].endswith("references/consumer-runtime-v1.md"))
+
+    def test_doctor_reports_damaged_standalone_source_as_missing_resource(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = Path(tmp_dir) / "project"
+            project_root.mkdir()
+            self.write_registry(project_root)
+            source_root = Path(tmp_dir) / "damaged-source"
+            shutil.copytree(
+                ROOT,
+                source_root,
+                ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+            )
+            (source_root / "references/consumer-runtime-v1.md").unlink()
+
+            result, payload = self.run_cli_json(
+                "doctor",
+                "--project-root",
+                str(project_root),
+                "--source-root",
+                str(source_root),
+            )
+
+            self.assertEqual(result.returncode, 2)
+            self.assertFalse(payload["ok"])
+            self.assertFalse(payload["source_root_valid"])
+            self.assertEqual(payload["source_root_mode"], "unavailable")
+            self.assertNotIn("source_root_unavailable", {item["key"] for item in payload["results"]})
+            missing_sources = [
+                item for item in payload["install_check"]["results"]
+                if item["key"] == "source" and item["status"] == "error"
+            ]
+            self.assertEqual(len(missing_sources), 1)
+            self.assertTrue(missing_sources[0]["path"].endswith("references/consumer-runtime-v1.md"))
 
     def test_workflow_finalize_routes_to_finalize_runtime(self) -> None:
         with self.make_tempdir() as tmp_dir:

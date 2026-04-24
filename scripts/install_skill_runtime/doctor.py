@@ -9,7 +9,14 @@ from pathlib import Path
 
 from task_workflow_runtime.legacy_upgrade import upgrade_state_summary
 
-from .environment import detect_existing_system, summarize_existing_system, validate_source, validate_target
+from .environment import (
+    detect_existing_system,
+    source_root_mode,
+    source_root_ready,
+    summarize_existing_system,
+    validate_source,
+    validate_target,
+)
 from .models import (
     BLOCKING_LAYER_CORE,
     BLOCKING_LAYER_PUBLISH,
@@ -400,6 +407,8 @@ def build_dependency_checks(project_root: Path, source_root: Path, report: Exist
 
 def doctor_deps(project_root: Path, source_root: Path, profile: str) -> dict[str, object]:
     results: list[StepResult] = []
+    runtime_root = Path(__file__).resolve().parents[1]
+    source_mode = source_root_mode(source_root, runtime_root)
     source_results = validate_source(source_root)
     results.extend(source_results)
     results.extend(validate_target(project_root))
@@ -427,6 +436,10 @@ def doctor_deps(project_root: Path, source_root: Path, profile: str) -> dict[str
         "mode": "doctor-deps",
         "project_root": str(project_root),
         "profile": profile,
+        "source_root": str(source_root),
+        "runtime_root": str(runtime_root),
+        "source_root_valid": source_root_ready(source_root),
+        "source_root_mode": source_mode,
         "existing_system_classification": existing_report.classification,
         **upgrade_state_summary(
             project_root,

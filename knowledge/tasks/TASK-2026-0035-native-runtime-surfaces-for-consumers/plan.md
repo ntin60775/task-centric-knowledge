@@ -11,7 +11,7 @@
 |------|----------|
 | ID задачи | `TASK-2026-0035` |
 | Parent ID | `—` |
-| Версия плана | `1` |
+| Версия плана | `2` |
 | Связь с SDD | `sdd.md`, этапы 1-4 |
 | Дата обновления | `2026-04-24` |
 
@@ -25,7 +25,7 @@
 
 - freeze consumer use-cases, которые не закрываются текущим query/workflow subset;
 - проектирование и реализация minimal native runtime surfaces;
-- versioned/updateable consumer contract и sync rules;
+- versioned/updateable consumer contract и consumer-owned update rules;
 - targeted integration validation на paired downstream consumer-case.
 
 ### Не входит
@@ -44,8 +44,8 @@
 
 ### Конфигурация / схема данных / именуемые сущности
 
-- определить native runtime storage/interface contract для consumer repos;
-- зафиксировать versioning и update-flow для embedded subset.
+- определить CLI/JSON runtime/interface contract для consumer repos;
+- зафиксировать versioning, manifest shape и consumer-owned update-flow для embedded subset.
 
 ### Документация
 
@@ -74,15 +74,15 @@
 
 - updateable контракт потребления;
 - minimal native runtime surfaces для paired consumer;
-- воспроизводимая sync/story для embedded subset.
+- воспроизводимая consumer-owned update story для embedded subset.
 
 ### Основной сценарий
 
-- downstream consumer обновляет versioned subset из канонического `task-centric-knowledge` и получает достаточно native runtime surfaces, чтобы убрать `.sisyphus` без внешнего absolute checkout и без ad-hoc patching upstream.
+- downstream consumer своим update script-ом обновляет versioned subset из канонического `task-centric-knowledge` и получает стабильный CLI/JSON contract без внешнего absolute checkout и без ad-hoc patching upstream.
 
 ### Исходный наблюдаемый симптом
 
-- paired consumer-case `oh-my-openagent-fork` остаётся `mixed_system` и использует `.sisyphus`, потому что текущий `task-centric-knowledge` покрывает только managed task OS и query/workflow subset, но не все live runtime use-cases consumer-а.
+- paired consumer-case `oh-my-openagent-fork` исторически был `mixed_system`; фактический checkout уже совместим, но upstream не имел зафиксированного `consumer-runtime-v1`, manifest shape и root-boundary для embedded consumers.
 - review-замечание 3.1: `task status` в archive/zip срезе без `.git` падал traceback вместо JSON warning и registry summary.
 - review-замечание 3.2: `doctor` из project-local runtime mirror смешивал project root consumer-а с source root standalone skill-а и перечислял отсутствующие source-файлы как будто они должны лежать в проекте.
 
@@ -105,10 +105,12 @@
 
 - `python3 -m unittest discover -s tests`
 - `python3 -m unittest tests.test_task_knowledge_cli -v`
-- `task-knowledge --json doctor --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/task-centric-knowledge`
-- `task-knowledge --json install check --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/oh-my-openagent-fork`
+- `python3 -m unittest tests.test_task_knowledge_cli tests.test_consumer_runtime_contract tests.test_python_hardening_contracts -v`
+- `python3 -m compileall -q scripts tests`
+- `task-knowledge --json doctor --project-root /home/prog7/РабочееПространство/projects/PetProjects/task-centric-knowledge`
+- `task-knowledge --json install check --project-root /home/prog7/РабочееПространство/projects/PetProjects/oh-my-openagent-fork`
 - `git diff --check`
-- `bash scripts/check-docs-localization.sh knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/task.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/plan.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/sdd.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/artifacts/verification-matrix.md knowledge/tasks/registry.md`
+- `bash scripts/check-docs-localization.sh README.md references/deployment.md references/consumer-runtime-v1.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/task.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/plan.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/sdd.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/artifacts/verification-matrix.md knowledge/tasks/registry.md`
 
 ### Что остаётся на ручную проверку
 
@@ -116,10 +118,12 @@
 
 ## Шаги
 
-- [ ] Freeze paired consumer gap и минимальный contract surface
-- [ ] Спроектировать versioned/updateable native runtime contract для consumers
-- [ ] Реализовать tests/docs/runtime glue для этого contract surface
-- [ ] Подтвердить paired consumer applicability без scope creep
+- [x] Freeze paired consumer gap и минимальный contract surface
+- [x] Спроектировать versioned/updateable native runtime contract для consumers
+- [x] Реализовать tests/docs/runtime glue для этого contract surface
+- [x] Подтвердить paired consumer applicability без scope creep
+- [x] Пройти subagent review/fix loop по blocker-ам реализации
+- [ ] Завершить delivery unit после локального commit и publish/merge-контуры
 
 ## Критерии завершения
 

@@ -6,7 +6,7 @@
 |------|----------|
 | ID задачи | `TASK-2026-0035` |
 | Статус | `готово` |
-| Версия | `1` |
+| Версия | `2` |
 | Дата обновления | `2026-04-24` |
 
 ## 0. Инварианты и verification matrix
@@ -26,11 +26,11 @@
 
 ### Проблема
 
-Сегодня `task-centric-knowledge` уже является каноническим standalone repo для managed task OS и даёт consumer-ам install/query/workflow surfaces. Этого достаточно для repo-level knowledge, но недостаточно для потребителей, у которых `.sisyphus` всё ещё используется как live runtime storage. В paired consumer-case это делает downstream-миграцию блокированной на стороне upstream contract surface.
+Сегодня `task-centric-knowledge` уже является каноническим standalone repo для managed task OS и даёт consumer-ам install/query/workflow surfaces. Paired consumer уже выбрал свой product runtime root и consumer-owned update script, но upstream не фиксировал это как поддерживаемый embedded-consumer contract. Без такого contract-а consumers вынуждены опираться на ad-hoc manifest shape, runtime subset и неявную границу между project root, runtime root и source root.
 
 ### Цель
 
-Добавить в канонический repo минимально достаточный native runtime contract и explicit consumer surface, которые позволят paired consumer-ам заменить `.sisyphus`, не ломая update-governance и не раздувая scope продукта.
+Добавить в канонический repo минимально достаточный explicit consumer surface `consumer-runtime-v1`, который позволит paired consumer-ам обновлять embedded subset своим механизмом, не требуя внешнего absolute checkout, не ломая update-governance и не раздувая scope продукта.
 
 ## 2. Архитектура и границы
 
@@ -48,12 +48,13 @@
 
 - consumer-facing runtime contract может расширить текущий subset, если это минимально необходимо;
 - paired downstream use-case может использоваться как field-validation target;
-- embedded subset и update-flow могут быть формализованы как канонический путь потребления.
+- embedded subset и consumer-owned update-flow могут быть формализованы как канонический путь потребления.
 
 #### Недопустимые связи
 
 - нельзя требовать от consumer repos внешний абсолютный source path на checkout upstream;
 - нельзя вводить disguised replacement для `.sisyphus` без нормализации модели;
+- нельзя добавлять новый upstream `task-knowledge consumer sync-*` CLI в этой задаче;
 - нельзя решать задачу за счёт broad framework expansion или чужой product thesis.
 
 ### Новые зависимости и их обоснование
@@ -63,27 +64,28 @@
 
 ### Наблюдаемые сигналы и диагностические маркеры
 
-- paired downstream repo `oh-my-openagent-fork` остаётся `mixed_system` по strict install check из-за `.sisyphus`;
-- текущий upstream subset покрывает query/workflow, но не весь runtime use-case surface, нужный для полной downstream-миграции.
+- старый paired path `/home/prog7/MyWorkspace/20-Personal/PetProjects/Active/oh-my-openagent-fork` отсутствует; фактический checkout находится в `/home/prog7/РабочееПространство/projects/PetProjects/oh-my-openagent-fork`;
+- фактический paired checkout уже проходит strict install check как `compatible`, но upstream должен закрепить `consumer-runtime-v1`, manifest shape и root-boundary для повторяемости;
 - review-маркер 3.1: `task status` в archive/zip срезе без `.git` должен возвращать JSON warning, а не traceback.
 - review-маркер 3.2: `doctor` должен явно различать project root consumer-а и standalone source root skill-а, не требуя source-файлы skill-а от project-local mirror.
 
 ## 3. Изменения данных / схемы / metadata
 
-- потребуется канонический consumer-facing runtime contract и versioning/sync metadata для embedded subset;
+- потребуется канонический consumer-facing runtime contract и versioning metadata для embedded subset;
 - точная форма нового contract surface должна быть выбрана так, чтобы не дублировать legacy semantics `.sisyphus` один в один;
 - install/upgrade governance и project-data safety должны остаться неизменными по смыслу.
 
 ## 4. Новые сущности и интерфейсы
 
-- native consumer runtime contract для planning/execution-related use-cases, которых не хватает current subset;
-- versioned/updateable embedded-consumer surface и sync metadata;
-- explicit docs для потребителей, как использовать этот surface без ad-hoc копирования репозитория.
+- `consumer-runtime-v1` как versioned embedded-consumer surface;
+- минимальная форма manifest: `integration_contract`, `pinned_commit`, `included_paths`, `consumer_runtime_root`, `consumer_entrypoint`;
+- диагностика границы корней: `project_root`, `runtime_root`, `source_root`, `source_root_mode`;
+- explicit docs для потребителей, как использовать этот surface без ad-hoc копирования репозитория и без upstream-owned sync CLI.
 
 ## 5. Изменения в существующих компонентах
 
-- `README.md`, `references/deployment.md`: описать consumer contract и update-flow, если surface materialize-ится;
-- runtime/query/workflow glue и tests: расширить только если это минимально необходимо для нового contract surface;
+- `README.md`, `references/deployment.md`, `references/consumer-runtime-v1.md`: описать consumer contract и consumer-owned update-flow;
+- runtime/query/workflow glue и tests: расширить только минимально для root-boundary diagnostics и contract constants;
 - knowledge/task docs этого repo: связать paired downstream use-case и architectural guard against scope creep.
 
 ## 6. Этапы реализации и проверки
@@ -92,28 +94,28 @@
 
 - зафиксировать, каких runtime surfaces не хватает paired consumer-case;
 - явно отрезать всё, что уводит продукт за пределы standalone формулы.
-- Проверка: `task-knowledge --json install check --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/oh-my-openagent-fork`
+- Проверка: `task-knowledge --json install check --project-root /home/prog7/РабочееПространство/projects/PetProjects/oh-my-openagent-fork`
 - Аудит: `SDD_AUDIT`
 
 ### Этап 2: Native consumer contract и versioning
 
 - определить minimal native runtime contract;
 - описать versioned/updateable embedded-consumer surface.
-- Проверка: `python3 -m unittest discover -s tests`; `task-knowledge --json doctor --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/task-centric-knowledge`
+- Проверка: `python3 -m unittest tests.test_task_knowledge_cli tests.test_consumer_runtime_contract tests.test_python_hardening_contracts -v`; `task-knowledge --json doctor --project-root /home/prog7/РабочееПространство/projects/PetProjects/task-centric-knowledge`
 - Аудит: `IMPLEMENTATION_AUDIT`
 
 ### Этап 3: Runtime glue, docs и paired applicability
 
 - materialize-ить contract в коде/docs/tests;
 - доказать пригодность для paired downstream case без реализации downstream-миграции здесь.
-- Проверка: `python3 -m unittest discover -s tests`; `git diff --check`
+- Проверка: `python3 -m unittest discover -s tests`; `python3 -m compileall -q scripts tests`; `git diff --check`
 - Аудит: `IMPLEMENTATION_AUDIT`
 
 ### Этап 4: Integration verdict
 
 - собрать единый verdict по paired downstream applicability и scope guard;
 - обновить verification matrix и task-local docs.
-- Проверка: `task-knowledge --json install check --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/oh-my-openagent-fork`; `bash scripts/check-docs-localization.sh knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/task.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/plan.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/sdd.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/artifacts/verification-matrix.md knowledge/tasks/registry.md`
+- Проверка: `task-knowledge --json install check --project-root /home/prog7/РабочееПространство/projects/PetProjects/oh-my-openagent-fork`; `bash scripts/check-docs-localization.sh README.md references/deployment.md references/consumer-runtime-v1.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/task.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/plan.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/sdd.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/artifacts/verification-matrix.md knowledge/tasks/registry.md`
 - Аудит: `INTEGRATION_AUDIT`
 
 ## 7. Критерии приёмки
