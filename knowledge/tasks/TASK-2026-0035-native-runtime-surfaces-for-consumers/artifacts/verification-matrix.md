@@ -26,6 +26,8 @@
 | `INV-02` | Новый surface нельзя обновлять как versioned embedded subset | `task-knowledge --json doctor --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/task-centric-knowledge` | `planned` | Update/sync contract должен быть проверяемым |
 | `INV-03` | Решение выходит за рамки standalone task OS | task-local docs review, `git diff --check` | `planned` | Архитектурный guard |
 | `INV-04` | Paired consumer-case не может использовать новый contract для отказа от `.sisyphus` | `task-knowledge --json install check --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/oh-my-openagent-fork` | `planned` | Полный consumer effect будет доказан в paired downstream task |
+| `INV-01` | Archive/zip срез без `.git` ломает `task status` traceback-ом вместо read-only summary | `python3 -m unittest tests.test_task_knowledge_cli -v`; `python3 scripts/task_knowledge_cli.py --json task status --project-root /tmp/tck-nogit-1777034137405595199` | `covered` | JSON возвращает `current_task.task=null`, `reason=git_unavailable`, `warning=git_context_unavailable` |
+| `INV-02` | Project-local runtime mirror выдаёт отсутствующие standalone source-файлы проекта как doctor-проблемы | `python3 -m unittest tests.test_task_knowledge_cli -v` | `covered` | `doctor` возвращает единый `source_root` blocker и `source_root_valid=false` без списка `SKILL.md`/`assets/...` как project-missing ресурсов |
 
 ## 3. Остаточный риск и ручной остаток
 

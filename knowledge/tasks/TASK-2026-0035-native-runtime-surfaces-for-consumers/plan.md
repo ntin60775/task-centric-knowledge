@@ -83,6 +83,8 @@
 ### Исходный наблюдаемый симптом
 
 - paired consumer-case `oh-my-openagent-fork` остаётся `mixed_system` и использует `.sisyphus`, потому что текущий `task-centric-knowledge` покрывает только managed task OS и query/workflow subset, но не все live runtime use-cases consumer-а.
+- review-замечание 3.1: `task status` в archive/zip срезе без `.git` падал traceback вместо JSON warning и registry summary.
+- review-замечание 3.2: `doctor` из project-local runtime mirror смешивал project root consumer-а с source root standalone skill-а и перечислял отсутствующие source-файлы как будто они должны лежать в проекте.
 
 ## Риски и зависимости
 
@@ -102,6 +104,7 @@
 ### Что можно проверить кодом или тестами
 
 - `python3 -m unittest discover -s tests`
+- `python3 -m unittest tests.test_task_knowledge_cli -v`
 - `task-knowledge --json doctor --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/task-centric-knowledge`
 - `task-knowledge --json install check --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/oh-my-openagent-fork`
 - `git diff --check`

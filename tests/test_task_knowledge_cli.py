@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -103,6 +104,77 @@ class TaskKnowledgeCliTests(TempRepoCase):
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["command"], "status")
             self.assertEqual(payload["current_task"]["state"], "resolved")
+
+    def test_task_status_degrades_without_git_repository(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = Path(tmp_dir) / "project"
+            project_root.mkdir()
+            self.write_registry(project_root)
+            task_dir = project_root / "knowledge/tasks/TASK-2026-1201-archive"
+            self.write_task(
+                task_dir,
+                task_id="TASK-2026-1201",
+                slug="archive",
+                branch="task/task-2026-1201-archive",
+                priority="высокий",
+                human_description="Архивная задача без git-контекста.",
+            )
+            registry_path = project_root / "knowledge/tasks/registry.md"
+            registry_path.write_text(
+                registry_path.read_text(encoding="utf-8")
+                + "| `TASK-2026-1201` | `—` | `в работе` | `высокий` | `task/task-2026-1201-archive` | `knowledge/tasks/TASK-2026-1201-archive/` | Архивная задача без git-контекста. |\n",
+                encoding="utf-8",
+            )
+
+            result, payload = self.run_cli_json("task", "status", "--project-root", str(project_root))
+
+            self.assertEqual(result.returncode, 0)
+            self.assertTrue(payload["ok"])
+            self.assertIsNone(payload["active_branch"])
+            self.assertEqual(payload["current_task"]["state"], "unresolved")
+            self.assertEqual(payload["current_task"]["reason"], "git_unavailable")
+            self.assertIsNone(payload["current_task"]["task"])
+            self.assertEqual(payload["high_priority_open"][0]["summary"]["task_id"], "TASK-2026-1201")
+            self.assertIn("git_context_unavailable", {item["code"] for item in payload["warnings"]})
+
+    def test_doctor_reports_embedded_runtime_without_treating_project_as_source(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = Path(tmp_dir) / "project"
+            project_root.mkdir()
+            self.write_registry(project_root)
+            (project_root / "task-knowledge.project.json").write_text('{"schema": "test"}\n', encoding="utf-8")
+            shutil.copytree(
+                ROOT / "scripts",
+                project_root / "scripts",
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(project_root / "scripts/task_knowledge_cli.py"),
+                    "--json",
+                    "doctor",
+                    "--project-root",
+                    str(project_root),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            )
+            payload = json.loads(result.stdout)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertFalse(payload["ok"])
+            self.assertEqual(payload["source_root"], str(project_root.resolve()))
+            self.assertFalse(payload["source_root_valid"])
+            self.assertEqual(payload["source_root_mode"], "unavailable")
+            self.assertFalse(payload["install_check"]["source_root_valid"])
+            self.assertIn("standalone-дистрибутив", payload["install_check"]["results"][0]["detail"])
+            result_paths = [item.get("path", "") for item in payload["results"]]
+            self.assertNotIn(str(project_root / "SKILL.md"), result_paths)
+            self.assertNotIn(str(project_root / "assets/knowledge/README.md"), result_paths)
 
     def test_workflow_finalize_routes_to_finalize_runtime(self) -> None:
         with self.make_tempdir() as tmp_dir:
