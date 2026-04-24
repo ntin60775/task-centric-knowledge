@@ -22,17 +22,17 @@
 
 | Invariant ID | Сценарий нарушения или переход | Автопроверка / команда | Статус покрытия | Примечание |
 |--------------|--------------------------------|------------------------|-----------------|------------|
-| `INV-01` | Current subset остаётся только query/workflow и не закрывает consumer gap | `python3 -m unittest discover -s tests` | `planned` | Точный test surface уточнится после materialization contract |
-| `INV-02` | Новый surface нельзя обновлять как versioned embedded subset | `task-knowledge --json doctor --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/task-centric-knowledge` | `planned` | Update/sync contract должен быть проверяемым |
-| `INV-03` | Решение выходит за рамки standalone task OS | task-local docs review, `git diff --check` | `planned` | Архитектурный guard |
-| `INV-04` | Paired consumer-case не может использовать новый contract для отказа от `.sisyphus` | `task-knowledge --json install check --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/oh-my-openagent-fork` | `planned` | Полный consumer effect будет доказан в paired downstream task |
+| `INV-01` | Upstream не фиксирует public consumer contract сверх query/workflow subset | `python3 -m unittest tests.test_task_knowledge_cli tests.test_consumer_runtime_contract tests.test_python_hardening_contracts -v` | `covered` | `consumer-runtime-v1`, manifest shape и stable CLI/JSON surface закреплены тестами/docs |
+| `INV-02` | Новый surface нельзя обновлять как versioned embedded subset без внешнего checkout | `python3 -m unittest tests.test_consumer_runtime_contract tests.test_python_hardening_contracts -v`; `task-knowledge --json doctor --project-root /home/prog7/РабочееПространство/projects/PetProjects/task-centric-knowledge` | `covered` | Update ownership остаётся у consumer script; upstream фиксирует version/manifest/root-boundary |
+| `INV-03` | Решение выходит за рамки standalone task OS или добавляет чужой sync framework | `python3 -m unittest tests.test_consumer_runtime_contract -v`; `git diff --check` | `covered` | Новый `task-knowledge consumer sync-*` surface не добавлен |
+| `INV-04` | Paired consumer-case не может использовать новый contract без root `.sisyphus` | `task-knowledge --json install check --project-root /home/prog7/РабочееПространство/projects/PetProjects/oh-my-openagent-fork`; paired read-only audit | `covered` | Фактический checkout compatible; live smoke остаётся в downstream task |
 | `INV-01` | Archive/zip срез без `.git` ломает `task status` traceback-ом вместо read-only summary | `python3 -m unittest tests.test_task_knowledge_cli -v`; `python3 scripts/task_knowledge_cli.py --json task status --project-root /tmp/tck-nogit-1777034137405595199` | `covered` | JSON возвращает `current_task.task=null`, `reason=git_unavailable`, `warning=git_context_unavailable` |
-| `INV-02` | Project-local runtime mirror выдаёт отсутствующие standalone source-файлы проекта как doctor-проблемы | `python3 -m unittest tests.test_task_knowledge_cli -v` | `covered` | `doctor` возвращает единый `source_root` blocker и `source_root_valid=false` без списка `SKILL.md`/`assets/...` как project-missing ресурсов |
+| `INV-02` | Project-local runtime mirror выдаёт отсутствующие standalone source-файлы проекта как doctor-проблемы | `python3 -m unittest tests.test_task_knowledge_cli -v` | `covered` | `doctor` и install-assets команды возвращают единый `source_root_unavailable` blocker и `source_root_valid=false`; consumer-owned `assets/` и `references/` не ломают embedded mode |
 
 ## 3. Остаточный риск и ручной остаток
 
-- До реализации остаётся риск, что consumer runtime gap окажется шире допустимого standalone scope.
 - Live downstream smoke остаётся в paired consumer task и не дублируется здесь.
+- Будущий общий upstream sync CLI для embedded consumers намеренно не входит в текущий contract surface.
 
 ## 4. Правило завершения
 

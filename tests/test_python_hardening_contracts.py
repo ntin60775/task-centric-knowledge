@@ -28,6 +28,18 @@ class PythonHardeningContractsTests(unittest.TestCase):
         self.assertTrue(main_path.exists())
         self.assertIn("from task_knowledge_cli import main", main_path.read_text(encoding="utf-8"))
 
+    def test_version_and_consumer_contract_have_single_python_source(self) -> None:
+        pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        version_text = (ROOT / "scripts" / "task_knowledge" / "version.py").read_text(encoding="utf-8")
+        init_text = (ROOT / "scripts" / "task_knowledge" / "__init__.py").read_text(encoding="utf-8")
+        cli_text = (ROOT / "scripts" / "task_knowledge_cli.py").read_text(encoding="utf-8")
+
+        self.assertIn(f'__version__ = "{pyproject["project"]["version"]}"', version_text)
+        self.assertIn("CLI_VERSION = __version__", version_text)
+        self.assertIn('CONSUMER_RUNTIME_CONTRACT = "consumer-runtime-v1"', version_text)
+        self.assertIn("from .version import __version__", init_text)
+        self.assertIn("from task_knowledge.version import CLI_VERSION", cli_text)
+
     def test_makefile_keeps_offline_fallback_for_local_install(self) -> None:
         makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
         self.assertIn("PYTHON_EXTERNALLY_MANAGED", makefile)

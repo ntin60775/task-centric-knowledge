@@ -15,10 +15,19 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from borrowings_runtime import apply_refresh, build_refresh_plan, read_status
-from install_skill_runtime import check, doctor_deps, install, migrate_cleanup_confirm, migrate_cleanup_plan, resolve_source
+from install_skill_runtime import (
+    check,
+    doctor_deps,
+    install,
+    migrate_cleanup_confirm,
+    migrate_cleanup_plan,
+    resolve_source,
+    source_root_mode as detect_source_root_mode,
+    source_root_ready,
+)
 from install_skill_runtime.cli import main as legacy_install_main
 from install_skill_runtime.cli import print_text_report as print_install_text_report
-from install_skill_runtime.models import REQUIRED_RELATIVE_PATHS, SKILL_NAME
+from install_skill_runtime.models import SKILL_NAME
 from module_core_runtime.query_cli import (
     dispatch_file,
     dispatch_module,
@@ -34,10 +43,10 @@ from task_workflow_runtime.query_cli import (
     format_status_payload,
     format_task_show_payload,
 )
+from task_knowledge.version import CLI_VERSION, CONSUMER_RUNTIME_CONTRACT, CONSUMER_RUNTIME_SCHEMA_VERSION
 
 
 COMMAND_NAME = "task-knowledge"
-CLI_VERSION = "0.1.0"
 SUPPORTED_COMMANDS = ["doctor", "install", "task", "module", "file", "workflow", "borrowings"]
 
 
@@ -392,70 +401,18 @@ def _render_borrowings_text(payload: dict[str, object]) -> None:
             print(f"- [{item['status']}] {item['key']}: {item['detail']}{suffix}")
 
 
-def _source_root_ready(source_root: Path) -> bool:
-    return all((source_root / relative).exists() for relative in REQUIRED_RELATIVE_PATHS)
-
-
-def _source_root_unavailable_payloads(project_root: Path, source_root: Path, profile: str) -> tuple[dict[str, object], dict[str, object]]:
-    issue = {
-        "key": "source_root",
-        "status": "error",
-        "detail": (
-            "Source root не содержит standalone-дистрибутив `task-centric-knowledge`; "
-            "project root не считается source root. Используйте установленную команду "
-            "`task-knowledge --project-root /abs/project` или передайте корректный `--source-root`."
-        ),
-        "path": str(source_root),
-    }
-    install_check = {
-        "skill": SKILL_NAME,
-        "mode": "check",
-        "project_root": str(project_root),
-        "profile": profile,
-        "source_root": str(source_root),
-        "source_root_valid": False,
-        "ok": False,
-        "results": [issue],
-    }
-    dependency_check = {
-        "skill": SKILL_NAME,
-        "mode": "doctor-deps",
-        "project_root": str(project_root),
-        "profile": profile,
-        "source_root": str(source_root),
-        "source_root_valid": False,
-        "ok": False,
-        "results": [
-            {
-                "key": "doctor_summary",
-                "status": "error",
-                "detail": "Core/local blockers: 1; publish/integration issues: 0.",
-            },
-        ],
-        "dependencies": [
-            {
-                "name": "skill_source",
-                "dependency_class": "required",
-                "status": "misconfigured",
-                "blocking_layer": "core/local mode",
-                "detail": "Исходный standalone-дистрибутив skill-а недоступен из текущего runtime-среза.",
-                "hint": "Запустите установленный `task-knowledge` вне project-local mirror или задайте `--source-root`.",
-                "path": str(source_root),
-            }
-        ],
-    }
-    return install_check, dependency_check
+def _runtime_root() -> Path:
+    return Path(__file__).resolve().parent
 
 
 def _doctor(args: argparse.Namespace) -> tuple[dict[str, object], int]:
     project_root = Path(args.project_root).resolve()
     source_root = resolve_source(args.source_root)
-    source_root_valid = _source_root_ready(source_root)
-    if source_root_valid:
-        install_check = check(project_root, source_root, args.profile)
-        dependency_check = doctor_deps(project_root, source_root, args.profile)
-    else:
-        install_check, dependency_check = _source_root_unavailable_payloads(project_root, source_root, args.profile)
+    runtime_root = _runtime_root()
+    source_root_valid = source_root_ready(source_root)
+    source_mode = detect_source_root_mode(source_root, runtime_root)
+    install_check = check(project_root, source_root, args.profile)
+    dependency_check = doctor_deps(project_root, source_root, args.profile)
     command_path = shutil.which(COMMAND_NAME)
     results = [
         *install_check["results"],
@@ -499,9 +456,12 @@ def _doctor(args: argparse.Namespace) -> tuple[dict[str, object], int]:
         "python": sys.executable,
         "git_available": git_available,
         "project_root": str(project_root),
+        "runtime_root": str(runtime_root),
         "source_root": str(source_root),
         "source_root_valid": source_root_valid,
-        "source_root_mode": "standalone" if source_root_valid else "unavailable",
+        "source_root_mode": source_mode,
+        "consumer_runtime_contract": CONSUMER_RUNTIME_CONTRACT,
+        "consumer_runtime_schema_version": CONSUMER_RUNTIME_SCHEMA_VERSION,
         "profile": args.profile,
         "results": results,
         "install_check": install_check,

@@ -34,6 +34,59 @@ def resolve_source(source_root: str | None) -> Path:
     return Path(source_root).resolve() if source_root else skill_root()
 
 
+def source_root_ready(source_root: Path) -> bool:
+    return all((source_root / relative).exists() for relative in REQUIRED_RELATIVE_PATHS)
+
+
+def _has_standalone_source_identity(source_root: Path) -> bool:
+    markers = (
+        "SKILL.md",
+        "agents/openai.yaml",
+        "assets/agents-managed-block-generic.md",
+        "assets/knowledge/tasks/_templates/task.md",
+    )
+    return any((source_root / marker).exists() for marker in markers)
+
+
+def embedded_runtime_ready(source_root: Path) -> bool:
+    scripts_root = source_root / "scripts"
+    return (
+        not _has_standalone_source_identity(source_root)
+        and (scripts_root / "task_knowledge_cli.py").exists()
+        and (scripts_root / "task_query.py").exists()
+        and (scripts_root / "task_workflow.py").exists()
+        and (scripts_root / "task_workflow_runtime").is_dir()
+    )
+
+
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def source_root_mode(source_root: Path, runtime_root: Path) -> str:
+    if source_root_ready(source_root):
+        return "standalone" if _is_relative_to(runtime_root, source_root) else "external"
+    if embedded_runtime_ready(source_root):
+        return "embedded"
+    return "unavailable"
+
+
+def _embedded_source_root_unavailable_result(source_root: Path) -> StepResult:
+    return StepResult(
+        "source_root_unavailable",
+        "error",
+        (
+            "Source root не содержит standalone-дистрибутив `task-centric-knowledge`; "
+            "embedded runtime subset не является источником install assets."
+        ),
+        str(source_root),
+    )
+
+
 def asset_to_target_relative(asset_relative: str) -> str:
     return str(Path(asset_relative).relative_to("assets"))
 
@@ -43,6 +96,9 @@ def asset_to_target_path(project_root: Path, asset_relative: str) -> Path:
 
 
 def validate_source(source_root: Path) -> list[StepResult]:
+    if not source_root_ready(source_root) and embedded_runtime_ready(source_root):
+        return [_embedded_source_root_unavailable_result(source_root)]
+
     results: list[StepResult] = []
     for relative in REQUIRED_RELATIVE_PATHS:
         path = source_root / relative
@@ -354,6 +410,9 @@ def _base_payload(
     *,
     mode: str,
     project_root: Path,
+    source_root: Path,
+    runtime_root: Path,
+    source_root_mode: str,
     profile: str,
     existing_report: ExistingSystemReport,
     ok: bool,
@@ -368,6 +427,10 @@ def _base_payload(
         "mode": mode,
         "project_root": str(project_root),
         "profile": profile,
+        "source_root": str(source_root),
+        "runtime_root": str(runtime_root),
+        "source_root_valid": source_root_ready(source_root),
+        "source_root_mode": source_root_mode,
         "existing_system_classification": existing_report.classification,
         **upgrade_summary,
         "ok": ok,
@@ -377,6 +440,8 @@ def _base_payload(
 
 def install(project_root: Path, source_root: Path, profile: str, *, force: bool, existing_system_mode: str) -> dict[str, object]:
     results: list[StepResult] = []
+    runtime_root = skill_root() / "scripts"
+    source_mode = source_root_mode(source_root, runtime_root)
     results.extend(validate_source(source_root))
     results.extend(validate_target(project_root))
     existing_report = detect_existing_system(project_root)
@@ -386,6 +451,9 @@ def install(project_root: Path, source_root: Path, profile: str, *, force: bool,
         return _base_payload(
             mode="install",
             project_root=project_root,
+            source_root=source_root,
+            runtime_root=runtime_root,
+            source_root_mode=source_mode,
             profile=profile,
             existing_report=existing_report,
             ok=False,
@@ -413,6 +481,9 @@ def install(project_root: Path, source_root: Path, profile: str, *, force: bool,
     return _base_payload(
         mode="install",
         project_root=project_root,
+        source_root=source_root,
+        runtime_root=runtime_root,
+        source_root_mode=source_mode,
         profile=profile,
         existing_report=existing_report,
         ok=not has_errors(results),
@@ -422,6 +493,8 @@ def install(project_root: Path, source_root: Path, profile: str, *, force: bool,
 
 def check(project_root: Path, source_root: Path, profile: str) -> dict[str, object]:
     results: list[StepResult] = []
+    runtime_root = skill_root() / "scripts"
+    source_mode = source_root_mode(source_root, runtime_root)
     results.extend(validate_source(source_root))
     results.extend(validate_target(project_root))
     existing_report = detect_existing_system(project_root)
@@ -430,6 +503,9 @@ def check(project_root: Path, source_root: Path, profile: str) -> dict[str, obje
     return _base_payload(
         mode="check",
         project_root=project_root,
+        source_root=source_root,
+        runtime_root=runtime_root,
+        source_root_mode=source_mode,
         profile=profile,
         existing_report=existing_report,
         ok=not has_errors(results),

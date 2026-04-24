@@ -37,6 +37,7 @@ REQUIRED_RELATIVE_PATHS = (
     "SKILL.md",
     "agents/openai.yaml",
     "references/deployment.md",
+    "references/consumer-runtime-v1.md",
     "references/upgrade-transition.md",
     "references/task-routing.md",
     "references/task-workflow.md",
