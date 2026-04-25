@@ -13,7 +13,7 @@
 | Parent ID | `—` |
 | Версия плана | `2` |
 | Связь с SDD | `sdd.md`, этапы 1-4 |
-| Дата обновления | `2026-04-24` |
+| Дата обновления | `2026-04-25` |
 
 ## Цель
 
@@ -107,8 +107,8 @@
 - `python3 -m unittest tests.test_task_knowledge_cli -v`
 - `python3 -m unittest tests.test_task_knowledge_cli tests.test_consumer_runtime_contract tests.test_python_hardening_contracts -v`
 - `python3 -m compileall -q scripts tests`
-- `task-knowledge --json doctor --project-root /home/prog7/РабочееПространство/projects/PetProjects/task-centric-knowledge`
-- `task-knowledge --json install check --project-root /home/prog7/РабочееПространство/projects/PetProjects/oh-my-openagent-fork`
+- `task-knowledge --json doctor --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/task-centric-knowledge`
+- `task-knowledge --json install check --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/oh-my-openagent-fork`
 - `git diff --check`
 - `bash scripts/check-docs-localization.sh README.md references/deployment.md references/consumer-runtime-v1.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/task.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/plan.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/sdd.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/artifacts/verification-matrix.md knowledge/tasks/registry.md`
 
@@ -123,7 +123,7 @@
 - [x] Реализовать tests/docs/runtime glue для этого contract surface
 - [x] Подтвердить paired consumer applicability без scope creep
 - [x] Пройти subagent review/fix loop по blocker-ам реализации
-- [ ] Завершить delivery unit после локального commit и publish/merge-контуры
+- [x] Завершить delivery unit после локального commit и merge-контуры
 
 ## Критерии завершения
 

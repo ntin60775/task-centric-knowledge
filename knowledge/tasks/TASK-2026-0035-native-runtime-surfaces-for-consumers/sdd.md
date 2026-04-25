@@ -64,7 +64,7 @@
 
 ### Наблюдаемые сигналы и диагностические маркеры
 
-- старый paired path `/home/prog7/MyWorkspace/20-Personal/PetProjects/Active/oh-my-openagent-fork` отсутствует; фактический checkout находится в `/home/prog7/РабочееПространство/projects/PetProjects/oh-my-openagent-fork`;
+- paired consumer path `/home/prog7/MyWorkspace/20-Personal/PetProjects/Active/oh-my-openagent-fork` является текущим проверенным checkout;
 - фактический paired checkout уже проходит strict install check как `compatible`, но upstream должен закрепить `consumer-runtime-v1`, manifest shape и root-boundary для повторяемости;
 - review-маркер 3.1: `task status` в archive/zip срезе без `.git` должен возвращать JSON warning, а не traceback.
 - review-маркер 3.2: `doctor` должен явно различать project root consumer-а и standalone source root skill-а, не требуя source-файлы skill-а от project-local mirror.
@@ -94,14 +94,14 @@
 
 - зафиксировать, каких runtime surfaces не хватает paired consumer-case;
 - явно отрезать всё, что уводит продукт за пределы standalone формулы.
-- Проверка: `task-knowledge --json install check --project-root /home/prog7/РабочееПространство/projects/PetProjects/oh-my-openagent-fork`
+- Проверка: `task-knowledge --json install check --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/oh-my-openagent-fork`
 - Аудит: `SDD_AUDIT`
 
 ### Этап 2: Native consumer contract и versioning
 
 - определить minimal native runtime contract;
 - описать versioned/updateable embedded-consumer surface.
-- Проверка: `python3 -m unittest tests.test_task_knowledge_cli tests.test_consumer_runtime_contract tests.test_python_hardening_contracts -v`; `task-knowledge --json doctor --project-root /home/prog7/РабочееПространство/projects/PetProjects/task-centric-knowledge`
+- Проверка: `python3 -m unittest tests.test_task_knowledge_cli tests.test_consumer_runtime_contract tests.test_python_hardening_contracts -v`; `task-knowledge --json doctor --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/task-centric-knowledge`
 - Аудит: `IMPLEMENTATION_AUDIT`
 
 ### Этап 3: Runtime glue, docs и paired applicability
@@ -115,7 +115,7 @@
 
 - собрать единый verdict по paired downstream applicability и scope guard;
 - обновить verification matrix и task-local docs.
-- Проверка: `task-knowledge --json install check --project-root /home/prog7/РабочееПространство/projects/PetProjects/oh-my-openagent-fork`; `bash scripts/check-docs-localization.sh README.md references/deployment.md references/consumer-runtime-v1.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/task.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/plan.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/sdd.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/artifacts/verification-matrix.md knowledge/tasks/registry.md`
+- Проверка: `task-knowledge --json install check --project-root /home/prog7/MyWorkspace/20-Personal/PetProjects/Active/oh-my-openagent-fork`; `bash scripts/check-docs-localization.sh README.md references/deployment.md references/consumer-runtime-v1.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/task.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/plan.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/sdd.md knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/artifacts/verification-matrix.md knowledge/tasks/registry.md`
 - Аудит: `INTEGRATION_AUDIT`
 
 ## 7. Критерии приёмки
