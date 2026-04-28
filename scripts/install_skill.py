@@ -31,6 +31,8 @@ from install_skill_runtime import (  # noqa: E402
     detect_existing_system,
     main,
     skill_root,
+    verify_project,
+    verify_project_install,
 )
 from install_skill_runtime import doctor_deps as _doctor_deps  # noqa: E402
 from install_skill_runtime import environment as _environment_module  # noqa: E402

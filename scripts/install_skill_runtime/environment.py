@@ -267,6 +267,9 @@ def copy_knowledge_files(project_root: Path, source_root: Path, *, force: bool) 
         target_path = asset_to_target_path(project_root, relative)
         target_path.parent.mkdir(parents=True, exist_ok=True)
         if target_path.exists():
+            if target_path.is_file() and target_path.read_text(encoding="utf-8") == source_path.read_text(encoding="utf-8"):
+                results.append(StepResult("copy", "ok", "Файл уже актуален", str(target_path)))
+                continue
             if force and target_relative in FORCE_OVERWRITABLE_TARGET_FILES:
                 target_path.write_text(source_path.read_text(encoding="utf-8"), encoding="utf-8")
                 results.append(StepResult("copy", "ok", "Файл обновлен из дистрибутива", str(target_path)))
@@ -278,6 +281,76 @@ def copy_knowledge_files(project_root: Path, source_root: Path, *, force: bool) 
             continue
         target_path.write_text(source_path.read_text(encoding="utf-8"), encoding="utf-8")
         results.append(StepResult("copy", "ok", "Файл развернут", str(target_path)))
+    return results
+
+
+def _content_matches(source_path: Path, target_path: Path) -> bool:
+    return source_path.read_text(encoding="utf-8") == target_path.read_text(encoding="utf-8")
+
+
+def _extract_managed_block(existing: str) -> str | None:
+    if detect_managed_block_state(existing) != "managed":
+        return None
+    start = existing.index(BEGIN_MARKER)
+    end = existing.index(END_MARKER) + len(END_MARKER)
+    return existing[start:end].strip() + "\n"
+
+
+def verify_project_install(project_root: Path, source_root: Path, profile: str, *, force: bool) -> list[StepResult]:
+    results: list[StepResult] = []
+    for relative in KNOWLEDGE_ASSET_FILES:
+        source_path = source_root / relative
+        target_relative = asset_to_target_relative(relative)
+        target_path = asset_to_target_path(project_root, relative)
+        if not target_path.exists():
+            results.append(StepResult("project_verify", "error", "Managed-файл отсутствует после установки", str(target_path)))
+            continue
+        if not target_path.is_file():
+            results.append(StepResult("project_verify", "error", "Managed-path существует, но не является файлом", str(target_path)))
+            continue
+        if target_relative in PROJECT_DATA_TARGET_FILES:
+            results.append(StepResult("project_verify", "ok", "Project data файл существует и не сверяется с шаблоном", str(target_path)))
+            continue
+        if _content_matches(source_path, target_path):
+            results.append(StepResult("project_verify", "ok", "Managed-файл актуален", str(target_path)))
+            continue
+        if force:
+            results.append(StepResult("project_verify", "error", "Managed-файл устарел после `--force` обновления", str(target_path)))
+        else:
+            results.append(StepResult("project_verify", "warning", "Managed-файл отличается от дистрибутива; для полного обновления нужен `--force`", str(target_path)))
+
+    expected_block = render_agents_block(source_root, profile)
+    agents_path = project_root / "AGENTS.md"
+    snippet_path = project_root / f"AGENTS.task-centric-knowledge.{profile}.md"
+    if agents_path.exists():
+        agents_text = agents_path.read_text(encoding="utf-8")
+        block_state = detect_managed_block_state(agents_text)
+        if block_state == "invalid":
+            results.append(StepResult("project_verify", "error", "Managed-маркеры в AGENTS.md неконсистентны", str(agents_path)))
+        elif block_state == "absent":
+            results.append(StepResult("project_verify", "error", "AGENTS.md существует, но managed-блок knowledge-системы отсутствует", str(agents_path)))
+        elif _extract_managed_block(agents_text) != expected_block:
+            results.append(StepResult("project_verify", "error", "Managed-блок AGENTS.md не соответствует выбранному profile", str(agents_path)))
+        else:
+            results.append(StepResult("project_verify", "ok", "Managed-блок AGENTS.md актуален", str(agents_path)))
+    elif snippet_path.exists():
+        if _content_matches(source_root / PROFILE_TO_BLOCK[profile], snippet_path):
+            results.append(StepResult("project_verify", "ok", "Snippet для ручного включения AGENTS.md актуален", str(snippet_path)))
+        else:
+            results.append(StepResult("project_verify", "error", "Snippet для AGENTS.md не соответствует выбранному profile", str(snippet_path)))
+    else:
+        results.append(StepResult("project_verify", "error", "Не найден ни AGENTS.md с managed-блоком, ни generated snippet", str(agents_path)))
+
+    error_count = sum(1 for item in results if item.status == "error")
+    warning_count = sum(1 for item in results if item.status == "warning")
+    status = "error" if error_count else "ok"
+    results.append(
+        StepResult(
+            "project_verify_summary",
+            status,
+            f"Post-install verification: errors={error_count}; warnings={warning_count}; checked={len(results)}.",
+        )
+    )
     return results
 
 
@@ -478,8 +551,32 @@ def install(project_root: Path, source_root: Path, profile: str, *, force: bool,
             )
         )
     results.extend(install_agents_block(project_root, source_root, profile))
+    results.extend(verify_project_install(project_root, source_root, profile, force=force))
     return _base_payload(
         mode="install",
+        project_root=project_root,
+        source_root=source_root,
+        runtime_root=runtime_root,
+        source_root_mode=source_mode,
+        profile=profile,
+        existing_report=existing_report,
+        ok=not has_errors(results),
+        results=results,
+    )
+
+
+def verify_project(project_root: Path, source_root: Path, profile: str, *, force: bool) -> dict[str, object]:
+    results: list[StepResult] = []
+    runtime_root = skill_root() / "scripts"
+    source_mode = source_root_mode(source_root, runtime_root)
+    results.extend(validate_source(source_root))
+    results.extend(validate_target(project_root))
+    existing_report = detect_existing_system(project_root)
+    results.extend(summarize_existing_system(existing_report))
+    if not has_errors(results):
+        results.extend(verify_project_install(project_root, source_root, profile, force=force))
+    return _base_payload(
+        mode="verify-project",
         project_root=project_root,
         source_root=source_root,
         runtime_root=runtime_root,

@@ -96,23 +96,34 @@ python3 scripts/install_skill.py --project-root /abs/project --mode check --prof
 python3 scripts/install_skill.py --project-root /abs/project --mode install
 python3 scripts/install_skill.py --project-root /abs/project --mode install --profile 1c
 python3 scripts/install_skill.py --project-root /abs/project --mode install --existing-system-mode migrate
+python3 scripts/install_skill.py --project-root /abs/project --mode install --force  # полное обновление managed-шаблонов
 ```
 
 4. Если в проекте уже есть managed-файлы knowledge-системы и их нужно обновить шаблонами этого дистрибутива, используй `--force`.
    При этом `knowledge/tasks/registry.md` и `knowledge/modules/registry.md` считаются project data:
    installer создаёт их при первой установке, но не перезаписывает даже с `--force`.
+   `install` всегда выполняет post-install verification перед успешным результатом.
    Сам переход версии разносить в локальном git отдельным commit-ом по правилам из `references/upgrade-transition.md`.
-5. Для диагностики install/upgrade-контура используй:
+5. Для отдельного read-only аудита уже установленной проектной части используй:
+
+```
+python3 scripts/install_skill.py --project-root /abs/project --mode verify-project  # read-only аудит установленного проекта
+python3 scripts/install_skill.py --project-root /abs/project --mode verify-project --force  # проверка полного обновления
+```
+
+`verify-project --force` требует актуальность force-updatable managed-шаблонов относительно дистрибутива,
+но не перезаписывает project data и не выполняет cleanup.
+6. Для диагностики install/upgrade-контура используй:
 
 ```bash
 python3 scripts/install_skill.py --project-root /abs/project --mode doctor-deps
 ```
 
-`check`, `install` и `doctor-deps` дополнительно возвращают поля
+`check`, `install`, `verify-project` и `doctor-deps` дополнительно возвращают поля
 совместимости `compatibility_epoch`, `upgrade_status`, `execution_rollout`,
 а также счётчики `legacy_pending_count` и `reference_manual_count`.
 
-6. Если после миграции появились installer-generated артефакты для безопасной чистки, сначала покажи план:
+7. Если после миграции появились installer-generated артефакты для безопасной чистки, сначала покажи план:
 
 ```bash
 python3 scripts/install_skill.py --project-root /abs/project --mode migrate-cleanup-plan
@@ -126,17 +137,17 @@ python3 scripts/install_skill.py --project-root /abs/project --mode migrate-clea
 Legacy-контуры вроде `.sisyphus`, `doc/tasks`, `docs/tasks`, `docs/roadmap`, `docs/plans` и другие `FOREIGN_SYSTEM_INDICATORS` не удаляются автоматически и уходят только в `manual_review`.
 Даже allowlist v1 удаляется автоматически только для обычных файлов; symlink, каталог или любой другой неожиданный тип объекта переводится в `manual_review`.
 `project data` (`AGENTS.md`, `knowledge/tasks/registry.md`, `knowledge/modules/registry.md`, каталоги задач и managed knowledge-файлы) остаются в `keep`.
-7. Применение cleanup допустимо только через fingerprint из показанного плана:
+8. Применение cleanup допустимо только через fingerprint из показанного плана:
 
 ```bash
 python3 scripts/install_skill.py --project-root /abs/project --mode migrate-cleanup-confirm --confirm-fingerprint <sha256> --yes
 ```
 
 `confirm` пересчитывает scope заново и останавливается при любом расхождении `TARGETS`, `TARGET_COUNT`, `COUNT` или confirm-команды.
-8. Если `AGENTS.md` отсутствует, установщик не создает его молча, а генерирует отдельный snippet для ручного включения.
-9. Если установщик обнаруживает другую систему хранения, он классифицирует её и по умолчанию останавливает установку с явным предложением миграции.
-10. Если в `AGENTS.md` найдены неконсистентные managed-маркеры, установщик останавливается с ошибкой и не дописывает новый блок поверх поврежденного состояния.
-11. После установки для каждой новой задачи синхронизируй git-контекст через вспомогательный скрипт.
+9. Если `AGENTS.md` отсутствует, установщик не создает его молча, а генерирует отдельный snippet для ручного включения.
+10. Если установщик обнаруживает другую систему хранения, он классифицирует её и по умолчанию останавливает установку с явным предложением миграции.
+11. Если в `AGENTS.md` найдены неконсистентные managed-маркеры, установщик останавливается с ошибкой и не дописывает новый блок поверх поврежденного состояния.
+12. После установки для каждой новой задачи синхронизируй git-контекст через вспомогательный скрипт.
     Если это самый первый task bootstrap после clean install и `install` уже сделал рабочее дерево грязным,
     сначала явно создай `task/...` ветку вручную, а затем вызывай helper в режиме `--register-if-missing`
     по правилам из `references/adoption.md` и `references/task-workflow.md`:
@@ -146,13 +157,13 @@ python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledg
 python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha/subtasks/TASK-2026-0001.1-podzadacha --create-branch --inherit-branch-from-parent --register-if-missing --summary "Краткое описание подзадачи"
 ```
 
-12. Если repo уже переведён в epoch `module-core-v1`, legacy-задачи обновляй только через explicit backfill:
+13. Если repo уже переведён в epoch `module-core-v1`, legacy-задачи обновляй только через explicit backfill:
     через facade-скрипт `python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --backfill-scope compatibility` или через unified CLI `task-knowledge workflow backfill --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --scope compatibility`
 
 Для `closed historical` ordinary sync сохраняет historical safe-sync policy,
 а controlled backfill ограничивается migration note и repo upgrade-state.
 
-12. Для read-only operator query используй отдельный CLI:
+14. Для read-only operator query используй отдельный CLI:
 
 ```bash
 python3 scripts/task_query.py --project-root /abs/project status --format json
@@ -253,7 +264,7 @@ python3 scripts/task_query.py --project-root /abs/project task show TASK-2026-00
 - `assets/knowledge/**` — шаблон корня `knowledge/`
 - `assets/agents-managed-block-generic.md` — managed-блок для `AGENTS.md`
 - `assets/agents-managed-block-1c.md` — managed-блок для `AGENTS.md` под 1С
-- `scripts/install_skill.py` — facade-entrypoint для `check/install/doctor-deps/migrate-cleanup-*`
+- `scripts/install_skill.py` — facade-entrypoint для `check/install/verify-project/doctor-deps/migrate-cleanup-*`
 - `scripts/install_skill_runtime/**` — runtime-модули install/upgrade governance
 - `scripts/task_workflow.py` — вспомогательный скрипт для синхронизации стартовой task-ветки, `task.md`, `registry.md` и publish-блока delivery units
 - `scripts/task_query.py` — read-only operator facade для `status/current-task/task show`

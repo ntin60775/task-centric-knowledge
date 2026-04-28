@@ -110,6 +110,12 @@ class TaskCentricKnowledgeInstallerTests(unittest.TestCase):
             self.assertEqual(payload["existing_system_classification"], "compatible")
             self.assertEqual(registry_path.read_text(encoding="utf-8"), "CUSTOM-REGISTRY\n")
             self.assertTrue((project_root / "knowledge/tasks/_templates/sdd.md").exists())
+            verify_results = [
+                item
+                for item in payload["results"]
+                if item["key"] == "project_verify" and item.get("path") == str(registry_path)
+            ]
+            self.assertEqual(verify_results[0]["status"], "ok")
 
     def test_install_force_preserves_module_registry_data(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -130,6 +136,118 @@ class TaskCentricKnowledgeInstallerTests(unittest.TestCase):
             self.assertEqual(payload["existing_system_classification"], "compatible")
             self.assertEqual(registry_path.read_text(encoding="utf-8"), "CUSTOM-MODULE-REGISTRY\n")
             self.assertTrue((project_root / "knowledge/modules/_templates/module.md").exists())
+
+    def test_verify_project_detects_missing_managed_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._create_project_with_custom_agents_block(Path(tmp_dir))
+            install_payload = install_module.install(
+                project_root,
+                ROOT,
+                "generic",
+                force=False,
+                existing_system_mode="abort",
+            )
+            missing_path = project_root / "knowledge/tasks/_templates/task.md"
+            missing_path.unlink()
+
+            payload = install_module.verify_project(project_root, ROOT, "generic", force=False)
+
+            self.assertTrue(install_payload["ok"])
+            self.assertFalse(payload["ok"])
+            self.assertIn("Managed-файл отсутствует", "\n".join(item["detail"] for item in payload["results"]))
+
+    def test_verify_project_detects_stale_force_updatable_template(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._create_project_with_custom_agents_block(Path(tmp_dir))
+            install_module.install(
+                project_root,
+                ROOT,
+                "generic",
+                force=False,
+                existing_system_mode="abort",
+            )
+            template_path = project_root / "knowledge/tasks/_templates/plan.md"
+            template_path.write_text("STALE TEMPLATE\n", encoding="utf-8")
+
+            payload = install_module.verify_project(project_root, ROOT, "generic", force=True)
+
+            self.assertFalse(payload["ok"])
+            self.assertIn("устарел после `--force`", "\n".join(item["detail"] for item in payload["results"]))
+
+    def test_verify_project_is_read_only_and_preserves_target_only_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._create_project_with_custom_agents_block(Path(tmp_dir))
+            install_module.install(
+                project_root,
+                ROOT,
+                "generic",
+                force=False,
+                existing_system_mode="abort",
+            )
+            target_only = project_root / "knowledge/local-note.md"
+            target_only.write_text("локальная заметка\n", encoding="utf-8")
+            before = {
+                path.relative_to(project_root).as_posix(): path.read_text(encoding="utf-8")
+                for path in project_root.rglob("*")
+                if path.is_file()
+            }
+
+            payload = install_module.verify_project(project_root, ROOT, "generic", force=False)
+
+            after = {
+                path.relative_to(project_root).as_posix(): path.read_text(encoding="utf-8")
+                for path in project_root.rglob("*")
+                if path.is_file()
+            }
+            self.assertTrue(payload["ok"])
+            self.assertEqual(after, before)
+
+    def test_install_without_agents_creates_verified_snippet(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = Path(tmp_dir) / "project"
+            project_root.mkdir()
+
+            payload = install_module.install(
+                project_root,
+                ROOT,
+                "generic",
+                force=False,
+                existing_system_mode="abort",
+            )
+
+            self.assertTrue(payload["ok"])
+            snippet_path = project_root / "AGENTS.task-centric-knowledge.generic.md"
+            self.assertTrue(snippet_path.exists())
+            snippet_results = [
+                item
+                for item in payload["results"]
+                if item["key"] == "project_verify" and item.get("path") == str(snippet_path)
+            ]
+            self.assertEqual(snippet_results[0]["status"], "ok")
+
+    def test_install_fails_when_post_install_verifier_reports_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = self._create_project_with_custom_agents_block(Path(tmp_dir))
+            original = install_module._environment_module.verify_project_install
+
+            def broken_verifier(*_args, **_kwargs):
+                return [install_module.StepResult("project_verify", "error", "POST VERIFY ERROR")]
+
+            try:
+                install_module._environment_module.verify_project_install = broken_verifier
+
+                payload = install_module.install(
+                    project_root,
+                    ROOT,
+                    "generic",
+                    force=False,
+                    existing_system_mode="abort",
+                )
+            finally:
+                install_module._environment_module.verify_project_install = original
+
+            self.assertFalse(payload["ok"])
+            self.assertIn("POST VERIFY ERROR", "\n".join(item["detail"] for item in payload["results"]))
 
     def test_check_reports_legacy_epoch_for_compatible_project_without_upgrade_state(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

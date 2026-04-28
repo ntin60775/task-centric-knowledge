@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .cleanup import migrate_cleanup_confirm, migrate_cleanup_plan
 from .doctor import doctor_deps
-from .environment import check, install, resolve_source
+from .environment import check, install, resolve_source, verify_project
 from .models import VALID_MODES
 
 
@@ -83,6 +83,8 @@ def dispatch(args: argparse.Namespace, *, script_path: Path) -> dict[str, object
         return install(project_root, source_root, args.profile, force=args.force, existing_system_mode=args.existing_system_mode)
     if args.mode == "doctor-deps":
         return doctor_deps(project_root, source_root, args.profile)
+    if args.mode == "verify-project":
+        return verify_project(project_root, source_root, args.profile, force=args.force)
     if args.mode == "migrate-cleanup-plan":
         return migrate_cleanup_plan(
             project_root,

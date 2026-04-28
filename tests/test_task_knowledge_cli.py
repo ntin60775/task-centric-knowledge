@@ -75,6 +75,31 @@ class TaskKnowledgeCliTests(TempRepoCase):
             self.assertEqual(payload["mode"], "migrate-cleanup-plan")
             self.assertIn("task-knowledge install cleanup-confirm", payload["confirm_command"])
 
+    def test_install_verify_project_routes_to_project_verifier(self) -> None:
+        with self.make_tempdir() as tmp_dir:
+            project_root = self.init_repo(Path(tmp_dir))
+            (project_root / "AGENTS.md").write_text("# AGENTS\n", encoding="utf-8")
+            apply_result, apply_payload = self.run_cli_json(
+                "install",
+                "apply",
+                "--project-root",
+                str(project_root),
+            )
+
+            result, payload = self.run_cli_json(
+                "install",
+                "verify-project",
+                "--project-root",
+                str(project_root),
+            )
+
+            self.assertEqual(apply_result.returncode, 0)
+            self.assertTrue(apply_payload["ok"])
+            self.assertEqual(result.returncode, 0)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["mode"], "verify-project")
+            self.assertIn("project_verify_summary", {item["key"] for item in payload["results"]})
+
     def test_task_status_routes_to_query_runtime(self) -> None:
         with self.make_tempdir() as tmp_dir:
             project_root = self.init_repo(Path(tmp_dir))

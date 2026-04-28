@@ -52,3 +52,4 @@
 | `TASK-2026-0035` | `—` | `завершена` | `высокий` | `main` | `knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/` | Добавить native runtime surfaces и updateable consumer contract, чтобы потребители могли полностью уйти от `.sisyphus` |
 | `TASK-2026-0036` | `—` | `завершена` | `средний` | `main` | `knowledge/tasks/TASK-2026-0036-ignore-zip-context-artifacts/` | Исключить локальные артефакты `zip-context` из git-статуса standalone-репозитория. |
 | `TASK-2026-0037` | `—` | `завершена` | `высокий` | `main` | `knowledge/tasks/TASK-2026-0037-global-skill-install-contract/` | Закрепить полную и проверяемую глобальную установку навыка `task-centric-knowledge` в live-copy и CLI layer. |
+| `TASK-2026-0038` | `—` | `завершена` | `высокий` | `main` | `knowledge/tasks/TASK-2026-0038-project-install-verification-contract/` | Закрепить полную и проверяемую установку или обновление проектной части `task-centric-knowledge`. |

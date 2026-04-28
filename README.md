@@ -17,7 +17,7 @@
 | Source repo | Канонический standalone-дистрибутив для разработки и релиза. | `git status`, `python3 -m unittest discover -s tests -v` |
 | Live skill copy | Глобальная копия навыка для Codex skills. | `make install-global` |
 | User-site CLI layer | Команда `task-knowledge` и Python import path. | `make install-local` |
-| Target project knowledge | Managed `knowledge/` и блок `AGENTS.md` в целевом проекте. | `task-knowledge install apply --project-root /abs/project` |
+| Target project knowledge | Managed `knowledge/` и блок `AGENTS.md` в целевом проекте. | `task-knowledge install apply --project-root /abs/project --force` |
 
 ## Глобальная установка навыка
 
@@ -73,10 +73,16 @@ task-knowledge --json doctor --project-root /abs/project
 
 ```bash
 task-knowledge install check --project-root /abs/project
-task-knowledge install apply --project-root /abs/project
+task-knowledge install apply --project-root /abs/project --force  # полное обновление managed-шаблонов
+task-knowledge install verify-project --project-root /abs/project --force  # read-only проверка результата
 task-knowledge install doctor-deps --project-root /abs/project
 task-knowledge install cleanup-plan --project-root /abs/project --existing-system-mode migrate
 ```
+
+`install apply` всегда выполняет post-install verification перед успешным `ok=True`.
+`install verify-project` повторяет ту же проверку read-only и нужен для отдельного аудита уже установленного проекта.
+Для полного обновления managed-шаблонов используй `--force`: шаблоны должны совпасть с дистрибутивом,
+а `knowledge/tasks/registry.md` и `knowledge/modules/registry.md` всё равно остаются project data и не перезаписываются.
 
 Получить read-only отчётность:
 

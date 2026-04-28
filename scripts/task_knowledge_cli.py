@@ -24,6 +24,7 @@ from install_skill_runtime import (
     resolve_source,
     source_root_mode as detect_source_root_mode,
     source_root_ready,
+    verify_project,
 )
 from install_skill_runtime.cli import main as legacy_install_main
 from install_skill_runtime.cli import print_text_report as print_install_text_report
@@ -103,6 +104,17 @@ def _add_install_commands(subparsers) -> None:
         choices=("abort", "adopt", "migrate"),
         default="abort",
         help="Как вести себя при обнаружении существующей системы хранения.",
+    )
+
+    verify_parser = install_subparsers.add_parser(
+        "verify-project",
+        parents=[_common_install_parent()],
+        help="Проверить полноту установленной project knowledge-системы.",
+    )
+    verify_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Требовать актуальность обновляемых managed-шаблонов относительно дистрибутива.",
     )
 
     install_subparsers.add_parser(
@@ -487,6 +499,8 @@ def _install(args: argparse.Namespace, *, json_mode: bool) -> tuple[dict[str, ob
         )
     elif args.install_command == "doctor-deps":
         payload = doctor_deps(project_root, source_root, args.profile)
+    elif args.install_command == "verify-project":
+        payload = verify_project(project_root, source_root, args.profile, force=args.force)
     elif args.install_command == "cleanup-plan":
         payload = migrate_cleanup_plan(
             project_root,

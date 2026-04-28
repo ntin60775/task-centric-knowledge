@@ -36,6 +36,8 @@ from .environment import (
     validate_existing_system_policy,
     validate_source,
     validate_target,
+    verify_project,
+    verify_project_install,
     write_migration_suggestion,
 )
 from .models import (
@@ -52,6 +54,7 @@ from .models import (
     MODE_INSTALL,
     MODE_MIGRATE_CLEANUP_CONFIRM,
     MODE_MIGRATE_CLEANUP_PLAN,
+    MODE_VERIFY_PROJECT,
     VALID_MODES,
     cleanup_scope_fingerprint,
     has_errors,
@@ -79,6 +82,7 @@ __all__ = [
     "MODE_INSTALL",
     "MODE_MIGRATE_CLEANUP_CONFIRM",
     "MODE_MIGRATE_CLEANUP_PLAN",
+    "MODE_VERIFY_PROJECT",
     "PROFILE_TO_BLOCK",
     "PROJECT_DATA_TARGET_FILES",
     "REQUIRED_RELATIVE_PATHS",
@@ -111,5 +115,7 @@ __all__ = [
     "validate_existing_system_policy",
     "validate_source",
     "validate_target",
+    "verify_project",
+    "verify_project_install",
     "write_migration_suggestion",
 ]
