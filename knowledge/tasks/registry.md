@@ -54,3 +54,4 @@
 | `TASK-2026-0037` | `—` | `завершена` | `высокий` | `main` | `knowledge/tasks/TASK-2026-0037-global-skill-install-contract/` | Закрепить полную и проверяемую глобальную установку навыка `task-centric-knowledge` в live-copy и CLI layer. |
 | `TASK-2026-0038` | `—` | `завершена` | `высокий` | `main` | `knowledge/tasks/TASK-2026-0038-project-install-verification-contract/` | Закрепить полную и проверяемую установку или обновление проектной части `task-centric-knowledge`. |
 | `TASK-2026-0039` | `—` | `завершена` | `высокий` | `main` | `knowledge/tasks/TASK-2026-0039-production-team-snapshot-integration/` | Интегрировать полезные правки из production-team snapshot после исправления blocker-ов ревью. |
+| `TASK-2026-0040` | `—` | `завершена` | `средний` | `main` | `knowledge/tasks/TASK-2026-0040-project-copy-refresh-after-global-install/` | Обновить текущую project copy после обновления глобальной установки навыка task-centric-knowledge. |

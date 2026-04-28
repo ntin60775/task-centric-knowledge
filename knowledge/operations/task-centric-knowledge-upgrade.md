@@ -8,8 +8,8 @@
 | Эпоха совместимости | `module-core-v1` |
 | Статус перехода | `fully-upgraded` |
 | Контур исполнения | `single-writer` |
-| Последняя задача перехода | `TASK-2026-0034` |
-| Дата обновления | `2026-04-23` |
+| Последняя задача перехода | `TASK-2026-0040` |
+| Дата обновления | `2026-04-28` |
 
 ## Исторические задачи
 
@@ -45,4 +45,10 @@
 | `TASK-2026-0031` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0031-repo-wide-review-fix-cycle/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
 | `TASK-2026-0032` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0032-python-hardened-integration/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
 | `TASK-2026-0033` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0033-repo-wide-review-rerun/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
-| `TASK-2026-0034` | `active` | `compatibility-backfilled` | `knowledge/tasks/TASK-2026-0034-task-centric-knowledge-upgrade-completion/artifacts/migration/task-centric-knowledge-upgrade.md` | Active-задача прошла controlled compatibility-backfill и остаётся в обычном task lifecycle. |
+| `TASK-2026-0034` | `closed historical` | `compatibility-backfilled` | `knowledge/tasks/TASK-2026-0034-task-centric-knowledge-upgrade-completion/artifacts/migration/task-centric-knowledge-upgrade.md` | Active-задача прошла controlled compatibility-backfill и остаётся в обычном task lifecycle. |
+| `TASK-2026-0035` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0035-native-runtime-surfaces-for-consumers/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0036` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0036-ignore-zip-context-artifacts/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0037` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0037-global-skill-install-contract/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0038` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0038-project-install-verification-contract/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0039` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0039-production-team-snapshot-integration/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
+| `TASK-2026-0040` | `active` | `compatibility-backfilled` | `knowledge/tasks/TASK-2026-0040-project-copy-refresh-after-global-install/artifacts/migration/task-centric-knowledge-upgrade.md` | Active-задача прошла controlled compatibility-backfill и остаётся в обычном task lifecycle. |

@@ -123,6 +123,9 @@ main language: русский;
 
 - Перед upgrade сначала выполнить локальную проверку совместимости и определить точный scope перехода.
 - Уже созданные task-каталоги, `task.md`/`plan.md`/`sdd.md` и `knowledge/tasks/registry.md` считать project data; не перезаписывать их молча при обновлении.
+- Локальную проектную установку обновлять только после verified global live-copy: `task-knowledge install check --project-root /abs/project --source-root ~/.agents/skills/task-centric-knowledge`, затем `task-knowledge install apply --project-root /abs/project --source-root ~/.agents/skills/task-centric-knowledge --force`, затем `task-knowledge install verify-project --project-root /abs/project --source-root ~/.agents/skills/task-centric-knowledge --force`.
+- Если installer сообщает `symlink` или managed-path outside project, остановиться и исправить layout вручную; не пытаться обновлять managed-файлы через symlink.
+- Для mutating workflow-команд `--task-dir` должен находиться внутри `project_root` после `resolve()`; symlinked task directory, ведущий наружу, использовать запрещено.
 - Сам переход версии разносить в локальном git отдельным task-scoped commit-ом, чтобы момент перехода был виден однозначно.
 - После transition-commit последующие рабочие изменения делать отдельными commit-ами, а не смешивать с самим переходом.
 - Предлагать `push` только если через `git remote` или `git remote -v` реально обнаружен связанный remote; если remote нет, работать только локально и не поднимать тему `push`.
