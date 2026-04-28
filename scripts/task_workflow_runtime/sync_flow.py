@@ -18,6 +18,7 @@ from task_workflow_runtime.legacy_upgrade import (
 
 from .git_ops import branch_exists, current_git_branch, has_remote, run_git, worktree_is_clean
 from .models import FINAL_TASK_STATUSES, PLACEHOLDER_BRANCH_VALUES, StepResult, default_branch_name
+from .path_safety import resolve_task_dir_inside_project
 from .registry_sync import (
     dirty_paths_are_task_scoped,
     find_parent_branch,
@@ -92,9 +93,7 @@ def resolve_target_branch(
 
 
 def _resolve_task_dir(project_root: Path, task_dir: Path) -> Path:
-    if task_dir.is_absolute():
-        return task_dir.resolve()
-    return (project_root / task_dir).resolve()
+    return resolve_task_dir_inside_project(project_root, task_dir)
 
 
 def _load_backfill_context(
@@ -373,7 +372,7 @@ def sync_task(
     today: str | None = None,
 ) -> dict[str, object]:
     project_root = project_root.resolve()
-    task_dir = (project_root / task_dir).resolve() if not task_dir.is_absolute() else task_dir.resolve()
+    task_dir = _resolve_task_dir(project_root, task_dir)
     task_file = task_dir / "task.md"
     if not task_file.exists():
         raise ValueError(f"Не найден task.md по пути {task_file}.")

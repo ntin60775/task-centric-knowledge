@@ -115,7 +115,40 @@ def iter_manifest_files(source_root: Path) -> list[Path]:
     return sorted(files, key=lambda item: item.relative_to(source_root).as_posix())
 
 
-def status_for_file(source_path: Path, target_path: Path) -> str:
+def _absolute_target_for_check(target_root: Path, target_path: Path) -> Path:
+    if target_path.is_absolute():
+        return target_path
+    root = target_root if target_root.is_absolute() else Path.cwd() / target_root
+    return root / target_path
+
+
+def target_path_safety_status(target_root: Path, target_path: Path) -> str | None:
+    resolved_root = target_root.resolve()
+    absolute_target = _absolute_target_for_check(target_root, target_path)
+
+    try:
+        relative_parts = absolute_target.relative_to(target_root if target_root.is_absolute() else Path.cwd() / target_root).parts
+    except ValueError:
+        return "blocked-target-outside-root"
+
+    current = target_root if target_root.is_absolute() else Path.cwd() / target_root
+    for part in relative_parts:
+        current = current / part
+        if current.is_symlink():
+            return "blocked-target-symlink"
+
+    resolved_target = absolute_target.resolve(strict=False)
+    try:
+        resolved_target.relative_to(resolved_root)
+    except ValueError:
+        return "blocked-target-outside-root"
+    return None
+
+
+def status_for_file(source_path: Path, target_path: Path, *, target_root: Path) -> str:
+    safety_status = target_path_safety_status(target_root, target_path)
+    if safety_status is not None:
+        return safety_status
     if not target_path.exists():
         return "create"
     if not target_path.is_file():
@@ -137,10 +170,18 @@ def build_plan(source_root: Path, target_root: Path) -> list[DeployFile]:
                 relative=relative,
                 source=str(source_path),
                 target=str(target_path),
-                status=status_for_file(source_path, target_path),
+                status=status_for_file(source_path, target_path, target_root=target_root),
             )
         )
     return plan
+
+
+def plan_blocking_issues(plan: list[DeployFile]) -> list[VerificationIssue]:
+    return [
+        VerificationIssue(item.relative, f"manifest target is unsafe: {item.status}")
+        for item in plan
+        if item.status.startswith("blocked-target-")
+    ]
 
 
 def required_missing(root: Path) -> list[str]:
@@ -148,12 +189,11 @@ def required_missing(root: Path) -> list[str]:
 
 
 def apply_plan(plan: list[DeployFile]) -> list[DeployFile]:
+    if plan_blocking_issues(plan):
+        return []
     applied: list[DeployFile] = []
     for item in plan:
         if item.status == "unchanged":
-            continue
-        if item.status == "blocked-target-not-file":
-            applied.append(item)
             continue
         source = Path(item.source)
         target = Path(item.target)
@@ -199,6 +239,10 @@ def verify_target(source_root: Path, target_root: Path) -> tuple[list[Verificati
     for source_path in manifest:
         relative = source_path.relative_to(source_root).as_posix()
         target_path = target_root / relative
+        safety_status = target_path_safety_status(target_root, target_path)
+        if safety_status is not None:
+            issues.append(VerificationIssue(relative, f"manifest target is unsafe: {safety_status}"))
+            continue
         if not target_path.exists():
             issues.append(VerificationIssue(relative, "manifest file is missing in live skill copy"))
             continue
@@ -263,7 +307,7 @@ def run_command(
 
 def install_cli_layer(target_root: Path, *, user_bin: Path | None, python_site: Path | None) -> SmokeResult:
     env = os.environ.copy()
-    command = ["make", "install-local", f"PYTHON={sys.executable}"]
+    command = ["make", "install-wrapper", f"PYTHON={sys.executable}"]
     if user_bin is not None:
         command.append(f"USER_BIN={user_bin}")
     if python_site is not None:
@@ -277,7 +321,9 @@ def verify_cli_layer(target_root: Path, *, user_bin: Path | None, python_site: P
     resolved_python_site = python_site if python_site is not None else default_python_site()
     wrapper_path = resolved_user_bin / "task-knowledge"
     expected_script = str((target_root / "scripts" / "task_knowledge_cli.py").resolve())
-    if not wrapper_path.exists():
+    if wrapper_path.is_symlink():
+        issues.append(VerificationIssue("user-site CLI layer", f"task-knowledge wrapper is a symlink and is unsafe: {wrapper_path}"))
+    elif not wrapper_path.exists():
         issues.append(VerificationIssue("user-site CLI layer", f"task-knowledge wrapper is missing: {wrapper_path}"))
     elif not wrapper_path.is_file():
         issues.append(VerificationIssue("user-site CLI layer", f"task-knowledge wrapper is not a file: {wrapper_path}"))
@@ -293,7 +339,9 @@ def verify_cli_layer(target_root: Path, *, user_bin: Path | None, python_site: P
 
     pth_path = resolved_python_site / "task_knowledge_local.pth"
     expected_pth = str((target_root / "scripts").resolve())
-    if not pth_path.exists():
+    if pth_path.is_symlink():
+        issues.append(VerificationIssue("user-site CLI layer", f"task_knowledge_local.pth is a symlink and is unsafe: {pth_path}"))
+    elif not pth_path.exists():
         issues.append(VerificationIssue("user-site CLI layer", f"task_knowledge_local.pth is missing: {pth_path}"))
     elif pth_path.read_text(encoding="utf-8").strip() != expected_pth:
         issues.append(
@@ -377,7 +425,7 @@ def summarize_plan(plan: list[DeployFile]) -> dict[str, int]:
         "create": sum(1 for item in plan if item.status == "create"),
         "update": sum(1 for item in plan if item.status == "update"),
         "unchanged": sum(1 for item in plan if item.status == "unchanged"),
-        "blocked": sum(1 for item in plan if item.status == "blocked-target-not-file"),
+        "blocked": sum(1 for item in plan if item.status.startswith("blocked-target-")),
     }
 
 
@@ -397,7 +445,7 @@ def build_payload(
     source_missing = required_missing(source_root)
     verification_issues = verification_issues or []
     smoke_results = smoke_results or []
-    ok = not source_missing
+    ok = not source_missing and not verification_issues
     if mode == "verify":
         ok = ok and not verification_issues and all(item.ok for item in smoke_results)
     if mode == "apply":
@@ -462,10 +510,11 @@ def main(argv: list[str] | None = None) -> int:
     user_bin = Path(args.user_bin).resolve() if args.user_bin else None
     python_site = Path(args.python_site).resolve() if args.python_site else None
     plan = build_plan(source_root, target_root)
+    blocking_issues = plan_blocking_issues(plan)
     applied: list[DeployFile] = []
     cli_install: SmokeResult | None = None
     smoke_results: list[SmokeResult] = []
-    if args.mode == "apply":
+    if args.mode == "apply" and not blocking_issues:
         applied = apply_plan(plan)
         if not args.skip_cli_install:
             cli_install = install_cli_layer(target_root, user_bin=user_bin, python_site=python_site)
@@ -473,11 +522,12 @@ def main(argv: list[str] | None = None) -> int:
             smoke_results = run_smoke_checks(target_root, project_root, user_bin=user_bin)
     elif args.mode == "verify" and not args.skip_smoke:
         smoke_results = run_smoke_checks(target_root, project_root, user_bin=user_bin)
-    if args.mode == "dry-run":
-        verification_issues: list[VerificationIssue] = []
+    if args.mode == "dry-run" or blocking_issues:
+        verification_issues: list[VerificationIssue] = blocking_issues
         extra_target_files: list[str] = []
     else:
         verification_issues, extra_target_files = verify_target(source_root, target_root)
+        verification_issues = blocking_issues + verification_issues
         if args.mode == "verify" or not args.skip_cli_install:
             verification_issues.extend(verify_cli_layer(target_root, user_bin=user_bin, python_site=python_site))
     payload = build_payload(

@@ -31,6 +31,7 @@ from .models import (
     normalize_unit_id,
     sanitize_delivery_text,
 )
+from .path_safety import resolve_task_dir_inside_project
 from .registry_sync import (
     collect_delivery_units,
     find_delivery_unit,
@@ -385,9 +386,7 @@ def branch_for_task_context(
 
 
 def _resolve_task_dir(project_root: Path, task_dir: Path) -> Path:
-    if task_dir.is_absolute():
-        return task_dir.resolve()
-    return (project_root / task_dir).resolve()
+    return resolve_task_dir_inside_project(project_root, task_dir)
 
 
 def _load_publish_context(project_root: Path, task_dir: Path) -> PublishContext:

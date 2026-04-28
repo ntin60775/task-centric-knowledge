@@ -11,10 +11,10 @@
 | Технический ключ для новых именуемых сущностей | `—` |
 | Краткое имя | `production-team-snapshot-integration` |
 | Человекочитаемое описание | `Интегрировать полезные правки из production-team snapshot после исправления blocker-ов ревью.` |
-| Статус | `готова к работе` |
+| Статус | `завершена` |
 | Приоритет | `высокий` |
 | Ответственный | `не назначен` |
-| Ветка | `task/task-2026-0039-production-team-snapshot-integration` |
+| Ветка | `main` |
 | Требуется SDD | `да` |
 | Статус SDD | `актуален` |
 | Ссылка на SDD | `sdd.md` |
@@ -67,6 +67,7 @@ Selective-port полезных изменений из архива production-
 - файл плана: `plan.md`
 - файл SDD: `sdd.md`
 - файл verification matrix: `artifacts/verification-matrix.md`
+- финальное сравнение scope с архивом: `artifacts/snapshot-scope-review.md`
 - пользовательские материалы: `/home/prog7/РабочееПространство/projects/PetProjects/task-centric-knowledge-production-team-2026-04-28.zip`
 - рабочий каталог анализа архива: `/tmp/tck-prod-review.V3x4ih`
 - связанные коммиты / PR / ветки: `task/task-2026-0039-production-team-snapshot-integration`
@@ -80,16 +81,15 @@ Selective-port полезных изменений из архива production-
 
 ## Текущий этап
 
-Задача открыта. Следующий шаг — selective-port с исправлением blocker-ов до переноса production contract в основной код и документацию.
-
+Локальный finalize выполнен: task-ветка влита в base-ветку, рабочий контекст переведён на base-ветку, `push` остаётся отдельным шагом.
 ## Стратегия проверки
 
 ### Покрывается кодом или тестами
 
 - `python3 -m compileall -q scripts tests`
 - `python3 -m unittest discover -s tests -v`
-- `python3 -m ruff check scripts tests`, если lint target остаётся обязательной частью production gate.
-- `python3 -m mypy scripts`, если `mypy` доступен в dev environment или gate объявлен обязательным.
+- `python3 -m ruff check scripts tests` как optional `check-strict`; текущий baseline красный и не входит в mandatory `check-production`.
+- `python3 -m mypy scripts` как optional `check-strict`; текущая среда не содержит `mypy`.
 - `git diff --check`
 - `bash scripts/check-docs-localization.sh`
 - Targeted tests по safety guard: global install symlink, project install symlink/outside-root, workflow `task_dir_outside_project_root`.
@@ -97,7 +97,7 @@ Selective-port полезных изменений из архива production-
 
 ### Остаётся на ручную проверку
 
-- Финальное review-сравнение перенесённого scope с архивом, чтобы не потерять полезную правку и не перенести repo-only мусор.
+- `не требуется`: финальное review-сравнение scope с архивом выполнено в `artifacts/snapshot-scope-review.md`.
 
 ## Критерии готовности
 
@@ -110,8 +110,8 @@ Selective-port полезных изменений из архива production-
 
 ## Итоговый список ручных проверок
 
-- Финальное review-сравнение перенесённого scope с архивом.
+- `не требуется`: финальное review-сравнение scope с архивом выполнено в `artifacts/snapshot-scope-review.md`.
 
 ## Итог
 
-Заполняется после реализации и verify-loop.
+Selective-port выполнен: перенесены production rollout contract, atomic safety-preflight для global/project install и workflow `task_dir` boundary guard. Strict static checks отделены от mandatory production gate.

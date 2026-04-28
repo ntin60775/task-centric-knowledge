@@ -16,6 +16,7 @@ from .models import (
     StepResult,
     default_branch_name,
 )
+from .path_safety import resolve_task_dir_inside_project
 from .registry_sync import collect_delivery_units, update_registry
 from .task_markdown import derive_goal_summary_from_lines, read_task_fields, task_summary_from_fields, update_task_file
 
@@ -168,9 +169,7 @@ def _runtime_failure_payload(
 
 
 def _resolve_task_dir(project_root: Path, task_dir: Path) -> Path:
-    if task_dir.is_absolute():
-        return task_dir.resolve()
-    return (project_root / task_dir).resolve()
+    return resolve_task_dir_inside_project(project_root, task_dir)
 
 
 def _load_finalize_context(project_root: Path, task_dir: Path, base_branch: str | None) -> FinalizeContext:

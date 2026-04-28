@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from task_workflow_runtime.legacy_upgrade import ensure_repo_upgrade_state, upgrade_state_summary
+from task_workflow_runtime.legacy_upgrade import ensure_repo_upgrade_state, repo_upgrade_state_path, upgrade_state_summary
 
 from .models import (
     ADDITIVE_MANAGED_TARGET_FILES,
@@ -95,6 +95,109 @@ def asset_to_target_path(project_root: Path, asset_relative: str) -> Path:
     return project_root / asset_to_target_relative(asset_relative)
 
 
+def _managed_path_safety_result(
+    project_root: Path,
+    target_path: Path,
+    *,
+    key: str,
+    action: str,
+) -> StepResult | None:
+    resolved_root = project_root.resolve()
+    absolute_target = target_path if target_path.is_absolute() else project_root / target_path
+    try:
+        relative_parts = absolute_target.relative_to(project_root).parts
+    except ValueError:
+        return StepResult(
+            key,
+            "error",
+            f"Managed-path выходит за project_root; installer не будет выполнять {action}.",
+            str(absolute_target),
+        )
+
+    current = project_root
+    for part in relative_parts:
+        current = current / part
+        if current.is_symlink():
+            return StepResult(
+                key,
+                "error",
+                f"Managed-path содержит symlink; installer не будет выполнять {action} через symlink.",
+                str(current),
+            )
+
+    resolved_target = absolute_target.resolve(strict=False)
+    try:
+        resolved_target.relative_to(resolved_root)
+    except ValueError:
+        return StepResult(
+            key,
+            "error",
+            f"Managed-path после resolve выходит за project_root; installer не будет выполнять {action}.",
+            str(absolute_target),
+        )
+    return None
+
+
+def _managed_write_safety_result(project_root: Path, target_path: Path, *, key: str) -> StepResult | None:
+    return _managed_path_safety_result(project_root, target_path, key=key, action="запись")
+
+
+def _managed_read_safety_result(project_root: Path, target_path: Path, *, key: str) -> StepResult | None:
+    return _managed_path_safety_result(project_root, target_path, key=key, action="чтение")
+
+
+def _install_preflight_targets(
+    project_root: Path,
+    profile: str,
+    *,
+    include_migration_note: bool,
+    include_upgrade_state: bool,
+) -> list[Path]:
+    targets = [asset_to_target_path(project_root, relative) for relative in KNOWLEDGE_ASSET_FILES]
+    agents_path = project_root / "AGENTS.md"
+    if agents_path.exists() or agents_path.is_symlink():
+        targets.append(agents_path)
+    else:
+        targets.append(project_root / f"AGENTS.task-centric-knowledge.{profile}.md")
+    if include_migration_note:
+        targets.append(project_root / "knowledge" / MIGRATION_NOTE_NAME)
+    if include_upgrade_state:
+        targets.append(repo_upgrade_state_path(project_root))
+    return targets
+
+
+def preflight_managed_write_targets(
+    project_root: Path,
+    profile: str,
+    *,
+    include_migration_note: bool,
+    include_upgrade_state: bool,
+) -> list[StepResult]:
+    results: list[StepResult] = []
+    seen: set[Path] = set()
+    for target_path in _install_preflight_targets(
+        project_root,
+        profile,
+        include_migration_note=include_migration_note,
+        include_upgrade_state=include_upgrade_state,
+    ):
+        if target_path in seen:
+            continue
+        seen.add(target_path)
+        safety_result = _managed_write_safety_result(project_root, target_path, key="managed_preflight")
+        if safety_result is not None:
+            results.append(safety_result)
+    if results:
+        results.append(
+            StepResult(
+                "managed_preflight",
+                "error",
+                "Установка остановлена до write-шагов: обнаружены небезопасные managed targets.",
+            )
+        )
+    return results
+
+
 def validate_source(source_root: Path) -> list[StepResult]:
     if not source_root_ready(source_root) and embedded_runtime_ready(source_root):
         return [_embedded_source_root_unavailable_result(source_root)]
@@ -118,7 +221,16 @@ def validate_target(project_root: Path) -> list[StepResult]:
         return results
 
     agents_path = project_root / "AGENTS.md"
-    if agents_path.exists():
+    if agents_path.is_symlink():
+        results.append(
+            StepResult(
+                "agents",
+                "error",
+                "AGENTS.md является symlink; installer не будет читать или писать managed-блок через symlink",
+                str(agents_path),
+            )
+        )
+    elif agents_path.exists():
         results.append(StepResult("agents", "ok", "Найден AGENTS.md", str(agents_path)))
     else:
         results.append(
@@ -131,7 +243,16 @@ def validate_target(project_root: Path) -> list[StepResult]:
         )
 
     knowledge_path = project_root / "knowledge"
-    if knowledge_path.exists() and knowledge_path.is_dir():
+    if knowledge_path.is_symlink():
+        results.append(
+            StepResult(
+                "knowledge",
+                "error",
+                "Путь knowledge является symlink; installer не будет писать managed-файлы через symlink",
+                str(knowledge_path),
+            )
+        )
+    elif knowledge_path.exists() and knowledge_path.is_dir():
         results.append(StepResult("knowledge", "warning", "Каталог knowledge уже существует", str(knowledge_path)))
     elif knowledge_path.exists():
         results.append(
@@ -163,7 +284,9 @@ def detect_existing_system(project_root: Path) -> ExistingSystemReport:
     missing_managed = [relative for relative in MANAGED_TARGET_FILES if relative not in managed_present]
     agents_path = project_root / "AGENTS.md"
     agents_block_state = "absent"
-    if agents_path.exists():
+    if agents_path.is_symlink():
+        agents_block_state = "invalid"
+    elif agents_path.exists():
         agents_text = agents_path.read_text(encoding="utf-8")
         agents_block_state = detect_managed_block_state(agents_text)
 
@@ -261,6 +384,14 @@ def summarize_existing_system(report: ExistingSystemReport) -> list[StepResult]:
 
 def copy_knowledge_files(project_root: Path, source_root: Path, *, force: bool) -> list[StepResult]:
     results: list[StepResult] = []
+    safety_results = [
+        result
+        for relative in KNOWLEDGE_ASSET_FILES
+        if (result := _managed_write_safety_result(project_root, asset_to_target_path(project_root, relative), key="copy"))
+        is not None
+    ]
+    if safety_results:
+        return safety_results
     for relative in KNOWLEDGE_ASSET_FILES:
         source_path = source_root / relative
         target_relative = asset_to_target_relative(relative)
@@ -302,6 +433,10 @@ def verify_project_install(project_root: Path, source_root: Path, profile: str, 
         source_path = source_root / relative
         target_relative = asset_to_target_relative(relative)
         target_path = asset_to_target_path(project_root, relative)
+        safety_result = _managed_read_safety_result(project_root, target_path, key="project_verify")
+        if safety_result is not None:
+            results.append(safety_result)
+            continue
         if not target_path.exists():
             results.append(StepResult("project_verify", "error", "Managed-файл отсутствует после установки", str(target_path)))
             continue
@@ -322,9 +457,15 @@ def verify_project_install(project_root: Path, source_root: Path, profile: str, 
     expected_block = render_agents_block(source_root, profile)
     agents_path = project_root / "AGENTS.md"
     snippet_path = project_root / f"AGENTS.task-centric-knowledge.{profile}.md"
-    if agents_path.exists():
-        agents_text = agents_path.read_text(encoding="utf-8")
-        block_state = detect_managed_block_state(agents_text)
+    if agents_path.exists() or agents_path.is_symlink():
+        safety_result = _managed_read_safety_result(project_root, agents_path, key="project_verify")
+        if safety_result is not None:
+            results.append(safety_result)
+            agents_text = ""
+            block_state = "invalid"
+        else:
+            agents_text = agents_path.read_text(encoding="utf-8")
+            block_state = detect_managed_block_state(agents_text)
         if block_state == "invalid":
             results.append(StepResult("project_verify", "error", "Managed-маркеры в AGENTS.md неконсистентны", str(agents_path)))
         elif block_state == "absent":
@@ -333,8 +474,11 @@ def verify_project_install(project_root: Path, source_root: Path, profile: str, 
             results.append(StepResult("project_verify", "error", "Managed-блок AGENTS.md не соответствует выбранному profile", str(agents_path)))
         else:
             results.append(StepResult("project_verify", "ok", "Managed-блок AGENTS.md актуален", str(agents_path)))
-    elif snippet_path.exists():
-        if _content_matches(source_root / PROFILE_TO_BLOCK[profile], snippet_path):
+    elif snippet_path.exists() or snippet_path.is_symlink():
+        safety_result = _managed_read_safety_result(project_root, snippet_path, key="project_verify")
+        if safety_result is not None:
+            results.append(safety_result)
+        elif _content_matches(source_root / PROFILE_TO_BLOCK[profile], snippet_path):
             results.append(StepResult("project_verify", "ok", "Snippet для ручного включения AGENTS.md актуален", str(snippet_path)))
         else:
             results.append(StepResult("project_verify", "error", "Snippet для AGENTS.md не соответствует выбранному profile", str(snippet_path)))
@@ -383,7 +527,11 @@ def install_agents_block(project_root: Path, source_root: Path, profile: str) ->
     results: list[StepResult] = []
     block = render_agents_block(source_root, profile)
     agents_path = project_root / "AGENTS.md"
-    if agents_path.exists():
+    if agents_path.exists() or agents_path.is_symlink():
+        safety_result = _managed_write_safety_result(project_root, agents_path, key="agents")
+        if safety_result is not None:
+            results.append(safety_result)
+            return results
         current = agents_path.read_text(encoding="utf-8")
         try:
             updated, mode = upsert_block(current, block)
@@ -396,6 +544,10 @@ def install_agents_block(project_root: Path, source_root: Path, profile: str) ->
         return results
 
     snippet_path = project_root / f"AGENTS.task-centric-knowledge.{profile}.md"
+    safety_result = _managed_write_safety_result(project_root, snippet_path, key="agents")
+    if safety_result is not None:
+        results.append(safety_result)
+        return results
     snippet_path.write_text(block, encoding="utf-8")
     results.append(
         StepResult(
@@ -438,6 +590,9 @@ def validate_existing_system_policy(classification: str, mode: str) -> list[Step
 
 def write_migration_suggestion(project_root: Path, report: ExistingSystemReport, profile: str) -> StepResult:
     migration_path = project_root / "knowledge" / MIGRATION_NOTE_NAME
+    safety_result = _managed_write_safety_result(project_root, migration_path, key="migration")
+    if safety_result is not None:
+        return safety_result
     migration_path.parent.mkdir(parents=True, exist_ok=True)
     managed_lines = "\n".join(f"- `{item}`" for item in report.managed_present) or "- совместимые managed-файлы не обнаружены"
     foreign_lines = "\n".join(f"- `{item}`" for item in report.foreign_present) or "- внешние контуры не обнаружены"
@@ -479,6 +634,31 @@ def write_migration_suggestion(project_root: Path, report: ExistingSystemReport,
     return StepResult("migration", "warning", "Создано явное предложение миграции с другой системы хранения", str(migration_path))
 
 
+def _fallback_upgrade_summary(project_root: Path, existing_system_classification: str) -> dict[str, object]:
+    compatibility_epoch = "legacy-v1" if existing_system_classification == "compatible" else "module-core-v1"
+    upgrade_status = "legacy-compatible" if compatibility_epoch == "legacy-v1" else "fully-upgraded"
+    execution_rollout = "legacy" if compatibility_epoch == "legacy-v1" else "single-writer"
+    return {
+        "state_path": str(repo_upgrade_state_path(project_root)),
+        "state_exists": False,
+        "compatibility_epoch": compatibility_epoch,
+        "upgrade_status": upgrade_status,
+        "execution_rollout": execution_rollout,
+        "legacy_pending_count": 0,
+        "reference_manual_count": 0,
+    }
+
+
+def _safe_upgrade_state_summary(project_root: Path, existing_system_classification: str) -> dict[str, object]:
+    safety_result = _managed_read_safety_result(project_root, repo_upgrade_state_path(project_root), key="upgrade_state")
+    if safety_result is not None:
+        return _fallback_upgrade_summary(project_root, existing_system_classification)
+    return upgrade_state_summary(
+        project_root,
+        existing_system_classification=existing_system_classification,
+    )
+
+
 def _base_payload(
     *,
     mode: str,
@@ -491,9 +671,9 @@ def _base_payload(
     ok: bool,
     results: list[StepResult],
 ) -> dict[str, object]:
-    upgrade_summary = upgrade_state_summary(
+    upgrade_summary = _safe_upgrade_state_summary(
         project_root,
-        existing_system_classification=existing_report.classification,
+        existing_report.classification,
     )
     return {
         "skill": SKILL_NAME,
@@ -520,6 +700,20 @@ def install(project_root: Path, source_root: Path, profile: str, *, force: bool,
     existing_report = detect_existing_system(project_root)
     results.extend(summarize_existing_system(existing_report))
     results.extend(validate_existing_system_policy(existing_report.classification, existing_system_mode))
+    include_migration_note = existing_system_mode == "migrate" and existing_report.classification in {
+        "foreign_system",
+        "mixed_system",
+        "partial_knowledge",
+    }
+    include_upgrade_state = existing_report.classification == "compatible" and force
+    results.extend(
+        preflight_managed_write_targets(
+            project_root,
+            profile,
+            include_migration_note=include_migration_note,
+            include_upgrade_state=include_upgrade_state,
+        )
+    )
     if has_errors(results):
         return _base_payload(
             mode="install",
@@ -534,9 +728,9 @@ def install(project_root: Path, source_root: Path, profile: str, *, force: bool,
         )
 
     results.extend(copy_knowledge_files(project_root, source_root, force=force))
-    if existing_system_mode == "migrate" and existing_report.classification in {"foreign_system", "mixed_system", "partial_knowledge"}:
+    if include_migration_note:
         results.append(write_migration_suggestion(project_root, existing_report, profile))
-    if existing_report.classification == "compatible" and force:
+    if include_upgrade_state:
         state = ensure_repo_upgrade_state(
             project_root,
             epoch="module-core-v1",

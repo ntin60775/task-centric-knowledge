@@ -137,6 +137,44 @@ class TaskCentricKnowledgeInstallerTests(unittest.TestCase):
             self.assertEqual(registry_path.read_text(encoding="utf-8"), "CUSTOM-MODULE-REGISTRY\n")
             self.assertTrue((project_root / "knowledge/modules/_templates/module.md").exists())
 
+    def test_install_force_rejects_managed_file_symlink_without_overwriting_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            project_root = self._create_legacy_compatible_project(root)
+            victim_path = root / "victim.txt"
+            victim_path.write_text("DO NOT OVERWRITE\n", encoding="utf-8")
+            managed_path = project_root / "knowledge/tasks/_templates/plan.md"
+            managed_path.unlink()
+            managed_path.symlink_to(victim_path)
+
+            results = install_module._environment_module.copy_knowledge_files(project_root, ROOT, force=True)
+
+            self.assertTrue(any(item.status == "error" for item in results))
+            self.assertEqual(victim_path.read_text(encoding="utf-8"), "DO NOT OVERWRITE\n")
+            self.assertTrue(managed_path.is_symlink())
+            self.assertIn("symlink", "\n".join(item.detail for item in results))
+
+    def test_install_rejects_symlinked_knowledge_directory_before_writing_assets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            project_root = root / "project"
+            project_root.mkdir()
+            external_knowledge = root / "external-knowledge"
+            external_knowledge.mkdir()
+            (project_root / "knowledge").symlink_to(external_knowledge, target_is_directory=True)
+
+            payload = install_module.install(
+                project_root,
+                ROOT,
+                "generic",
+                force=True,
+                existing_system_mode="abort",
+            )
+
+            self.assertFalse(payload["ok"])
+            self.assertFalse((external_knowledge / "README.md").exists())
+            self.assertIn("symlink", "\n".join(item["detail"] for item in payload["results"]))
+
     def test_verify_project_detects_missing_managed_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             project_root = self._create_project_with_custom_agents_block(Path(tmp_dir))

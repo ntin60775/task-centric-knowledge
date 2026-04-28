@@ -23,9 +23,10 @@ class TestTaskWorkflowArchitecture(unittest.TestCase):
             "task_markdown.py": {"models"},
             "registry_sync.py": {"git_ops", "models", "task_markdown"},
             "forge.py": {"git_ops", "models"},
-            "sync_flow.py": {"git_ops", "models", "registry_sync", "task_markdown"},
-            "publish_flow.py": {"forge", "git_ops", "models", "registry_sync", "task_markdown"},
-            "finalize_flow.py": {"git_ops", "models", "registry_sync", "task_markdown"},
+            "path_safety.py": set(),
+            "sync_flow.py": {"git_ops", "models", "path_safety", "registry_sync", "task_markdown"},
+            "publish_flow.py": {"forge", "git_ops", "models", "path_safety", "registry_sync", "task_markdown"},
+            "finalize_flow.py": {"git_ops", "models", "path_safety", "registry_sync", "task_markdown"},
             "cli.py": {"finalize_flow", "models", "publish_flow", "sync_flow"},
         }
 

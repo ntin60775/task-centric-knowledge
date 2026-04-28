@@ -113,13 +113,13 @@
 
 ## Шаги
 
-- [ ] Зафиксировать точный diff snapshot и выбрать переносимые файлы/фрагменты.
-- [ ] Исправить atomic safety-preflight для global install.
-- [ ] Исправить project install flow, чтобы unsafe managed target останавливал mutating steps до записей.
-- [ ] Перенести workflow `task_dir` boundary helper и покрыть mutators тестами.
-- [ ] Синхронизировать Makefile/docs/managed blocks с фактическим production gate.
-- [ ] Прогнать полный verify-loop, localization guard и обновить verification matrix.
-- [ ] Подготовить local finalize: task-scoped commit, merge в `main`, checkout `main`, если blockers нет.
+- [x] Зафиксировать точный diff snapshot и выбрать переносимые файлы/фрагменты.
+- [x] Исправить atomic safety-preflight для global install.
+- [x] Исправить project install flow, чтобы unsafe managed target останавливал mutating steps до записей.
+- [x] Перенести workflow `task_dir` boundary helper и покрыть mutators тестами.
+- [x] Синхронизировать Makefile/docs/managed blocks с фактическим production gate.
+- [x] Прогнать полный verify-loop, localization guard и обновить verification matrix.
+- [x] Подготовить local finalize: task-scoped commit, merge в `main`, checkout `main`, если blockers нет.
 
 ## Критерии завершения
 

@@ -62,6 +62,26 @@ class GlobalSkillInstallTests(unittest.TestCase):
             self.assertFalse((target_root / "output").exists())
             self.assertFalse((target_root / "zip_context_ignore.md").exists())
 
+    def test_apply_refuses_manifest_target_symlink_before_any_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            target_root = root / "live-skill"
+            target_root.mkdir()
+            victim_path = root / "victim.txt"
+            victim_path.write_text("DO NOT OVERWRITE\n", encoding="utf-8")
+            (target_root / "SKILL.md").symlink_to(victim_path)
+
+            plan = install_global.build_plan(ROOT, target_root)
+            applied = install_global.apply_plan(plan)
+            issues, _extra_target_files = install_global.verify_target(ROOT, target_root)
+
+            skill_item = next(item for item in plan if item.relative == "SKILL.md")
+            self.assertEqual(skill_item.status, "blocked-target-symlink")
+            self.assertEqual(applied, [])
+            self.assertEqual(victim_path.read_text(encoding="utf-8"), "DO NOT OVERWRITE\n")
+            self.assertFalse((target_root / "README.md").exists())
+            self.assertIn("blocked-target-symlink", "\n".join(issue.detail for issue in issues))
+
     def test_verify_reports_target_only_repo_artifacts_as_warnings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             target_root = Path(tmp_dir) / "live-skill"
@@ -124,6 +144,28 @@ class GlobalSkillInstallTests(unittest.TestCase):
             details = "\n".join(issue.detail for issue in issues)
             self.assertIn("task-knowledge wrapper does not point to live skill copy", details)
             self.assertIn("task_knowledge_local.pth does not point to live skill copy", details)
+
+    def test_verify_cli_layer_rejects_symlinked_wrapper_and_pth(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            target_root = tmp_root / "live-skill"
+            user_bin = tmp_root / "bin"
+            python_site = tmp_root / "site-packages"
+            target_root.mkdir()
+            user_bin.mkdir()
+            python_site.mkdir()
+            wrapper_target = tmp_root / "external-wrapper"
+            pth_target = tmp_root / "external.pth"
+            wrapper_target.write_text("external wrapper\n", encoding="utf-8")
+            pth_target.write_text("external pth\n", encoding="utf-8")
+            (user_bin / "task-knowledge").symlink_to(wrapper_target)
+            (python_site / "task_knowledge_local.pth").symlink_to(pth_target)
+
+            issues = install_global.verify_cli_layer(target_root, user_bin=user_bin, python_site=python_site)
+
+            details = "\n".join(issue.detail for issue in issues)
+            self.assertIn("wrapper is a symlink", details)
+            self.assertIn("pth is a symlink", details)
 
     def test_user_cli_smoke_rejects_runtime_root_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

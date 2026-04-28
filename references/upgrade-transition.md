@@ -16,6 +16,7 @@
 - существующие каталоги `knowledge/tasks/<TASK-ID>-<slug>/`;
 - `task.md`, `plan.md`, `sdd.md`, `worklog.md`, `decisions.md`, `handoff.md` внутри уже созданных задач;
 - `knowledge/tasks/registry.md` как project data;
+- `knowledge/modules/registry.md` как project data;
 - пользовательские разделы вне managed-блока в `AGENTS.md`.
 
 ## Локальный порядок обновления
@@ -23,28 +24,37 @@
 1. Открыть задачу или подзадачу именно под переход версии.
 2. Работать сначала только в локальном git.
 3. Убедиться, что рабочее дерево не содержит несвязанных изменений.
-4. Запустить:
+4. Убедиться, что глобальная live-copy обновлена и проверена:
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode check
+make verify-global-install
 ```
 
-5. Если проект совместим и нужен именно upgrade managed-ресурсов, выполнить:
+5. Запустить проектную проверку от verified live-copy:
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode install --force
+task-knowledge install check --project-root /abs/project --source-root ~/.agents/skills/task-centric-knowledge
 ```
 
-6. Проверить, что:
+6. Если проект совместим и нужен именно upgrade managed-ресурсов, выполнить:
+
+```bash
+task-knowledge install apply --project-root /abs/project --source-root ~/.agents/skills/task-centric-knowledge --force
+task-knowledge install verify-project --project-root /abs/project --source-root ~/.agents/skills/task-centric-knowledge --force
+```
+
+7. Проверить, что:
 
 - `registry.md` не потерял project data;
 - существующие каталоги задач не изменились вне ожидаемого scope;
 - managed-блок в `AGENTS.md` не продублировался;
-- повторный запуск не создаёт повторных блоков и повторных артефактов.
-7. После install/force прогнать diagnostics:
+- повторный запуск не создаёт повторных блоков и повторных артефактов;
+- installer не сообщил `symlink` или managed-path outside project.
+
+8. После install/force прогнать diagnostics:
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode doctor-deps
+task-knowledge install doctor-deps --project-root /abs/project --source-root ~/.agents/skills/task-centric-knowledge
 ```
 
 `doctor-deps` должен явно показать, что блокирует `core/local mode`, а что относится только к `publish/integration`.
@@ -58,7 +68,7 @@ python3 scripts/install_skill.py --project-root /abs/project --mode doctor-deps
 - поле `compatibility_epoch` имеет значение `legacy-v1`
 - поле `upgrade_status` имеет значение `legacy-compatible`
 - поле `execution_rollout` имеет значение `legacy`
-8. Если переход оставил installer-generated миграционные хвосты, сначала показать cleanup-plan:
+9. Если переход оставил installer-generated миграционные хвосты, сначала показать cleanup-plan:
 
 ```bash
 python3 scripts/install_skill.py --project-root /abs/project --mode migrate-cleanup-plan
@@ -66,7 +76,7 @@ python3 scripts/install_skill.py --project-root /abs/project --mode migrate-clea
 
 Проверить, что auto-delete scope ограничен только ожидаемыми артефактами (`knowledge/MIGRATION-SUGGESTION.md` и/или `AGENTS.task-centric-knowledge.<profile>.md`) и не затрагивает `project data`.
 Если по allowlist-пути лежит symlink, каталог или другой неожиданный тип объекта, такой путь должен уйти в `manual_review`, а не в `safe_delete`.
-9. Только после этого, если план корректен, выполнить confirm-команду из самого плана:
+10. Только после этого, если план корректен, выполнить confirm-команду из самого плана:
 
 ```bash
 python3 scripts/install_skill.py --project-root /abs/project --mode migrate-cleanup-confirm --confirm-fingerprint <sha256> --yes
@@ -139,6 +149,8 @@ Governed backfill выполняется одной из двух команд:
 - через unified CLI: `task-knowledge workflow backfill --project-root /abs/project --task-dir /abs/project/knowledge/tasks/TASK-... --scope compatibility`
 - через facade-скрипт: `python3 scripts/task_workflow.py --project-root /abs/project --task-dir /abs/project/knowledge/tasks/TASK-... --backfill-scope compatibility`
 
+`--task-dir` может быть относительным или абсолютным, но после `resolve()` обязан оставаться внутри `project_root`. Symlinked task directory, ведущий за пределы проекта, является blocker-ом и не должен мутировать `task.md` или registry.
+
 Результат по классам:
 
 - класс `active` переводится в статус `compatibility-backfilled`
@@ -172,3 +184,4 @@ Governed backfill выполняется одной из двух команд:
 - Неясно, какие существующие task-данные будут затронуты.
 - Update требует разрушающих git-действий.
 - После повторного запуска появляются дубликаты managed-блоков или неоднозначность в целевом состоянии.
+- Installer или workflow helper сообщает `symlink`, `blocked-target-symlink`, `blocked-target-outside-root` или `task_dir_outside_project_root`.

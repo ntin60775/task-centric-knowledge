@@ -190,6 +190,114 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self.assertIn("`TASK-2026-0004`", registry_text)
             self.assertIn("`task/task-2026-0004-demo`", registry_text)
 
+    def test_sync_task_rejects_absolute_task_dir_outside_project_before_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            project_root = self._init_repo(root)
+            self._write_registry(project_root)
+            outside_task_dir = root / "outside/TASK-2026-0900-outside"
+            self._write_task(
+                outside_task_dir,
+                task_id="TASK-2026-0900",
+                slug="outside",
+                goal="External task must not be mutated by project workflow.",
+            )
+            task_file = outside_task_dir / "task.md"
+            before = task_file.read_text(encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "task_dir_outside_project_root"):
+                workflow_module.sync_task(
+                    project_root,
+                    outside_task_dir,
+                    create_branch=False,
+                    register_if_missing=True,
+                    summary="External task must not be registered.",
+                    branch_name=None,
+                    inherit_branch_from_parent=False,
+                    today="2026-04-09",
+                )
+
+            self.assertEqual(task_file.read_text(encoding="utf-8"), before)
+            registry_text = (project_root / "knowledge/tasks/registry.md").read_text(encoding="utf-8")
+            self.assertNotIn("TASK-2026-0900", registry_text)
+
+    def test_workflow_mutators_reject_symlinked_task_dir_resolving_outside_project(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            project_root = self._init_repo(root)
+            self._write_registry(project_root)
+            outside_task_dir = root / "outside/TASK-2026-0901-linked"
+            self._write_task(
+                outside_task_dir,
+                task_id="TASK-2026-0901",
+                slug="linked",
+                branch="task/task-2026-0901-linked",
+                goal="Symlinked task must not be mutated by project workflow.",
+            )
+            symlink_task_dir = project_root / "knowledge/tasks/TASK-2026-0901-linked"
+            symlink_task_dir.parent.mkdir(parents=True, exist_ok=True)
+            symlink_task_dir.symlink_to(outside_task_dir, target_is_directory=True)
+            task_file = outside_task_dir / "task.md"
+            before = task_file.read_text(encoding="utf-8")
+
+            calls = {
+                "sync": lambda: workflow_module.sync_task(
+                    project_root,
+                    symlink_task_dir,
+                    create_branch=False,
+                    register_if_missing=True,
+                    summary="Symlinked task must not be registered.",
+                    branch_name=None,
+                    inherit_branch_from_parent=False,
+                    today="2026-04-09",
+                ),
+                "backfill": lambda: runtime_backfill_task(
+                    project_root,
+                    symlink_task_dir,
+                    scope="compatibility",
+                    summary="Symlinked task must not be backfilled.",
+                    today="2026-04-09",
+                ),
+                "publish": lambda: workflow_module.run_publish_flow(
+                    project_root,
+                    symlink_task_dir,
+                    action="start",
+                    unit_id=None,
+                    purpose="Unsafe publish should be blocked.",
+                    base_branch="main",
+                    head_branch=None,
+                    from_ref=None,
+                    host=None,
+                    publication_type=None,
+                    url=None,
+                    merge_commit=None,
+                    cleanup=None,
+                    remote_name="origin",
+                    status=None,
+                    create_publication=False,
+                    sync_from_host=False,
+                    title=None,
+                    body=None,
+                    summary=None,
+                    today="2026-04-09",
+                ),
+                "finalize": lambda: workflow_module.finalize_task(
+                    project_root,
+                    symlink_task_dir,
+                    base_branch="main",
+                    commit_message=None,
+                    today="2026-04-09",
+                ),
+            }
+            for label, call in calls.items():
+                with self.subTest(label=label):
+                    with self.assertRaisesRegex(ValueError, "task_dir_outside_project_root"):
+                        call()
+                    self.assertEqual(task_file.read_text(encoding="utf-8"), before)
+
+            registry_text = (project_root / "knowledge/tasks/registry.md").read_text(encoding="utf-8")
+            self.assertNotIn("TASK-2026-0901", registry_text)
+
     def test_sync_task_prefers_human_description_for_registry_row(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             project_root = self._init_repo(Path(tmp_dir))
