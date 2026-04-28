@@ -8,7 +8,34 @@
 - workflow / publish helper для task-веток, compatibility-backfill и delivery units.
 - versioned consumer runtime contract для проектов, которые встраивают минимальный runtime subset.
 
-## Установка
+## Поверхности установки
+
+У `task-centric-knowledge` есть четыре разные поверхности. Их нельзя подменять друг другом:
+
+| Поверхность | Назначение | Команда |
+|-------------|------------|---------|
+| Source repo | Канонический standalone-дистрибутив для разработки и релиза. | `git status`, `python3 -m unittest discover -s tests -v` |
+| Live skill copy | Глобальная копия навыка для Codex skills. | `make install-global` |
+| User-site CLI layer | Команда `task-knowledge` и Python import path. | `make install-local` |
+| Target project knowledge | Managed `knowledge/` и блок `AGENTS.md` в целевом проекте. | `task-knowledge install apply --project-root /abs/project` |
+
+## Глобальная установка навыка
+
+Полная глобальная установка должна обновлять live skill copy и CLI layer вместе:
+
+Порядок команд: `make install-global-dry-run`, затем `make install-global`, затем `make verify-global-install`.
+
+`make install-global` выполняет source-controlled overlay из текущего source repo в
+`~/.agents/skills/task-centric-knowledge`, затем запускает `make install-local` уже из live-copy.
+После этого обязательны две проверки:
+
+- прямой live smoke через `~/.agents/skills/task-centric-knowledge/scripts/install_skill.py`;
+- user-facing smoke через установленный `task-knowledge`.
+
+Helper не удаляет target-only файлы. Если verify показывает лишние файлы в live-copy,
+это отдельный cleanup-контур и он требует обычного delete-gate.
+
+## Установка CLI layer
 
 Из каталога skill-а:
 
@@ -16,13 +43,15 @@
 make install-local
 ```
 
-`make install-local` создаёт thin wrapper:
+`make install-local` создаёт thin wrapper и `.pth` только для user-site CLI layer:
 
 ```bash
 ~/.local/bin/task-knowledge
 ```
 
-Он запускает repo-local `scripts/task_knowledge_cli.py`, поэтому не требует сети, `pip install` или отдельного виртуального окружения.
+Команда запускает `scripts/task_knowledge_cli.py` из того каталога, где был выполнен `make install-local`.
+Поэтому зелёный `task-knowledge --help` сам по себе не доказывает, что live skill copy в
+`~/.agents/skills/task-centric-knowledge` полная и свежая. Для этого использовать `make verify-global-install`.
 
 После этого команда должна быть доступна из любого каталога:
 
