@@ -7,7 +7,7 @@
 
 `knowledge/modules/M-XXX-example/file-local-policy.md`
 
-## Hot spots
+## Локальные hot spots
 
 | Путь | Режим | Разрешённые markers | Обязательные blocks | Назначение |
 |------|-------|---------------------|---------------------|------------|
