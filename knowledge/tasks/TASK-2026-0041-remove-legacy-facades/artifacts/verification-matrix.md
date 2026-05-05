@@ -31,10 +31,10 @@
 | `INV-02` | `task-knowledge workflow sync` падает | `task-knowledge workflow sync --project-root . --task-dir knowledge/tasks/TASK-2026-0041-remove-legacy-facades --register-if-missing` | `covered` | `ok=True` |
 | `INV-02` | `task-knowledge doctor` падает | `task-knowledge doctor --project-root .` | `covered` | `ok=True` |
 | `INV-03` | `pyproject.toml` содержит удалённые модули | `grep -E "install_skill|task_query|task_workflow" pyproject.toml` | `covered` | Пустой результат |
-| `INV-04` | `make check` падает | `make check` | `covered` | 254/260 тестов зелёных; 6 pre-existing `doctor_deps` failures из-за окружения (gh/python3 в PATH) — не связаны с задачей |
+| `INV-04` | `make check` падает | `make check` | `covered` | 260/260 тестов зелёных |
 | `INV-04` | `make install-local` падает | `make install-local` | `covered` | Успешно |
 | `INV-05` | Unified CLI не может импортировать `print_text_report` | `python3 -c "from install_skill_runtime.cli import print_text_report"` | `covered` | `import OK` |
-| `INV-06` | Тесты падают | `python3 -m unittest discover -s tests -v` | `covered` | 254/260 зелёных; остаток — pre-existing `doctor_deps` environment-зависимые тесты |
+| `INV-06` | Тесты падают | `python3 -m unittest discover -s tests -v` | `covered` | 260/260 зелёных |
 | `INV-07` | `references/adoption.md` содержит facade-вызовы | `grep "install_skill.py\|task_workflow.py\|task_query.py" references/adoption.md` | `covered` | Пустой результат |
 | `INV-07` | `references/deployment.md` содержит facade-вызовы | `grep "install_skill.py\|task_workflow.py\|task_query.py" references/deployment.md` | `covered` | Пустой результат |
 | `INV-07` | `references/task-workflow.md` содержит facade-вызовы | `grep "install_skill.py\|task_workflow.py\|task_query.py" references/task-workflow.md` | `covered` | Пустой результат |

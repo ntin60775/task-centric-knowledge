@@ -30,7 +30,7 @@ def load_module(module_name: str, script_path: Path):
 
 
 install_module = load_module("task_centric_knowledge_install_skill_governance", INSTALL_SCRIPT)
-doctor_runtime = importlib.import_module("install_skill_runtime.doctor")
+doctor_runtime = install_module.doctor
 
 
 SUBPROCESS_TIMEOUT_SECONDS = 30

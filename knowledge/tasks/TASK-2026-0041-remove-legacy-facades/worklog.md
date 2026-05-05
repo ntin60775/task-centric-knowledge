@@ -37,8 +37,11 @@
 - Обновлено `embedded_runtime_ready` в `scripts/install_skill_runtime/environment.py`.
 
 ### Этап 7: Верификация
-- `python3 -m unittest discover -s tests -v`: 254/260 зелёных.
-- 6 pre-existing failures в `test_install_skill_governance.py` (doctor_deps, зависят от окружения gh/python3).
+- `python3 -m unittest discover -s tests -v`: **260/260 зелёных**.
 - `make install-local`: успешно.
 - `task-knowledge --help`, `doctor`, `install check`, `task status`, `workflow sync`: работают.
 - `artifacts/verification-matrix.md` обновлён, все инварианты покрыты.
+
+### Исправление упавших тестов
+- Причина: `test_install_skill_governance.py` использовал `importlib.import_module("install_skill_runtime.doctor")`, но `install_module` загружен через `load_module` под другим именем, поэтому патчи применялись к другому экземпляру модуля.
+- Исправление: `doctor_runtime = install_module.doctor` вместо отдельного импорта.
