@@ -23,7 +23,7 @@ class ConsumerRuntimeContractTests(unittest.TestCase):
         manifest = {
             "integration_contract": CONSUMER_RUNTIME_CONTRACT,
             "pinned_commit": "abc123",
-            "included_paths": ["scripts/task_query.py"],
+            "included_paths": ["scripts/task_knowledge_cli.py"],
             "consumer_runtime_root": "knowledge/runtime/example",
             "consumer_entrypoint": "task-knowledge task status --project-root /abs/project",
             "schema_version": CONSUMER_RUNTIME_SCHEMA_VERSION,

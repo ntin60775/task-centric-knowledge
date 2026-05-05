@@ -1,7 +1,6 @@
 """Public runtime surface for install_skill facade."""
 
 from .cleanup import build_cleanup_plan, migrate_cleanup_confirm, migrate_cleanup_plan
-from .cli import main
 from .doctor import doctor_deps
 from .environment import (
     BEGIN_MARKER,
@@ -102,7 +101,6 @@ __all__ = [
     "has_errors",
     "install",
     "install_agents_block",
-    "main",
     "migrate_cleanup_confirm",
     "migrate_cleanup_plan",
     "render_agents_block",

@@ -13,7 +13,6 @@ from task_workflow_testlib import ROOT
 
 
 RUNTIME_DIR = ROOT / "scripts" / "task_workflow_runtime"
-FACADE_PATH = ROOT / "scripts" / "task_query.py"
 
 
 class TestTaskQueryArchitecture(unittest.TestCase):
@@ -32,16 +31,6 @@ class TestTaskQueryArchitecture(unittest.TestCase):
                 if isinstance(node, ast.ImportFrom) and node.module and node.level == 1
             }
             assert actual <= expected, (filename, actual, expected)
-
-    def test_task_query_facade_is_thin_entrypoint(self) -> None:
-        source = FACADE_PATH.read_text(encoding="utf-8")
-        tree = ast.parse(source)
-        function_names = [node.name for node in tree.body if isinstance(node, ast.FunctionDef)]
-        class_defs = [node.name for node in tree.body if isinstance(node, ast.ClassDef)]
-
-        assert len(source.splitlines()) <= 25
-        assert class_defs == []
-        assert function_names == []
 
 
 if __name__ == "__main__":

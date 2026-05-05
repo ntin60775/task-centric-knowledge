@@ -13,28 +13,24 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SUBPROCESS_TIMEOUT_SECONDS = 30
-WORKFLOW_SCRIPT = ROOT / "scripts" / "task_workflow.py"
 SCRIPTS_DIR = ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 import task_workflow_runtime.finalize_flow as finalize_flow_module
-from task_workflow_runtime import backfill_task as runtime_backfill_task
+from task_workflow_runtime import (
+    backfill_task as runtime_backfill_task,
+    sync_task,
+    run_publish_flow,
+    finalize_task,
+    update_task_file_with_delivery_units,
+    DeliveryUnit,
+    DELIVERY_ROW_PLACEHOLDER,
+    PublicationSnapshot,
+)
+from task_workflow_runtime import publish_flow as _publish_flow_module
 
 DEFAULT_HUMAN_DESCRIPTION = object()
-
-
-def load_module(module_name: str, script_path: Path):
-    spec = importlib.util.spec_from_file_location(module_name, script_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-workflow_module = load_module("task_centric_knowledge_task_workflow", WORKFLOW_SCRIPT)
 
 
 def git(project_root: Path, *args: str) -> str:
@@ -132,7 +128,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
         )
 
     def _register_task(self, project_root: Path, task_dir: Path, summary: str) -> None:
-        workflow_module.sync_task(
+        sync_task(
             project_root,
             task_dir,
             create_branch=False,
@@ -148,8 +144,18 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
         git(project_root, "commit", "-m", message)
 
     def _run_cli(self, *args: str) -> subprocess.CompletedProcess[str]:
+        parts = list(args)
+        if "--json" in parts:
+            parts.remove("--json")
+            return subprocess.run(
+                [sys.executable, str(ROOT / "scripts" / "task_knowledge_cli.py"), "--json", "workflow", *parts],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            )
         return subprocess.run(
-            [sys.executable, str(WORKFLOW_SCRIPT), *args],
+            [sys.executable, str(ROOT / "scripts" / "task_knowledge_cli.py"), "workflow", *parts],
             capture_output=True,
             text=True,
             check=False,
@@ -168,7 +174,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 goal="Демо-задача для проверки git-sync.",
             )
 
-            payload = workflow_module.sync_task(
+            payload = sync_task(
                 project_root,
                 task_dir,
                 create_branch=True,
@@ -206,7 +212,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             before = task_file.read_text(encoding="utf-8")
 
             with self.assertRaisesRegex(ValueError, "task_dir_outside_project_root"):
-                workflow_module.sync_task(
+                sync_task(
                     project_root,
                     outside_task_dir,
                     create_branch=False,
@@ -241,7 +247,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             before = task_file.read_text(encoding="utf-8")
 
             calls = {
-                "sync": lambda: workflow_module.sync_task(
+                "sync": lambda: sync_task(
                     project_root,
                     symlink_task_dir,
                     create_branch=False,
@@ -258,7 +264,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                     summary="Symlinked task must not be backfilled.",
                     today="2026-04-09",
                 ),
-                "publish": lambda: workflow_module.run_publish_flow(
+                "publish": lambda: run_publish_flow(
                     project_root,
                     symlink_task_dir,
                     action="start",
@@ -281,7 +287,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                     summary=None,
                     today="2026-04-09",
                 ),
-                "finalize": lambda: workflow_module.finalize_task(
+                "finalize": lambda: finalize_task(
                     project_root,
                     symlink_task_dir,
                     base_branch="main",
@@ -311,7 +317,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 human_description="Каноническая сводка задачи для registry.",
             )
 
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=True,
@@ -344,7 +350,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -377,7 +383,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare finalize task")
 
             git(project_root, "checkout", "-b", "task/task-2026-1500-finalize-demo")
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -389,7 +395,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             )
             (project_root / "feature.txt").write_text("ready\n", encoding="utf-8")
 
-            payload = workflow_module.finalize_task(
+            payload = finalize_task(
                 project_root,
                 task_dir,
                 base_branch="main",
@@ -444,7 +450,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare blocked finalize task")
 
             git(project_root, "checkout", "-b", "task/task-2026-1501-finalize-blocked")
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -456,7 +462,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             )
             (project_root / "feature.txt").write_text("blocked\n", encoding="utf-8")
 
-            payload = workflow_module.finalize_task(
+            payload = finalize_task(
                 project_root,
                 task_dir,
                 base_branch="main",
@@ -491,7 +497,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare rollback finalize task")
 
             git(project_root, "checkout", "-b", "task/task-2026-1502-finalize-rollback")
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -512,7 +518,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 return real_run_git(project_root_param, *args, check=check)
 
             with mock.patch.object(finalize_flow_module, "run_git", side_effect=flaky_run_git):
-                payload = workflow_module.finalize_task(
+                payload = finalize_task(
                     project_root,
                     task_dir,
                     base_branch="main",
@@ -546,7 +552,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare finalize timeout task")
 
             git(project_root, "checkout", "-b", "task/task-2026-1503-finalize-timeout")
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -567,7 +573,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                     "has_remote",
                     side_effect=RuntimeError("git command timed out after 120s: git -C /tmp/project remote"),
                 ):
-                    payload = workflow_module.finalize_task(
+                    payload = finalize_task(
                         project_root,
                         task_dir,
                         base_branch=None,
@@ -603,7 +609,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare late finalize timeout task")
 
             git(project_root, "checkout", "-b", "task/task-2026-1504-finalize-late-timeout")
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -624,7 +630,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                     "has_remote",
                     side_effect=RuntimeError("git command timed out after 120s: git -C /tmp/project remote"),
                 ):
-                    payload = workflow_module.finalize_task(
+                    payload = finalize_task(
                         project_root,
                         task_dir,
                         base_branch="main",
@@ -657,7 +663,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare finalize error-path timeout task")
 
             git(project_root, "checkout", "-b", "task/task-2026-1505-finalize-error-timeout")
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -692,7 +698,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                         "has_remote",
                         side_effect=RuntimeError("git command timed out after 120s: git -C /tmp/project remote"),
                     ):
-                        payload = workflow_module.finalize_task(
+                        payload = finalize_task(
                             project_root,
                             task_dir,
                             base_branch="main",
@@ -721,7 +727,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             )
             self._register_task(project_root, task_dir, "Каноническая summary.")
 
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -758,7 +764,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -803,7 +809,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -835,7 +841,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 human_description=None,
             )
 
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -863,7 +869,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 human_description=None,
             )
 
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -903,7 +909,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -939,7 +945,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -984,7 +990,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 human_description=None,
             )
 
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -1028,7 +1034,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             git(project_root, "checkout", "-b", foreign_branch)
             task_before = (task_dir / "task.md").read_text(encoding="utf-8")
 
-            payload = workflow_module.sync_task(
+            payload = sync_task(
                 project_root,
                 task_dir,
                 create_branch=False,
@@ -1073,7 +1079,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             registry_before = registry_path.read_text(encoding="utf-8")
 
             with self.assertRaisesRegex(ValueError, "historical_sync_blocked"):
-                workflow_module.sync_task(
+                sync_task(
                     project_root,
                     task_dir,
                     create_branch=False,
@@ -1236,7 +1242,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             initial_branch = git(project_root, "branch", "--show-current")
 
             with self.assertRaisesRegex(ValueError, "В knowledge/tasks/registry.md не найдена строка"):
-                workflow_module.sync_task(
+                sync_task(
                     project_root,
                     task_dir,
                     create_branch=True,
@@ -1271,7 +1277,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             task_before = (task_dir / "task.md").read_text(encoding="utf-8")
 
             with self.assertRaisesRegex(ValueError, "Не найден knowledge/tasks/TASK-2026-0032-demo/task.md"):
-                workflow_module.sync_task(
+                sync_task(
                     project_root,
                     task_dir,
                     create_branch=True,
@@ -1298,7 +1304,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 goal="Задача с настроенным remote.",
             )
 
-            payload = workflow_module.sync_task(
+            payload = sync_task(
                 project_root,
                 task_dir,
                 create_branch=True,
@@ -1321,7 +1327,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             (project_root / "DIRTY.txt").write_text("dirty\n", encoding="utf-8")
 
             with self.assertRaisesRegex(ValueError, "Рабочее дерево грязное"):
-                workflow_module.sync_task(
+                sync_task(
                     project_root,
                     task_dir,
                     create_branch=True,
@@ -1364,7 +1370,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 goal="Подзадача наследует ветку родителя.",
             )
 
-            payload = workflow_module.sync_task(
+            payload = sync_task(
                 project_root,
                 child_dir,
                 create_branch=True,
@@ -1401,7 +1407,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
 
             parent_branch = "task/task-2026-0035-parent"
             git(project_root, "checkout", "-b", parent_branch)
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 parent_dir,
                 create_branch=False,
@@ -1424,7 +1430,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 goal="Подзадача должна унаследовать parent task branch.",
             )
 
-            payload = workflow_module.sync_task(
+            payload = sync_task(
                 project_root,
                 child_dir,
                 create_branch=True,
@@ -1473,7 +1479,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 goal="Подзадача не должна уходить в stale default branch.",
             )
 
-            payload = workflow_module.sync_task(
+            payload = sync_task(
                 project_root,
                 child_dir,
                 create_branch=True,
@@ -1507,7 +1513,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "record parent task on base branch")
 
             git(project_root, "checkout", "-b", default_parent_branch)
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 parent_dir,
                 create_branch=False,
@@ -1521,7 +1527,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
 
             git(project_root, "checkout", initial_branch)
             git(project_root, "merge", "--no-ff", default_parent_branch, "-m", "merge parent task branch")
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 parent_dir,
                 create_branch=False,
@@ -1543,7 +1549,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 goal="Подзадача должна унаследовать актуальную ветку родителя.",
             )
 
-            payload = workflow_module.sync_task(
+            payload = sync_task(
                 project_root,
                 child_dir,
                 create_branch=True,
@@ -1578,7 +1584,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             )
             git(project_root, "add", str(task_dir / "task.md"))
 
-            payload = workflow_module.sync_task(
+            payload = sync_task(
                 project_root,
                 task_dir,
                 create_branch=True,
@@ -1609,7 +1615,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare task context")
             base_branch = git(project_root, "branch", "--show-current")
 
-            payload = workflow_module.run_publish_flow(
+            payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -1662,7 +1668,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare legacy publish task")
             base_branch = git(project_root, "branch", "--show-current")
 
-            payload = workflow_module.run_publish_flow(
+            payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -1714,7 +1720,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare placeholder publish summary")
             base_branch = git(project_root, "branch", "--show-current")
 
-            payload = workflow_module.run_publish_flow(
+            payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -1767,7 +1773,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare legacy publish task without explicit summary")
             base_branch = git(project_root, "branch", "--show-current")
 
-            payload = workflow_module.run_publish_flow(
+            payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -1816,7 +1822,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             initial_branch = git(project_root, "branch", "--show-current")
 
             with self.assertRaisesRegex(ValueError, "В knowledge/tasks/registry.md не найдена строка"):
-                workflow_module.run_publish_flow(
+                run_publish_flow(
                     project_root,
                     task_dir,
                     action="start",
@@ -1874,7 +1880,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare target branch task context")
 
             git(project_root, "checkout", initial_branch)
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=True,
@@ -1937,7 +1943,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "change legacy goal on target branch")
 
             git(project_root, "checkout", initial_branch)
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=True,
@@ -1971,7 +1977,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare publish base context")
             base_branch = git(project_root, "branch", "--show-current")
 
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -2020,7 +2026,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._register_task(project_root, task_dir, "Base branch summary changed.")
             self._commit_all(project_root, "change base branch summary")
 
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -2071,11 +2077,11 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             base_branch = git(project_root, "branch", "--show-current")
 
             completed = self._run_cli(
+                "publish",
                 "--project-root",
                 str(project_root),
                 "--task-dir",
                 str(task_dir),
-                "--publish-action",
                 "start",
                 "--purpose",
                 "CLI legacy publish",
@@ -2083,8 +2089,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 base_branch,
                 "--summary",
                 "CLI summary wiring.",
-                "--format",
-                "json",
+                "--json",
             )
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -2114,7 +2119,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare create publication task")
             base_branch = git(project_root, "branch", "--show-current")
 
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -2139,18 +2144,18 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             )
 
             adapter = mock.Mock()
-            adapter.create_publication.return_value = workflow_module.PublicationSnapshot(
+            adapter.create_publication.return_value = PublicationSnapshot(
                 host="github",
                 publication_type="pr",
                 status="draft",
                 url="https://github.com/example/project/pull/29",
                 head="du/task-2026-0029-u01-demo",
                 base=base_branch,
-                merge_commit=workflow_module.DELIVERY_ROW_PLACEHOLDER,
+                merge_commit=DELIVERY_ROW_PLACEHOLDER,
             )
 
-            with mock.patch.object(workflow_module, "resolve_forge_adapter", return_value=adapter):
-                payload = workflow_module.run_publish_flow(
+            with mock.patch.object(_publish_flow_module, "resolve_forge_adapter", return_value=adapter):
+                payload = run_publish_flow(
                     project_root,
                     task_dir,
                     action="publish",
@@ -2194,7 +2199,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare base task context")
             base_branch = git(project_root, "branch", "--show-current")
 
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -2244,18 +2249,18 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "update base branch summary")
 
             adapter = mock.Mock()
-            adapter.create_publication.return_value = workflow_module.PublicationSnapshot(
+            adapter.create_publication.return_value = PublicationSnapshot(
                 host="github",
                 publication_type="pr",
                 status="draft",
                 url="https://github.com/example/project/pull/33",
                 head=delivery_branch,
                 base=base_branch,
-                merge_commit=workflow_module.DELIVERY_ROW_PLACEHOLDER,
+                merge_commit=DELIVERY_ROW_PLACEHOLDER,
             )
 
-            with mock.patch.object(workflow_module, "resolve_forge_adapter", return_value=adapter):
-                workflow_module.run_publish_flow(
+            with mock.patch.object(_publish_flow_module, "resolve_forge_adapter", return_value=adapter):
+                run_publish_flow(
                     project_root,
                     task_dir,
                     action="publish",
@@ -2304,7 +2309,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare manual publish base context")
             base_branch = git(project_root, "branch", "--show-current")
 
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -2353,7 +2358,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._register_task(project_root, task_dir, "Base branch summary updated.")
             self._commit_all(project_root, "update base summary before manual sync")
 
-            payload = workflow_module.run_publish_flow(
+            payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="sync",
@@ -2401,7 +2406,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare publication worktree summary")
             base_branch = git(project_root, "branch", "--show-current")
 
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -2434,18 +2439,18 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             )
 
             adapter = mock.Mock()
-            adapter.create_publication.return_value = workflow_module.PublicationSnapshot(
+            adapter.create_publication.return_value = PublicationSnapshot(
                 host="github",
                 publication_type="pr",
                 status="draft",
                 url="https://github.com/example/project/pull/38",
                 head="du/task-2026-0038-u01-demo",
                 base=base_branch,
-                merge_commit=workflow_module.DELIVERY_ROW_PLACEHOLDER,
+                merge_commit=DELIVERY_ROW_PLACEHOLDER,
             )
 
-            with mock.patch.object(workflow_module, "resolve_forge_adapter", return_value=adapter):
-                workflow_module.run_publish_flow(
+            with mock.patch.object(_publish_flow_module, "resolve_forge_adapter", return_value=adapter):
+                run_publish_flow(
                     project_root,
                     task_dir,
                     action="publish",
@@ -2489,7 +2494,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare detached publish base")
             base_branch = git(project_root, "branch", "--show-current")
 
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -2536,7 +2541,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "record delivery summary v2")
 
             git(project_root, "checkout", old_commit)
-            payload = workflow_module.run_publish_flow(
+            payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="sync",
@@ -2580,7 +2585,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare task context")
             base_branch = git(project_root, "branch", "--show-current")
 
-            first_payload = workflow_module.run_publish_flow(
+            first_payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -2605,7 +2610,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "start first delivery unit")
             git(project_root, "checkout", base_branch)
 
-            second_payload = workflow_module.run_publish_flow(
+            second_payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -2637,7 +2642,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "start second delivery unit")
             git(project_root, "checkout", base_branch)
 
-            publish_payload = workflow_module.run_publish_flow(
+            publish_payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="publish",
@@ -2682,7 +2687,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._register_task(project_root, task_dir, "Проверка publish lifecycle.")
             self._commit_all(project_root, "prepare task context")
             base_branch = git(project_root, "branch", "--show-current")
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -2705,7 +2710,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 today="2026-04-09",
             )
 
-            publish_payload = workflow_module.run_publish_flow(
+            publish_payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="publish",
@@ -2731,7 +2736,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self.assertEqual(publish_payload["host"], "github")
             self.assertEqual(publish_payload["publication_type"], "pr")
 
-            sync_payload = workflow_module.run_publish_flow(
+            sync_payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="sync",
@@ -2755,7 +2760,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             )
             self.assertEqual(sync_payload["delivery_status"], "review")
 
-            merge_payload = workflow_module.run_publish_flow(
+            merge_payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="merge",
@@ -2798,7 +2803,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare task context")
             base_branch = git(project_root, "branch", "--show-current")
 
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -2820,7 +2825,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 body=None,
                 today="2026-04-09",
             )
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="publish",
@@ -2842,7 +2847,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 body=None,
                 today="2026-04-09",
             )
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="sync",
@@ -2868,7 +2873,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             git(project_root, "checkout", base_branch)
             git(project_root, "merge", "--no-ff", "-m", "merge delivery branch", "du/task-2026-0012-u01-demo")
 
-            merge_payload = workflow_module.run_publish_flow(
+            merge_payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="merge",
@@ -2912,7 +2917,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare task context")
             base_branch = git(project_root, "branch", "--show-current")
 
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -2934,7 +2939,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 body=None,
                 today="2026-04-09",
             )
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="publish",
@@ -2958,19 +2963,19 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             )
 
             adapter = mock.Mock()
-            adapter.update_publication.return_value = workflow_module.PublicationSnapshot(
+            adapter.update_publication.return_value = PublicationSnapshot(
                 host="github",
                 publication_type="pr",
                 status="review",
                 url="https://github.com/example/project/pull/13",
                 head="du/task-2026-0013-u01-demo",
                 base=base_branch,
-                merge_commit=workflow_module.DELIVERY_ROW_PLACEHOLDER,
+                merge_commit=DELIVERY_ROW_PLACEHOLDER,
             )
             adapter.create_publication.side_effect = AssertionError("create_publication не должен вызываться")
 
-            with mock.patch.object(workflow_module, "resolve_forge_adapter", return_value=adapter):
-                payload = workflow_module.run_publish_flow(
+            with mock.patch.object(_publish_flow_module, "resolve_forge_adapter", return_value=adapter):
+                payload = run_publish_flow(
                     project_root,
                     task_dir,
                     action="publish",
@@ -3018,11 +3023,11 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 goal="Проверка работы helper на кастомной task-ветке.",
             )
             self._register_task(project_root, task_dir, "Проверка работы helper на кастомной task-ветке.")
-            workflow_module.update_task_file_with_delivery_units(
+            update_task_file_with_delivery_units(
                 task_dir / "task.md",
                 custom_branch,
                 [
-                    workflow_module.DeliveryUnit(
+                    DeliveryUnit(
                         unit_id="DU-01",
                         purpose="Поставка через PR",
                         head="du/task-2026-0015-u01-demo",
@@ -3030,8 +3035,8 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                         host="none",
                         publication_type="none",
                         status="review",
-                        url=workflow_module.DELIVERY_ROW_PLACEHOLDER,
-                        merge_commit=workflow_module.DELIVERY_ROW_PLACEHOLDER,
+                        url=DELIVERY_ROW_PLACEHOLDER,
+                        merge_commit=DELIVERY_ROW_PLACEHOLDER,
                         cleanup="не требуется",
                     )
                 ],
@@ -3039,7 +3044,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             )
             self._commit_all(project_root, "prepare custom task branch context")
 
-            payload = workflow_module.run_publish_flow(
+            payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="sync",
@@ -3081,7 +3086,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare task context")
             base_branch = git(project_root, "branch", "--show-current")
 
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -3107,9 +3112,9 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             git(project_root, "checkout", "-b", "task/task-2099-9998-foreign")
             adapter_resolver = mock.Mock()
 
-            with mock.patch.object(workflow_module, "resolve_forge_adapter", adapter_resolver):
+            with mock.patch.object(_publish_flow_module, "resolve_forge_adapter", adapter_resolver):
                 with self.assertRaisesRegex(ValueError, "checkout-ветка не относится к контексту этой задачи"):
-                    workflow_module.run_publish_flow(
+                    run_publish_flow(
                         project_root,
                         task_dir,
                         action="publish",
@@ -3150,11 +3155,11 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             task_file = task_dir / "task.md"
             publication_url = "https://github.com/example/project/pull/17"
 
-            workflow_module.update_task_file_with_delivery_units(
+            update_task_file_with_delivery_units(
                 task_file,
                 base_branch,
                 [
-                    workflow_module.DeliveryUnit(
+                    DeliveryUnit(
                         unit_id="DU-01",
                         purpose="Поставка через PR",
                         head="du/task-2026-0017-u01-demo",
@@ -3173,11 +3178,11 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
 
             delivery_branch = "du/task-2026-0017-u01-demo"
             git(project_root, "checkout", "-b", delivery_branch)
-            workflow_module.update_task_file_with_delivery_units(
+            update_task_file_with_delivery_units(
                 task_file,
                 delivery_branch,
                 [
-                    workflow_module.DeliveryUnit(
+                    DeliveryUnit(
                         unit_id="DU-01",
                         purpose="Поставка через PR",
                         head=delivery_branch,
@@ -3195,7 +3200,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "mark cleanup completed on delivery branch")
             git(project_root, "checkout", base_branch)
 
-            payload = workflow_module.run_publish_flow(
+            payload = run_publish_flow(
                 project_root,
                 task_dir,
                 action="sync",
@@ -3237,11 +3242,11 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._register_task(project_root, task_dir, "Проверка host-sync после retarget base-ветки.")
             base_branch = git(project_root, "branch", "--show-current")
             task_file = task_dir / "task.md"
-            workflow_module.update_task_file_with_delivery_units(
+            update_task_file_with_delivery_units(
                 task_file,
                 base_branch,
                 [
-                    workflow_module.DeliveryUnit(
+                    DeliveryUnit(
                         unit_id="DU-01",
                         purpose="Поставка через PR",
                         head="du/task-2026-0018-u01-demo",
@@ -3250,7 +3255,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                         publication_type="pr",
                         status="review",
                         url="https://github.com/example/project/pull/18",
-                        merge_commit=workflow_module.DELIVERY_ROW_PLACEHOLDER,
+                        merge_commit=DELIVERY_ROW_PLACEHOLDER,
                         cleanup="не требуется",
                     )
                 ],
@@ -3261,18 +3266,18 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             new_base_branch = "release/2026"
             git(project_root, "checkout", "-b", new_base_branch)
             adapter = mock.Mock()
-            adapter.read_publication.return_value = workflow_module.PublicationSnapshot(
+            adapter.read_publication.return_value = PublicationSnapshot(
                 host="github",
                 publication_type="pr",
                 status="review",
                 url="https://github.com/example/project/pull/18",
                 head="du/task-2026-0018-u01-demo",
                 base=new_base_branch,
-                merge_commit=workflow_module.DELIVERY_ROW_PLACEHOLDER,
+                merge_commit=DELIVERY_ROW_PLACEHOLDER,
             )
 
-            with mock.patch.object(workflow_module, "resolve_forge_adapter", return_value=adapter):
-                payload = workflow_module.run_publish_flow(
+            with mock.patch.object(_publish_flow_module, "resolve_forge_adapter", return_value=adapter):
+                payload = run_publish_flow(
                     project_root,
                     task_dir,
                     action="sync",
@@ -3321,7 +3326,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare task context")
             base_branch = git(project_root, "branch", "--show-current")
 
-            workflow_module.run_publish_flow(
+            run_publish_flow(
                 project_root,
                 task_dir,
                 action="start",
@@ -3348,7 +3353,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             before_text = (task_dir / "task.md").read_text(encoding="utf-8")
 
             with self.assertRaisesRegex(ValueError, "checkout-ветка не относится к контексту этой задачи"):
-                workflow_module.run_publish_flow(
+                run_publish_flow(
                     project_root,
                     task_dir,
                     action="sync",
@@ -3386,7 +3391,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 slug="demo",
                 goal="Проверка stop-условия для start.",
             )
-            workflow_module.sync_task(
+            sync_task(
                 project_root,
                 task_dir,
                 create_branch=True,
@@ -3399,7 +3404,7 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
             self._commit_all(project_root, "prepare task context")
 
             with self.assertRaisesRegex(ValueError, "Укажите `--from-ref`"):
-                workflow_module.run_publish_flow(
+                run_publish_flow(
                     project_root,
                     task_dir,
                     action="start",

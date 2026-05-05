@@ -14,7 +14,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = ROOT / "scripts"
-INSTALL_SCRIPT = SCRIPTS_DIR / "install_skill.py"
+INSTALL_SCRIPT = SCRIPTS_DIR / "install_skill_runtime" / "__init__.py"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
@@ -293,6 +293,7 @@ class InstallSkillGovernanceTests(unittest.TestCase):
                 script_path=INSTALL_SCRIPT,
                 source_root_arg=None,
                 output_format="text",
+                command_prefix=("task-knowledge", "install", "cleanup-confirm"),
             )
 
             self.assertTrue(payload["ok"])
@@ -325,6 +326,7 @@ class InstallSkillGovernanceTests(unittest.TestCase):
                 script_path=INSTALL_SCRIPT,
                 source_root_arg=None,
                 output_format="text",
+                command_prefix=("task-knowledge", "install", "cleanup-confirm"),
             )
 
             self.assertTrue(payload["ok"])
@@ -352,6 +354,7 @@ class InstallSkillGovernanceTests(unittest.TestCase):
                 script_path=INSTALL_SCRIPT,
                 source_root_arg=None,
                 output_format="text",
+                command_prefix=("task-knowledge", "install", "cleanup-confirm"),
             )
 
             self.assertTrue(payload["ok"])
@@ -368,32 +371,22 @@ class InstallSkillGovernanceTests(unittest.TestCase):
             snippet_path = project_root / "AGENTS.task-centric-knowledge.generic.md"
             snippet_path.write_text("snippet\n", encoding="utf-8")
 
-            env = os.environ.copy()
-            pythonpath_parts = [str(SCRIPTS_DIR)]
-            if env.get("PYTHONPATH"):
-                pythonpath_parts.append(env["PYTHONPATH"])
-            env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
-            completed = subprocess.run(
-                [
-                    sys.executable,
-                    str(INSTALL_SCRIPT),
-                    "--project-root",
-                    str(project_root),
-                    "--mode",
-                    "migrate-cleanup-plan",
-                ],
-                capture_output=True,
-                text=True,
-                check=False,
-                env=env,
-                timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            payload = install_module.migrate_cleanup_plan(
+                project_root,
+                source_root=ROOT,
+                profile="generic",
+                existing_system_mode="abort",
+                script_path=INSTALL_SCRIPT,
+                source_root_arg=None,
+                output_format="text",
+                command_prefix=("task-knowledge", "install", "cleanup-confirm"),
             )
 
-            self.assertEqual(completed.returncode, 0, completed.stderr)
-            self.assertIn("mode=migrate-cleanup-plan", completed.stdout)
-            self.assertIn("TARGET_COUNT=1", completed.stdout)
-            self.assertIn("COUNT=1", completed.stdout)
-            self.assertIn("PLAN_FINGERPRINT=", completed.stdout)
+            self.assertTrue(payload["ok"])
+            self.assertEqual(payload["mode"], "migrate-cleanup-plan")
+            self.assertEqual(payload["target_count"], 1)
+            self.assertEqual(payload["count"], 1)
+            self.assertNotEqual(payload["plan_fingerprint"], "—")
 
     def test_migrate_cleanup_confirm_requires_fingerprint_and_yes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -412,6 +405,7 @@ class InstallSkillGovernanceTests(unittest.TestCase):
                 output_format="text",
                 confirm_fingerprint=None,
                 assume_yes=True,
+                command_prefix=("task-knowledge", "install", "cleanup-confirm"),
             )
             self.assertFalse(missing_fingerprint["ok"])
 
@@ -434,6 +428,7 @@ class InstallSkillGovernanceTests(unittest.TestCase):
                 output_format="text",
                 confirm_fingerprint=plan["plan_fingerprint"],
                 assume_yes=False,
+                command_prefix=("task-knowledge", "install", "cleanup-confirm"),
             )
             self.assertFalse(missing_yes["ok"])
             self.assertTrue(snippet_path.exists())
@@ -453,6 +448,7 @@ class InstallSkillGovernanceTests(unittest.TestCase):
                 script_path=INSTALL_SCRIPT,
                 source_root_arg=None,
                 output_format="text",
+                command_prefix=("task-knowledge", "install", "cleanup-confirm"),
             )
             payload = install_module.migrate_cleanup_confirm(
                 project_root,
@@ -464,6 +460,7 @@ class InstallSkillGovernanceTests(unittest.TestCase):
                 output_format="text",
                 confirm_fingerprint=plan["plan_fingerprint"],
                 assume_yes=True,
+                command_prefix=("task-knowledge", "install", "cleanup-confirm"),
             )
 
             self.assertTrue(payload["ok"])
@@ -485,6 +482,7 @@ class InstallSkillGovernanceTests(unittest.TestCase):
                 script_path=INSTALL_SCRIPT,
                 source_root_arg=None,
                 output_format="text",
+                command_prefix=("task-knowledge", "install", "cleanup-confirm"),
             )
             second_snippet = project_root / "AGENTS.task-centric-knowledge.1c.md"
             second_snippet.write_text("snippet\n", encoding="utf-8")
@@ -499,6 +497,7 @@ class InstallSkillGovernanceTests(unittest.TestCase):
                 output_format="text",
                 confirm_fingerprint=plan["plan_fingerprint"],
                 assume_yes=True,
+                command_prefix=("task-knowledge", "install", "cleanup-confirm"),
             )
 
             self.assertFalse(payload["ok"])

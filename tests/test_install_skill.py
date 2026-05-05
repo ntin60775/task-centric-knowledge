@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-INSTALL_SCRIPT = ROOT / "scripts" / "install_skill.py"
+INSTALL_SCRIPT = ROOT / "scripts" / "install_skill_runtime" / "__init__.py"
 
 
 def load_module(module_name: str, script_path: Path):
@@ -22,6 +22,8 @@ def load_module(module_name: str, script_path: Path):
 
 
 install_module = load_module("task_centric_knowledge_install_skill", INSTALL_SCRIPT)
+
+_environment_module = install_module.environment
 
 
 class TaskCentricKnowledgeInstallerTests(unittest.TestCase):
@@ -147,7 +149,7 @@ class TaskCentricKnowledgeInstallerTests(unittest.TestCase):
             managed_path.unlink()
             managed_path.symlink_to(victim_path)
 
-            results = install_module._environment_module.copy_knowledge_files(project_root, ROOT, force=True)
+            results = _environment_module.copy_knowledge_files(project_root, ROOT, force=True)
 
             self.assertTrue(any(item.status == "error" for item in results))
             self.assertEqual(victim_path.read_text(encoding="utf-8"), "DO NOT OVERWRITE\n")
@@ -266,13 +268,13 @@ class TaskCentricKnowledgeInstallerTests(unittest.TestCase):
     def test_install_fails_when_post_install_verifier_reports_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             project_root = self._create_project_with_custom_agents_block(Path(tmp_dir))
-            original = install_module._environment_module.verify_project_install
+            original = _environment_module.verify_project_install
 
             def broken_verifier(*_args, **_kwargs):
                 return [install_module.StepResult("project_verify", "error", "POST VERIFY ERROR")]
 
             try:
-                install_module._environment_module.verify_project_install = broken_verifier
+                _environment_module.verify_project_install = broken_verifier
 
                 payload = install_module.install(
                     project_root,
@@ -282,7 +284,7 @@ class TaskCentricKnowledgeInstallerTests(unittest.TestCase):
                     existing_system_mode="abort",
                 )
             finally:
-                install_module._environment_module.verify_project_install = original
+                _environment_module.verify_project_install = original
 
             self.assertFalse(payload["ok"])
             self.assertIn("POST VERIFY ERROR", "\n".join(item["detail"] for item in payload["results"]))
@@ -554,7 +556,7 @@ class TaskCentricKnowledgeInstallerTests(unittest.TestCase):
             self.assertIn("## Управляемая поверхность", module_passport_template)
             self.assertIn("| Контракт | Форма | Ссылка/маркер | Для кого |", module_passport_template)
             self.assertIn("| Тип связи | Цель | Статус | Заметка |", module_passport_template)
-            self.assertIn("## Hot spots", module_file_policy_template)
+            self.assertIn("## Локальные hot spots", module_file_policy_template)
             self.assertIn("MODULE_CONTRACT:BEGIN", module_file_policy_template)
             self.assertIn("BLOCK_<NAME>:BEGIN", module_file_policy_template)
             self.assertIn("## Канонические проверки", module_verification_template)
@@ -598,7 +600,7 @@ class TaskCentricKnowledgeInstallerTests(unittest.TestCase):
             self.assertIn("критический функционал", agents_text)
             self.assertIn("### Контур публикации", agents_text)
             self.assertIn("delivery units не переведены в `merged` или `closed`", agents_text)
-            self.assertIn("python3 scripts/task_workflow.py --publish-action start|publish|sync|merge|close", agents_text)
+            self.assertIn("task-knowledge workflow publish --publish-action start|publish|sync|merge|close", agents_text)
 
     def test_install_deploys_publish_rules_for_1c_profile(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

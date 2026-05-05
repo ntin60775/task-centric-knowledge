@@ -294,7 +294,7 @@
 
 Результат:
 
-- `task_workflow.py` разрезан на модули;
+- `task-knowledge workflow` использует модульный runtime;
 - выделены `domain model`, `markdown io`, `registry sync`, `git ops`, `publish flow`, `forge adapters`, `cli`;
 - появляется read-модель для `status`, `current-task` и `task show`;
 - unit-тесты привязаны к модулям, а не только к одному большому сценарию.
@@ -418,7 +418,7 @@
 Подтверждённые сигналы по `TASK-2026-0014`:
 
 - clean install требует явного bootstrap-порядка первой задачи:
-  если `install` и первые task-файлы уже сделали дерево dirty, `task_workflow.py --create-branch` останавливается корректно;
+  если `install` и первые task-файлы уже сделали дерево dirty, `task-knowledge workflow sync --create-branch` останавливается корректно;
   валидированный путь сейчас — ручная `task/...` ветка и затем `--register-if-missing`;
 - для больших `1c`-репозиториев governance/adoption validation нужно проводить вне `tmpfs`
   или через sparse-checkout `AGENTS.md + knowledge/**`; полный checkout не является обязательным для такого класса проверки;

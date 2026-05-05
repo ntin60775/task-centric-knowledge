@@ -71,7 +71,7 @@ task-knowledge install doctor-deps --project-root /abs/project --source-root ~/.
 9. Если переход оставил installer-generated миграционные хвосты, сначала показать cleanup-plan:
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode migrate-cleanup-plan
+task-knowledge install cleanup-plan --project-root /abs/project
 ```
 
 Проверить, что auto-delete scope ограничен только ожидаемыми артефактами (`knowledge/MIGRATION-SUGGESTION.md` и/или `AGENTS.task-centric-knowledge.<profile>.md`) и не затрагивает `project data`.
@@ -79,7 +79,7 @@ python3 scripts/install_skill.py --project-root /abs/project --mode migrate-clea
 10. Только после этого, если план корректен, выполнить confirm-команду из самого плана:
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode migrate-cleanup-confirm --confirm-fingerprint <sha256> --yes
+task-knowledge install cleanup-confirm --project-root /abs/project --confirm-fingerprint <sha256> --yes
 ```
 
 Если fingerprint, `TARGETS`, `TARGET_COUNT` или `COUNT` изменились, cleanup нужно остановить и заново показать план.
@@ -147,7 +147,7 @@ python3 scripts/install_skill.py --project-root /abs/project --mode migrate-clea
 Governed backfill выполняется одной из двух команд:
 
 - через unified CLI: `task-knowledge workflow backfill --project-root /abs/project --task-dir /abs/project/knowledge/tasks/TASK-... --scope compatibility`
-- через facade-скрипт: `python3 scripts/task_workflow.py --project-root /abs/project --task-dir /abs/project/knowledge/tasks/TASK-... --backfill-scope compatibility`
+- через facade-скрипт: `task-knowledge workflow backfill --project-root /abs/project --task-dir /abs/project/knowledge/tasks/TASK-... --scope compatibility`
 
 `--task-dir` может быть относительным или абсолютным, но после `resolve()` обязан оставаться внутри `project_root`. Symlinked task directory, ведущий за пределы проекта, является blocker-ом и не должен мутировать `task.md` или registry.
 

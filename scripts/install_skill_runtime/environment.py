@@ -53,8 +53,6 @@ def embedded_runtime_ready(source_root: Path) -> bool:
     return (
         not _has_standalone_source_identity(source_root)
         and (scripts_root / "task_knowledge_cli.py").exists()
-        and (scripts_root / "task_query.py").exists()
-        and (scripts_root / "task_workflow.py").exists()
         and (scripts_root / "task_workflow_runtime").is_dir()
     )
 

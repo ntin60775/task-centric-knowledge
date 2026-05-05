@@ -39,7 +39,7 @@ Consumer-owned manifest может использовать следующий m
 {
   "integration_contract": "consumer-runtime-v1",
   "pinned_commit": "<upstream commit>",
-  "included_paths": ["scripts/task_query.py"],
+  "included_paths": ["scripts/task_knowledge_cli.py"],
   "consumer_runtime_root": "knowledge/runtime/<consumer-id>",
   "consumer_entrypoint": "task-knowledge task status --project-root /abs/project"
 }

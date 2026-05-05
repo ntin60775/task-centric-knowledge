@@ -148,7 +148,7 @@
 
 ## Важные operator-следствия
 
-- `scripts/task_query.py` строит read-only отчётность поверх `Task Core`, а не вместо него.
+- `task-knowledge task` строит read-only отчётность поверх `Task Core`, а не вместо него.
 - `current-task` сначала использует branch-match, затем `task-scoped dirty fallback`.
 - Если родительская задача и её подзадачи делят одну ветку, `current-task/status` в чистом дереве выбирают родителя как активный aggregate; task-scoped dirty fallback всё ещё может выбрать конкретную подзадачу.
 - `ambiguous/branch_tie` остаётся warning-first сигналом для несвязанных задач на одной ветке или другого tie, который нельзя безопасно свернуть к одному parent aggregate.

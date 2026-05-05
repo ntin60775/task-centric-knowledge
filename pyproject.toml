@@ -19,7 +19,7 @@ dev = [
 task-knowledge = "task_knowledge.__main__:main"
 
 [tool.setuptools]
-py-modules = ["install_skill", "task_query", "task_workflow", "task_knowledge_cli"]
+py-modules = ["task_knowledge_cli"]
 
 [tool.setuptools.package-dir]
 "" = "scripts"

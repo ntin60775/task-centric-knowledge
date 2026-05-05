@@ -26,9 +26,7 @@ from install_skill_runtime import (
     source_root_ready,
     verify_project,
 )
-from install_skill_runtime.cli import main as legacy_install_main
 from install_skill_runtime.cli import print_text_report as print_install_text_report
-from install_skill_runtime.models import SKILL_NAME
 from module_core_runtime.query_cli import (
     dispatch_file,
     dispatch_module,
@@ -669,15 +667,8 @@ def _borrowings(args: argparse.Namespace) -> tuple[dict[str, object], int]:
     return payload, 0 if payload["ok"] else 2
 
 
-def _run_legacy_install_cli(argv: list[str]) -> int:
-    return legacy_install_main(argv, script_path=Path(__file__).resolve())
-
-
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
-    if "--mode" in argv:
-        return _run_legacy_install_cli(argv)
-
     parser = build_parser()
     args = parser.parse_args(argv)
 

@@ -14,7 +14,7 @@ from task_workflow_testlib import ROOT, SUBPROCESS_TIMEOUT_SECONDS, TempRepoCase
 from task_workflow_runtime.task_markdown import parse_delivery_units
 
 
-QUERY_SCRIPT = ROOT / "scripts" / "task_query.py"
+QUERY_SCRIPT = ROOT / "scripts" / "task_knowledge_cli.py"
 DELIVERY_HEADER = (
     "| Unit ID | Назначение | Head | Base | Host | Тип публикации | "
     "Статус | URL | Merge commit | Cleanup |"
@@ -107,8 +107,11 @@ class TaskQueryTests(TempRepoCase):
         task_file.write_text(text.rstrip() + "\n" + "\n".join(additions).rstrip() + "\n", encoding="utf-8")
 
     def run_query(self, project_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        parts = list(args)
+        if not parts or parts[0] != "task":
+            parts.insert(0, "task")
         return subprocess.run(
-            [sys.executable, str(QUERY_SCRIPT), "--project-root", str(project_root), *args],
+            [sys.executable, str(QUERY_SCRIPT), *parts, "--project-root", str(project_root)],
             capture_output=True,
             text=True,
             check=False,
@@ -116,7 +119,16 @@ class TaskQueryTests(TempRepoCase):
         )
 
     def run_json_query(self, project_root: Path, *args: str) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
-        result = self.run_query(project_root, *args)
+        filtered = [a for a in args if a not in ("--format", "json")]
+        if not filtered or filtered[0] != "task":
+            filtered.insert(0, "task")
+        result = subprocess.run(
+            [sys.executable, str(QUERY_SCRIPT), "--json", *filtered, "--project-root", str(project_root)],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
         return result, json.loads(result.stdout)
 
     def test_status_reports_current_task_review_tasks_and_open_delivery_units(self) -> None:
@@ -287,7 +299,7 @@ class TaskQueryTests(TempRepoCase):
             git(project_root, "add", ".")
             git(project_root, "commit", "-m", "ambiguous fixtures")
 
-            result, payload = self.run_json_query(project_root, "current-task", "--format", "json")
+            result, payload = self.run_json_query(project_root, "current", "--format", "json")
 
             self.assertEqual(result.returncode, 0)
             self.assertEqual(payload["resolution"]["state"], "resolved")
@@ -330,7 +342,7 @@ class TaskQueryTests(TempRepoCase):
             git(project_root, "add", ".")
             git(project_root, "commit", "-m", "unrelated branch tie fixtures")
 
-            result, payload = self.run_json_query(project_root, "current-task", "--format", "json")
+            result, payload = self.run_json_query(project_root, "current", "--format", "json")
 
             self.assertEqual(result.returncode, 0)
             self.assertEqual(payload["resolution"]["state"], "ambiguous")
@@ -408,7 +420,7 @@ class TaskQueryTests(TempRepoCase):
             git(project_root, "add", ".")
             git(project_root, "commit", "-m", "prefer active branch candidates")
 
-            result, payload = self.run_json_query(project_root, "current-task", "--format", "json")
+            result, payload = self.run_json_query(project_root, "current", "--format", "json")
 
             self.assertEqual(result.returncode, 0)
             self.assertEqual(payload["resolution"]["state"], "resolved")
@@ -459,7 +471,7 @@ class TaskQueryTests(TempRepoCase):
             child_task_file = child_dir / "task.md"
             child_task_file.write_text(child_task_file.read_text(encoding="utf-8") + "\n", encoding="utf-8")
 
-            result, payload = self.run_json_query(project_root, "current-task", "--format", "json")
+            result, payload = self.run_json_query(project_root, "current", "--format", "json")
 
             self.assertEqual(result.returncode, 0)
             self.assertEqual(payload["resolution"]["state"], "resolved")
@@ -559,7 +571,7 @@ class TaskQueryTests(TempRepoCase):
             parent_task_file.write_text(parent_task_file.read_text(encoding="utf-8") + "\n", encoding="utf-8")
             child_task_file.write_text(child_task_file.read_text(encoding="utf-8") + "\n", encoding="utf-8")
 
-            result, payload = self.run_json_query(project_root, "current-task", "--format", "json")
+            result, payload = self.run_json_query(project_root, "current", "--format", "json")
 
             self.assertEqual(result.returncode, 0)
             self.assertEqual(payload["resolution"]["state"], "ambiguous")
@@ -664,7 +676,7 @@ class TaskQueryTests(TempRepoCase):
             (child_dir / "task.md").write_text((child_dir / "task.md").read_text(encoding="utf-8") + "\n", encoding="utf-8")
             (project_root / "scratch.txt").write_text("out-of-task dirty path\n", encoding="utf-8")
 
-            result, payload = self.run_json_query(project_root, "current-task", "--format", "json")
+            result, payload = self.run_json_query(project_root, "current", "--format", "json")
 
             self.assertEqual(result.returncode, 0)
             self.assertEqual(payload["resolution"]["state"], "resolved")
@@ -702,7 +714,7 @@ class TaskQueryTests(TempRepoCase):
             git(project_root, "add", ".")
             git(project_root, "commit", "-m", "unresolved fixtures")
 
-            result, payload = self.run_json_query(project_root, "current-task", "--format", "json")
+            result, payload = self.run_json_query(project_root, "current", "--format", "json")
 
             self.assertEqual(result.returncode, 0)
             self.assertEqual(payload["resolution"]["state"], "unresolved")
@@ -1128,7 +1140,7 @@ class TaskQueryTests(TempRepoCase):
             git(project_root, "add", ".")
             git(project_root, "commit", "-m", "waiting fixtures")
 
-            result, payload = self.run_json_query(project_root, "current-task", "--format", "json")
+            result, payload = self.run_json_query(project_root, "current", "--format", "json")
 
             self.assertEqual(result.returncode, 0)
             self.assertEqual(payload["resolution"]["task"]["blockers"], ["Нужен ответ пользователя по transport-layer."])

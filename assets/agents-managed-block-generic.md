@@ -88,7 +88,7 @@
 
 - `git status`, `git branch --show-current`, `git diff --check` и другие безопасные проверки только на чтение.
 - `git checkout -b` / `git switch -c` для task-ветки на чистом рабочем дереве.
-- `python3 scripts/task_workflow.py --publish-action start|publish|sync|merge|close` для локальной синхронизации publish-контура, если контекст задачи ясен и helper не требует недоступных сетевых действий.
+- `task-knowledge workflow publish --publish-action start|publish|sync|merge|close` для локальной синхронизации publish-контура, если контекст задачи ясен и helper не требует недоступных сетевых действий.
 - `git add` файлов задачи и `git commit` с префиксом `TASK-ID`, если границы изменения ясны.
 - Без явного запроса пользователя не выполнять `git push`, `git rebase`, `git reset`, `git clean`, удаление веток и любое переписывание истории.
 

@@ -64,7 +64,7 @@ Installer и workflow helpers применяют production safety guards: manag
 `~/.agents/skills/task-centric-knowledge`, затем запускает wrapper-based CLI install уже из live-copy.
 После этого обязательны две проверки:
 
-- прямой live smoke через `~/.agents/skills/task-centric-knowledge/scripts/install_skill.py`;
+- прямой live smoke через `task-knowledge --json install check --project-root /abs/project --source-root ~/.agents/skills/task-centric-knowledge`;
 - user-facing smoke через установленный `task-knowledge`.
 
 Helper не удаляет target-only файлы. Если verify показывает лишние файлы в live-copy,
