@@ -62,4 +62,6 @@ exec python3 "$guard_script" \
   --allow-phrase "task-centric-knowledge" \
   --allow-phrase "centric" \
   --allow-phrase "OK" \
+  --allow-phrase "semantic-algorithm-design" \
+  --allow-phrase "reference-semantic-algorithm-design-integration" \
   "$@"
