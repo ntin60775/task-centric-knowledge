@@ -50,6 +50,16 @@ typecheck:
 
 check-strict: lint typecheck
 
+docs:
+	doxygen Doxyfile
+
+docs-check:
+	@mkdir -p output/doxygen
+	doxygen Doxyfile 2>&1 | tee output/doxygen/warnings.log
+	@if grep -i "warning:" output/doxygen/warnings.log >/dev/null; then \
+		echo "Doxygen warnings detected"; exit 1; \
+	fi
+
 check-production: check verify-global-install
 
 project-install-check:
