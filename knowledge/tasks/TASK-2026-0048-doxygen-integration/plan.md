@@ -121,7 +121,7 @@
 - [x] Шаг 1: Создать `Doxyfile` с Python-настройками (HTML + XML).
 - [x] Шаг 2: Добавить `output/doxygen/` в `.gitignore`.
 - [x] Шаг 3: Добавить `docs` и `docs-check` в `Makefile`.
-- [ ] Шаг 4: Прогнать `make docs-check` и устранить warnings (блокируется: `doxygen` не установлен).
+- [x] Шаг 4: Прогнать `make docs-check` и устранить warnings.
 - [x] Шаг 5: Добавить Doxygen-блоки phase 1 к public API (`scripts/task_knowledge_cli.py`, `scripts/task_workflow_runtime/`, `scripts/install_skill_runtime/`, `scripts/borrowings_runtime/`).
 - [ ] Шаг 6: Добавить Doxygen-блоки phase 2 к key internal функциям (`@note`, `@todo`, `@see`).
 - [ ] Шаг 7: Добавить минимальные fallback docstrings внутри функций (частично: добавлены для dataclasses и key функций).
