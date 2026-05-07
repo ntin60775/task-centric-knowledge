@@ -88,11 +88,11 @@
 
 | Unit ID | Назначение | Head | Base | Host | Тип публикации | Статус | URL | Merge commit | Cleanup |
 |---------|------------|------|------|------|----------------|--------|-----|--------------|---------|
-| `DU-1` | Внедрение Doxygen и документирование public API | `task/task-2026-0048-doxygen-integration` | `main` | `none` | `none` | `planned` | `—` | `—` | `не требуется` |
+| `DU-1` | Внедрение Doxygen и документирование public API | `task/task-2026-0048-doxygen-integration` | `main` | `none` | `none` | `merged` | `—` | `3593f3f` | `не требуется` |
 
 ## Текущий этап
 
-Реализация. Создана задача, ветка и план. Приступаем к настройке Doxygen и документированию.
+Задача завершена. Phase 1 (public API) и phase 2 (module_core_runtime + internal helpers) выполнены. Ветка влита в `main`.
 
 ## Стратегия проверки
 
@@ -118,9 +118,9 @@
 ## Итоговый список ручных проверок
 
 - [x] Установить `doxygen` и прогнать `make docs-check`.
-- [ ] Визуальная проверка HTML-вывода.
-- [ ] Проверка полноты покрытия комментариями по key modules.
+- [x] Визуальная проверка HTML-вывода.
+- [x] Проверка полноты покрытия комментариями по key modules.
 
 ## Итог
 
-Заполняется при завершении или передаче.
+Doxygen интегрирован в проект. Настроен `Doxyfile`, добавлены цели `docs`/`docs-check` в Makefile. Все runtime-модули в `scripts/` покрыты Doxygen-блоками (phase 1 + phase 2). `make docs-check` clean, `make check` зелёный. Ветка `task/task-2026-0048-doxygen-integration` влита в `main` (fast-forward, HEAD `3593f3f`).
