@@ -30,33 +30,48 @@ from .task_markdown import (
 )
 
 
-## @brief Check if a task file has uncommitted changes.
-#  @param project_root Absolute path to the project root.
-#  @param task_file_relative Relative path to the task file.
-#  @return True if the file appears in dirty paths.
 def task_file_is_dirty(project_root: Path, task_file_relative: str) -> bool:
+    """Check if a task file has uncommitted changes.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_file_relative: Relative path to the task file.
+
+    Returns:
+        True if the file appears in dirty paths.
+    """
     normalized_target = task_file_relative.replace("\\", "/").rstrip("/")
     return any(path.replace("\\", "/").rstrip("/") == normalized_target for path in dirty_paths(project_root))
 
 
-## @brief Count commits touching a task file on a given ref.
-#  @param project_root Absolute path to the project root.
-#  @param ref_name Git ref to inspect.
-#  @param task_file_relative Relative path to the task file.
-#  @return Commit count, or 0 on error.
 def task_file_history_depth(project_root: Path, ref_name: str, task_file_relative: str) -> int:
+    """Count commits touching a task file on a given ref.
+
+    Args:
+        project_root: Absolute path to the project root.
+        ref_name: Git ref to inspect.
+        task_file_relative: Relative path to the task file.
+
+    Returns:
+        Commit count, or 0 on error.
+    """
     completed = run_git(project_root, "rev-list", "--count", ref_name, "--", task_file_relative, check=False)
     if completed.returncode != 0:
         return 0
     return int((completed.stdout or "0").strip() or "0")
 
 
-## @brief Parse git log output into a freshness tuple.
-#  @param output Raw stdout from git log.
-#  @param fallback_ref Ref name to use when output is empty.
-#  @param history_depth Precomputed history depth.
-#  @return Tuple of (source_flag, timestamp, history_depth, commit_id).
 def parse_task_file_freshness(output: str, fallback_ref: str, history_depth: int) -> tuple[int, int, int, str]:
+    """Parse git log output into a freshness tuple.
+
+    Args:
+        output: Raw stdout from git log.
+        fallback_ref: Ref name to use when output is empty.
+        history_depth: Precomputed history depth.
+
+    Returns:
+        Tuple of (source_flag, timestamp, history_depth, commit_id).
+    """
     payload = output.strip()
     if not payload:
         return (0, 0, history_depth, fallback_ref)
@@ -65,16 +80,21 @@ def parse_task_file_freshness(output: str, fallback_ref: str, history_depth: int
     return (1, timestamp, history_depth, commit_id or fallback_ref)
 
 
-## @brief Compute freshness for a task file on the current branch.
-#  @param project_root Absolute path to the project root.
-#  @param task_file Absolute path to the task file.
-#  @param task_file_relative Relative path to the task file.
-#  @return Freshness tuple.
 def current_task_file_freshness(
     project_root: Path,
     task_file: Path,
     task_file_relative: str,
 ) -> tuple[int, int, int, str]:
+    """Compute freshness for a task file on the current branch.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_file: Absolute path to the task file.
+        task_file_relative: Relative path to the task file.
+
+    Returns:
+        Freshness tuple.
+    """
     active_branch = current_git_branch(project_root) or "HEAD"
     history_depth = task_file_history_depth(project_root, active_branch, task_file_relative)
     if task_file_is_dirty(project_root, task_file_relative):
@@ -97,12 +117,17 @@ def current_task_file_freshness(
     return parse_task_file_freshness(completed.stdout, active_branch, history_depth)
 
 
-## @brief Compute freshness for a task file on a named ref.
-#  @param project_root Absolute path to the project root.
-#  @param ref_name Git ref to inspect.
-#  @param task_file_relative Relative path to the task file.
-#  @return Freshness tuple.
 def ref_task_file_freshness(project_root: Path, ref_name: str, task_file_relative: str) -> tuple[int, int, int, str]:
+    """Compute freshness for a task file on a named ref.
+
+    Args:
+        project_root: Absolute path to the project root.
+        ref_name: Git ref to inspect.
+        task_file_relative: Relative path to the task file.
+
+    Returns:
+        Freshness tuple.
+    """
     history_depth = task_file_history_depth(project_root, ref_name, task_file_relative)
     completed = run_git(
         project_root,
@@ -122,10 +147,15 @@ def ref_task_file_freshness(project_root: Path, ref_name: str, task_file_relativ
     return parse_task_file_freshness(completed.stdout, ref_name, history_depth)
 
 
-## @brief Build a sort key for merging delivery unit versions.
-#  @param version Delivery unit version to rank.
-#  @return Composite sort key tuple.
 def delivery_unit_merge_key(version: DeliveryUnitVersion) -> tuple[int, tuple[int, int, int, str], int, int, int, int]:
+    """Build a sort key for merging delivery unit versions.
+
+    Args:
+        version: Delivery unit version to rank.
+
+    Returns:
+        Composite sort key tuple.
+    """
     unit = version.unit
     return (
         DELIVERY_STATUS_PRIORITY.get(normalize_delivery_status(unit.status), -1),
@@ -149,17 +179,22 @@ def delivery_unit_merge_key(version: DeliveryUnitVersion) -> tuple[int, tuple[in
     )
 
 
-## @brief Pick the best non-placeholder value across delivery unit versions.
-#  @param versions List of delivery unit versions.
-#  @param field_name Attribute name to inspect.
-#  @param placeholders Set of placeholder values to skip.
-#  @return Best available value.
 def preferred_delivery_value(
     versions: list[DeliveryUnitVersion],
     field_name: str,
     *,
     placeholders: set[str],
 ) -> str:
+    """Pick the best non-placeholder value across delivery unit versions.
+
+    Args:
+        versions: List of delivery unit versions.
+        field_name: Attribute name to inspect.
+        placeholders: Set of placeholder values to skip.
+
+    Returns:
+        Best available value.
+    """
     for version in versions:
         unit = version.unit
         value = getattr(unit, field_name)
@@ -168,11 +203,18 @@ def preferred_delivery_value(
     return getattr(versions[0].unit, field_name)
 
 
-## @brief Merge multiple delivery unit versions into a single DeliveryUnit.
-#  @param versions List of versions to merge.
-#  @return Merged DeliveryUnit.
-#  @exception ValueError If the versions list is empty.
 def merge_delivery_unit_versions(versions: list[DeliveryUnitVersion]) -> DeliveryUnit:
+    """Merge multiple delivery unit versions into a single DeliveryUnit.
+
+    Args:
+        versions: List of versions to merge.
+
+    Returns:
+        Merged DeliveryUnit.
+
+    Raises:
+        ValueError: If the versions list is empty.
+    """
     if not versions:
         raise ValueError("Нельзя объединить пустой список delivery units.")
     ordered_versions = sorted(versions, key=delivery_unit_merge_key, reverse=True)
@@ -203,12 +245,17 @@ def merge_delivery_unit_versions(versions: list[DeliveryUnitVersion]) -> Deliver
     )
 
 
-## @brief Find branches related to a task's publish contour.
-#  @param project_root Absolute path to the project root.
-#  @param task_dir Absolute path to the task directory.
-#  @param fields Parsed task fields.
-#  @return Sorted list of related branch names.
 def related_publish_refs(project_root: Path, task_dir: Path, fields: dict[str, str]) -> list[str]:
+    """Find branches related to a task's publish contour.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_dir: Absolute path to the task directory.
+        fields: Parsed task fields.
+
+    Returns:
+        Sorted list of related branch names.
+    """
     task_id = fields.get("ID задачи", "").strip()
     short_name = fields.get("Краткое имя", "").strip()
     refs: set[str] = set()
@@ -228,38 +275,53 @@ def related_publish_refs(project_root: Path, task_dir: Path, fields: dict[str, s
     return sorted(refs)
 
 
-## @brief Read task file contents from a git ref.
-#  @param project_root Absolute path to the project root.
-#  @param ref_name Git ref to read from.
-#  @param task_file_relative Relative path to the task file.
-#  @return File lines, or None if the ref does not contain the file.
 def read_task_lines_from_ref(project_root: Path, ref_name: str, task_file_relative: str) -> list[str] | None:
+    """Read task file contents from a git ref.
+
+    Args:
+        project_root: Absolute path to the project root.
+        ref_name: Git ref to read from.
+        task_file_relative: Relative path to the task file.
+
+    Returns:
+        File lines, or None if the ref does not contain the file.
+    """
     completed = run_git(project_root, "show", f"{ref_name}:{task_file_relative}", check=False)
     if completed.returncode != 0:
         return None
     return completed.stdout.splitlines()
 
 
-## @brief Check if a path exists in the current HEAD.
-#  @param project_root Absolute path to the project root.
-#  @param relative_path Path relative to project root.
-#  @return True if the path exists in HEAD.
 def path_exists_in_head(project_root: Path, relative_path: str) -> bool:
+    """Check if a path exists in the current HEAD.
+
+    Args:
+        project_root: Absolute path to the project root.
+        relative_path: Path relative to project root.
+
+    Returns:
+        True if the path exists in HEAD.
+    """
     return read_task_lines_from_ref(project_root, "HEAD", relative_path) is not None
 
 
-## @brief Collect and merge delivery units from current and related refs.
-#  @param project_root Absolute path to the project root.
-#  @param task_dir Absolute path to the task directory.
-#  @param fields Parsed task fields.
-#  @param current_lines Current task file lines.
-#  @return Sorted list of merged DeliveryUnit objects.
 def collect_delivery_units(
     project_root: Path,
     task_dir: Path,
     fields: dict[str, str],
     current_lines: list[str],
 ) -> list[DeliveryUnit]:
+    """Collect and merge delivery units from current and related refs.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_dir: Absolute path to the task directory.
+        fields: Parsed task fields.
+        current_lines: Current task file lines.
+
+    Returns:
+        Sorted list of merged DeliveryUnit objects.
+    """
     task_file_relative = (task_dir / "task.md").relative_to(project_root).as_posix()
     units_by_id: dict[str, list[DeliveryUnitVersion]] = {}
     current_freshness = current_task_file_freshness(project_root, task_dir / "task.md", task_file_relative)
@@ -282,12 +344,19 @@ def collect_delivery_units(
     )
 
 
-## @brief Find a delivery unit by ID, raising on mismatch or ambiguity.
-#  @param units List of delivery units.
-#  @param unit_id Target unit ID, or None for single-unit auto-select.
-#  @return Matching DeliveryUnit.
-#  @exception ValueError If the unit is not found or selection is ambiguous.
 def find_delivery_unit(units: list[DeliveryUnit], unit_id: str | None) -> DeliveryUnit:
+    """Find a delivery unit by ID, raising on mismatch or ambiguity.
+
+    Args:
+        units: List of delivery units.
+        unit_id: Target unit ID, or None for single-unit auto-select.
+
+    Returns:
+        Matching DeliveryUnit.
+
+    Raises:
+        ValueError: If the unit is not found or selection is ambiguous.
+    """
     if unit_id:
         normalized_id = normalize_table_value(unit_id)
         for unit in units:
@@ -305,11 +374,16 @@ def find_delivery_unit(units: list[DeliveryUnit], unit_id: str | None) -> Delive
     raise ValueError("Нужно явно указать `--unit-id`, потому что delivery unit неоднозначен.")
 
 
-## @brief Replace or append a delivery unit in a list.
-#  @param units List of delivery units.
-#  @param updated_unit Unit to insert or replace.
-#  @return New list with the updated unit.
 def replace_delivery_unit(units: list[DeliveryUnit], updated_unit: DeliveryUnit) -> list[DeliveryUnit]:
+    """Replace or append a delivery unit in a list.
+
+    Args:
+        units: List of delivery units.
+        updated_unit: Unit to insert or replace.
+
+    Returns:
+        New list with the updated unit.
+    """
     replaced = False
     result: list[DeliveryUnit] = []
     for unit in units:
@@ -323,11 +397,16 @@ def replace_delivery_unit(units: list[DeliveryUnit], updated_unit: DeliveryUnit)
     return sorted(result, key=lambda item: delivery_unit_index(item.unit_id))
 
 
-## @brief Read the goal summary from HEAD for a given task.
-#  @param project_root Absolute path to the project root.
-#  @param task_dir Absolute path to the task directory.
-#  @return Goal summary string, or None.
 def tracked_goal_summary(project_root: Path, task_dir: Path) -> str | None:
+    """Read the goal summary from HEAD for a given task.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_dir: Absolute path to the task directory.
+
+    Returns:
+        Goal summary string, or None.
+    """
     task_file_relative = (task_dir / "task.md").relative_to(project_root).as_posix()
     tracked_lines = read_task_lines_from_ref(project_root, "HEAD", task_file_relative)
     if tracked_lines is None:
@@ -335,21 +414,20 @@ def tracked_goal_summary(project_root: Path, task_dir: Path) -> str | None:
     return derive_goal_summary_from_lines(tracked_lines)
 
 
-## @brief List commit hashes touching a path on a given ref.
-#  @param project_root Absolute path to the project root.
-#  @param relative_path Path relative to project root.
-#  @param ref_name Git ref to inspect.
-#  @return List of commit hashes.
 def commit_history_for_path(project_root: Path, relative_path: str, *, ref_name: str = "HEAD") -> list[str]:
+    """List commit hashes touching a path on a given ref.
+
+    Args:
+        project_root: Absolute path to the project root.
+        relative_path: Path relative to project root.
+        ref_name: Git ref to inspect.
+
+    Returns:
+        List of commit hashes.
+    """
     return run_git(project_root, "log", ref_name, "--format=%H", "--", relative_path).stdout.splitlines()
 
 
-## @brief Find the commit that introduced a specific goal summary.
-#  @param project_root Absolute path to the project root.
-#  @param task_dir Absolute path to the task directory.
-#  @param goal_summary Goal summary text to match.
-#  @param ref_name Git ref to search.
-#  @return Commit hash, or None if not found.
 def commit_introducing_goal_summary(
     project_root: Path,
     task_dir: Path,
@@ -357,6 +435,17 @@ def commit_introducing_goal_summary(
     *,
     ref_name: str = "HEAD",
 ) -> str | None:
+    """Find the commit that introduced a specific goal summary.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_dir: Absolute path to the task directory.
+        goal_summary: Goal summary text to match.
+        ref_name: Git ref to search.
+
+    Returns:
+        Commit hash, or None if not found.
+    """
     task_file_relative = (task_dir / "task.md").relative_to(project_root).as_posix()
     matching_commit: str | None = None
     for commit_id in commit_history_for_path(project_root, task_file_relative, ref_name=ref_name):
@@ -371,11 +460,16 @@ def commit_introducing_goal_summary(
     return matching_commit
 
 
-## @brief Extract a task's summary from registry markdown lines.
-#  @param lines Registry document lines.
-#  @param task_id Task ID to search for.
-#  @return Tuple of (summary string, row_found flag).
 def registry_summary_from_lines(lines: list[str], task_id: str) -> tuple[str | None, bool]:
+    """Extract a task's summary from registry markdown lines.
+
+    Args:
+        lines: Registry document lines.
+        task_id: Task ID to search for.
+
+    Returns:
+        Tuple of (summary string, row_found flag).
+    """
     for line in lines:
         stripped = line.strip()
         if not stripped.startswith("| `"):
@@ -390,12 +484,6 @@ def registry_summary_from_lines(lines: list[str], task_id: str) -> tuple[str | N
     return None, False
 
 
-## @brief Find the commit that introduced a specific registry summary.
-#  @param project_root Absolute path to the project root.
-#  @param task_id Task ID to search for.
-#  @param summary Summary text to match.
-#  @param ref_name Git ref to search.
-#  @return Commit hash, or None if not found.
 def commit_introducing_registry_summary(
     project_root: Path,
     task_id: str,
@@ -403,6 +491,17 @@ def commit_introducing_registry_summary(
     *,
     ref_name: str = "HEAD",
 ) -> str | None:
+    """Find the commit that introduced a specific registry summary.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_id: Task ID to search for.
+        summary: Summary text to match.
+        ref_name: Git ref to search.
+
+    Returns:
+        Commit hash, or None if not found.
+    """
     registry_relative = "knowledge/tasks/registry.md"
     matching_commit: str | None = None
     for commit_id in commit_history_for_path(project_root, registry_relative, ref_name=ref_name):
@@ -418,34 +517,36 @@ def commit_introducing_registry_summary(
     return matching_commit
 
 
-## @brief Check if one commit is an ancestor of another.
-#  @param project_root Absolute path to the project root.
-#  @param ancestor Potential ancestor commit.
-#  @param descendant Potential descendant commit.
-#  @return True if ancestor precedes descendant.
 def commit_is_ancestor(project_root: Path, ancestor: str, descendant: str) -> bool:
+    """Check if one commit is an ancestor of another.
+
+    Args:
+        project_root: Absolute path to the project root.
+        ancestor: Potential ancestor commit.
+        descendant: Potential descendant commit.
+
+    Returns:
+        True if ancestor precedes descendant.
+    """
     completed = run_git(project_root, "merge-base", "--is-ancestor", ancestor, descendant, check=False)
     return completed.returncode == 0
 
 
-## @brief Sanitize a legacy registry summary value.
-#  @param value Raw summary value.
-#  @return Sanitized string, or None if empty or placeholder.
 def legacy_registry_summary_candidate(value: str | None) -> str | None:
+    """Sanitize a legacy registry summary value.
+
+    Args:
+        value: Raw summary value.
+
+    Returns:
+        Sanitized string, or None if empty or placeholder.
+    """
     sanitized = sanitize_registry_summary(value or "")
     if not sanitized or sanitized == DELIVERY_ROW_PLACEHOLDER:
         return None
     return sanitized
 
 
-## @brief Determine if a goal summary should override the registry summary.
-#  @param project_root Absolute path to the project root.
-#  @param task_dir Absolute path to the task directory.
-#  @param task_id Task ID.
-#  @param goal_summary Current goal summary.
-#  @param existing_summary Existing registry summary.
-#  @param ref_name Git ref to inspect, or None for HEAD.
-#  @return True if the goal summary should take precedence.
 def legacy_goal_summary_overrides_registry(
     project_root: Path,
     task_dir: Path,
@@ -455,6 +556,19 @@ def legacy_goal_summary_overrides_registry(
     existing_summary: str | None,
     ref_name: str | None = None,
 ) -> bool:
+    """Determine if a goal summary should override the registry summary.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_dir: Absolute path to the task directory.
+        task_id: Task ID.
+        goal_summary: Current goal summary.
+        existing_summary: Existing registry summary.
+        ref_name: Git ref to inspect, or None for HEAD.
+
+    Returns:
+        True if the goal summary should take precedence.
+    """
     sanitized_existing = legacy_registry_summary_candidate(existing_summary)
     if not goal_summary or not sanitized_existing or goal_summary == sanitized_existing:
         return False
@@ -484,14 +598,6 @@ def legacy_goal_summary_overrides_registry(
     return commit_is_ancestor(project_root, registry_commit, goal_commit)
 
 
-## @brief Resolve the preferred registry summary from multiple sources.
-#  @param fields Parsed task fields.
-#  @param goal_summary Goal-derived summary.
-#  @param summary Explicitly passed summary.
-#  @param existing_summary Existing registry summary.
-#  @param prefer_goal_over_existing Whether to prefer goal over existing.
-#  @param ignore_task_summary Whether to ignore the task summary field.
-#  @return Best available summary string, or None.
 def preferred_registry_summary(
     fields: dict[str, str],
     *,
@@ -501,6 +607,19 @@ def preferred_registry_summary(
     prefer_goal_over_existing: bool = False,
     ignore_task_summary: bool = False,
 ) -> str | None:
+    """Resolve the preferred registry summary from multiple sources.
+
+    Args:
+        fields: Parsed task fields.
+        goal_summary: Goal-derived summary.
+        summary: Explicitly passed summary.
+        existing_summary: Existing registry summary.
+        prefer_goal_over_existing: Whether to prefer goal over existing.
+        ignore_task_summary: Whether to ignore the task summary field.
+
+    Returns:
+        Best available summary string, or None.
+    """
     explicit_task_summary = task_summary_from_fields(fields)
     if explicit_task_summary and not ignore_task_summary:
         return explicit_task_summary
@@ -518,18 +637,25 @@ def preferred_registry_summary(
     return goal_summary
 
 
-## @brief Read registry markdown lines from disk or a git ref.
-#  @param project_root Absolute path to the project root.
-#  @param ref_name Git ref to read from, or None for working tree.
-#  @param allow_untracked_fallback Allow falling back to working tree if ref lacks the file.
-#  @return Registry document lines.
-#  @exception ValueError If the registry file is not found.
 def read_registry_lines(
     project_root: Path,
     *,
     ref_name: str | None = None,
     allow_untracked_fallback: bool = False,
 ) -> list[str]:
+    """Read registry markdown lines from disk or a git ref.
+
+    Args:
+        project_root: Absolute path to the project root.
+        ref_name: Git ref to read from, or None for working tree.
+        allow_untracked_fallback: Allow falling back to working tree if ref lacks the file.
+
+    Returns:
+        Registry document lines.
+
+    Raises:
+        ValueError: If the registry file is not found.
+    """
     registry_relative = "knowledge/tasks/registry.md"
     registry_path = project_root / registry_relative
     if ref_name is None:
@@ -548,12 +674,6 @@ def read_registry_lines(
     return completed.stdout.splitlines()
 
 
-## @brief Read the existing registry summary for a task ID.
-#  @param project_root Absolute path to the project root.
-#  @param task_id Task ID to look up.
-#  @param ref_name Git ref to read from, or None for working tree.
-#  @param allow_untracked_fallback Allow falling back to working tree.
-#  @return Tuple of (summary string, row_found flag).
 def read_existing_registry_summary(
     project_root: Path,
     task_id: str,
@@ -561,6 +681,17 @@ def read_existing_registry_summary(
     ref_name: str | None = None,
     allow_untracked_fallback: bool = False,
 ) -> tuple[str | None, bool]:
+    """Read the existing registry summary for a task ID.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_id: Task ID to look up.
+        ref_name: Git ref to read from, or None for working tree.
+        allow_untracked_fallback: Allow falling back to working tree.
+
+    Returns:
+        Tuple of (summary string, row_found flag).
+    """
     lines = read_registry_lines(
         project_root,
         ref_name=ref_name,
@@ -569,13 +700,6 @@ def read_existing_registry_summary(
     return registry_summary_from_lines(lines, task_id)
 
 
-## @brief Read task file contents and fields from disk or a git ref.
-#  @param project_root Absolute path to the project root.
-#  @param task_dir Absolute path to the task directory.
-#  @param ref_name Git ref to read from, or None for working tree.
-#  @param allow_untracked_fallback Allow falling back to working tree.
-#  @return Tuple of (lines, fields, goal_summary).
-#  @exception ValueError If the task file is not found.
 def read_task_context(
     project_root: Path,
     task_dir: Path,
@@ -583,6 +707,20 @@ def read_task_context(
     ref_name: str | None = None,
     allow_untracked_fallback: bool = False,
 ) -> tuple[list[str], dict[str, str], str | None]:
+    """Read task file contents and fields from disk or a git ref.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_dir: Absolute path to the task directory.
+        ref_name: Git ref to read from, or None for working tree.
+        allow_untracked_fallback: Allow falling back to working tree.
+
+    Returns:
+        Tuple of (lines, fields, goal_summary).
+
+    Raises:
+        ValueError: If the task file is not found.
+    """
     task_file = task_dir / "task.md"
     if ref_name is None:
         lines, fields = read_task_fields(task_file)
@@ -602,12 +740,19 @@ def read_task_context(
     return lines, fields, derive_goal_summary_from_lines(lines)
 
 
-## @brief Inherit the branch name from a parent task.
-#  @param task_dir Absolute path to the subtask directory.
-#  @param project_root Absolute path to the project root, or None.
-#  @return Inherited branch name.
-#  @exception ValueError If the task is not a subtask or parent branch is unset.
 def find_parent_branch(task_dir: Path, *, project_root: Path | None = None) -> str:
+    """Inherit the branch name from a parent task.
+
+    Args:
+        task_dir: Absolute path to the subtask directory.
+        project_root: Absolute path to the project root, or None.
+
+    Returns:
+        Inherited branch name.
+
+    Raises:
+        ValueError: If the task is not a subtask or parent branch is unset.
+    """
     if task_dir.parent.name != "subtasks":
         raise ValueError("Нельзя наследовать ветку: задача не находится внутри каталога subtasks/.")
     parent_task_file = task_dir.parent.parent / "task.md"
@@ -645,15 +790,6 @@ def find_parent_branch(task_dir: Path, *, project_root: Path | None = None) -> s
     return parent_branch
 
 
-## @brief Compute the registry summary during preflight.
-#  @param project_root Absolute path to the project root.
-#  @param task_dir Absolute path to the task directory.
-#  @param register_if_missing Whether to allow creating a new registry row.
-#  @param summary Explicitly passed summary.
-#  @param ref_name Git ref to read from, or None for working tree.
-#  @param allow_untracked_fallback Allow falling back to working tree.
-#  @return Resolved summary string.
-#  @exception ValueError If no summary can be resolved.
 def preflight_registry_summary(
     project_root: Path,
     task_dir: Path,
@@ -663,6 +799,22 @@ def preflight_registry_summary(
     ref_name: str | None = None,
     allow_untracked_fallback: bool = False,
 ) -> str:
+    """Compute the registry summary during preflight.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_dir: Absolute path to the task directory.
+        register_if_missing: Whether to allow creating a new registry row.
+        summary: Explicitly passed summary.
+        ref_name: Git ref to read from, or None for working tree.
+        allow_untracked_fallback: Allow falling back to working tree.
+
+    Returns:
+        Resolved summary string.
+
+    Raises:
+        ValueError: If no summary can be resolved.
+    """
     lines, fields, goal_summary = read_task_context(
         project_root,
         task_dir,
@@ -704,30 +856,28 @@ def preflight_registry_summary(
     return resolved_summary
 
 
-## @brief Determine the target ref for a sync preflight.
-#  @param project_root Absolute path to the project root.
-#  @param create_branch Whether a new branch should be created.
-#  @param target_branch Name of the target branch.
-#  @return Target ref name, or None if no preflight is needed.
 def sync_preflight_ref_name(
     project_root: Path,
     *,
     create_branch: bool,
     target_branch: str,
 ) -> str | None:
+    """Determine the target ref for a sync preflight.
+
+    Args:
+        project_root: Absolute path to the project root.
+        create_branch: Whether a new branch should be created.
+        target_branch: Name of the target branch.
+
+    Returns:
+        Target ref name, or None if no preflight is needed.
+    """
     active_branch = current_git_branch(project_root)
     if create_branch and active_branch != target_branch and branch_exists(project_root, target_branch):
         return target_branch
     return None
 
 
-## @brief Determine the target ref for a publish preflight.
-#  @param project_root Absolute path to the project root.
-#  @param action Publish action name.
-#  @param target_branch Explicit target branch, or None.
-#  @param start_ref Starting ref, or None.
-#  @param current_unit Current delivery unit, or None.
-#  @return Target ref name, or None if no preflight is needed.
 def publish_preflight_ref_name(
     project_root: Path,
     *,
@@ -736,6 +886,18 @@ def publish_preflight_ref_name(
     start_ref: str | None,
     current_unit: DeliveryUnit | None = None,
 ) -> str | None:
+    """Determine the target ref for a publish preflight.
+
+    Args:
+        project_root: Absolute path to the project root.
+        action: Publish action name.
+        target_branch: Explicit target branch, or None.
+        start_ref: Starting ref, or None.
+        current_unit: Current delivery unit, or None.
+
+    Returns:
+        Target ref name, or None if no preflight is needed.
+    """
     if action == "start":
         if target_branch and branch_exists(project_root, target_branch):
             return target_branch
@@ -747,11 +909,16 @@ def publish_preflight_ref_name(
     return None
 
 
-## @brief Determine the ref to use for the publication body.
-#  @param project_root Absolute path to the project root.
-#  @param current_unit Current delivery unit.
-#  @return Branch name to use, or None for the current branch.
 def publication_body_ref_name(project_root: Path, current_unit: DeliveryUnit) -> str | None:
+    """Determine the ref to use for the publication body.
+
+    Args:
+        project_root: Absolute path to the project root.
+        current_unit: Current delivery unit.
+
+    Returns:
+        Branch name to use, or None for the current branch.
+    """
     if current_git_branch(project_root) == current_unit.head:
         return None
     if current_unit.head != DELIVERY_ROW_PLACEHOLDER and branch_exists(project_root, current_unit.head):
@@ -759,15 +926,6 @@ def publication_body_ref_name(project_root: Path, current_unit: DeliveryUnit) ->
     return None
 
 
-## @brief Format a single registry table row.
-#  @param task_id Task ID.
-#  @param parent_id Parent task ID.
-#  @param status Task status.
-#  @param priority Task priority.
-#  @param branch_name Branch name.
-#  @param task_dir_relative Relative task directory path.
-#  @param summary Human-readable summary.
-#  @return Formatted Markdown table row.
 def format_registry_row(
     task_id: str,
     parent_id: str,
@@ -777,6 +935,20 @@ def format_registry_row(
     task_dir_relative: str,
     summary: str,
 ) -> str:
+    """Format a single registry table row.
+
+    Args:
+        task_id: Task ID.
+        parent_id: Parent task ID.
+        status: Task status.
+        priority: Task priority.
+        branch_name: Branch name.
+        task_dir_relative: Relative task directory path.
+        summary: Human-readable summary.
+
+    Returns:
+        Formatted Markdown table row.
+    """
     safe_summary = sanitize_registry_summary(summary) or DELIVERY_ROW_PLACEHOLDER
     return (
         f"| `{task_id}` | `{parent_id}` | `{status}` | `{priority}` | "
@@ -784,15 +956,6 @@ def format_registry_row(
     )
 
 
-## @brief Update or append a task row in the registry.
-#  @param project_root Absolute path to the project root.
-#  @param task_dir Absolute path to the task directory.
-#  @param fields Parsed task fields.
-#  @param branch_name Branch name to record.
-#  @param register_if_missing Whether to append a new row if missing.
-#  @param summary Explicitly passed summary.
-#  @return Tuple of (was_new_row, registry_path).
-#  @exception ValueError If registry is missing or summary cannot be resolved.
 def update_registry(
     project_root: Path,
     task_dir: Path,
@@ -802,6 +965,22 @@ def update_registry(
     register_if_missing: bool,
     summary: str | None,
 ) -> tuple[bool, str]:
+    """Update or append a task row in the registry.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_dir: Absolute path to the task directory.
+        fields: Parsed task fields.
+        branch_name: Branch name to record.
+        register_if_missing: Whether to append a new row if missing.
+        summary: Explicitly passed summary.
+
+    Returns:
+        Tuple of (was_new_row, registry_path).
+
+    Raises:
+        ValueError: If registry is missing or summary cannot be resolved.
+    """
     registry_path = project_root / "knowledge" / "tasks" / "registry.md"
     if not registry_path.exists():
         raise ValueError("Не найден knowledge/tasks/registry.md.")
@@ -878,11 +1057,16 @@ def update_registry(
     return True, str(registry_path)
 
 
-## @brief Verify that all dirty paths are within the task scope or registry.
-#  @param project_root Absolute path to the project root.
-#  @param task_dir Absolute path to the task directory.
-#  @return True if all dirty paths are task-scoped.
 def dirty_paths_are_task_scoped(project_root: Path, task_dir: Path) -> bool:
+    """Verify that all dirty paths are within the task scope or registry.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_dir: Absolute path to the task directory.
+
+    Returns:
+        True if all dirty paths are task-scoped.
+    """
     task_dir_relative = task_dir.relative_to(project_root).as_posix().rstrip("/") + "/"
     registry_relative = "knowledge/tasks/registry.md"
     for path in dirty_paths(project_root):

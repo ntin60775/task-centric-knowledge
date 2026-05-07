@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 
-## @brief Вывести текстовый отчёт install-runtime.
-#
-#  Форматирует payload установки, проверки или cleanup в человекочитаемый текст.
-#  @param payload Словарь с результатами install-runtime операции.
 def print_text_report(payload: dict[str, object]) -> None:
+    """Вывести текстовый отчёт install-runtime.
+
+    Форматирует payload установки, проверки или cleanup в человекочитаемый текст.
+
+    Args:
+        payload: Словарь с результатами install-runtime операции.
+    """
     print(f"skill={payload['skill']}")
     if "mode" in payload:
         print(f"mode={payload['mode']}")

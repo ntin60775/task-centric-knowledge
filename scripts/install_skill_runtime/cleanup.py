@@ -134,6 +134,21 @@ def build_cleanup_plan(
     output_format: str,
     command_prefix: tuple[str, ...] | None = None,
 ) -> tuple[CleanupPlan, list[StepResult], str]:
+    """Build cleanup plan.
+
+    Args:
+    project_root: Description.
+    source_root: Description.
+    profile: Description.
+    existing_system_mode: Description.
+    script_path: Description.
+    source_root_arg: Description.
+    output_format: Description.
+    command_prefix: Description.
+
+    Returns:
+        Result.
+    """
     results: list[StepResult] = []
     source_results = validate_source(source_root)
     results.extend(source_results)
@@ -320,6 +335,21 @@ def migrate_cleanup_plan(
     output_format: str,
     command_prefix: tuple[str, ...] | None = None,
 ) -> dict[str, object]:
+    """Migrate cleanup plan.
+
+    Args:
+    project_root: Description.
+    source_root: Description.
+    profile: Description.
+    existing_system_mode: Description.
+    script_path: Description.
+    source_root_arg: Description.
+    output_format: Description.
+    command_prefix: Description.
+
+    Returns:
+        Result.
+    """
     plan, results, classification = build_cleanup_plan(
         project_root,
         source_root=source_root,
@@ -356,6 +386,23 @@ def migrate_cleanup_confirm(
     assume_yes: bool,
     command_prefix: tuple[str, ...] | None = None,
 ) -> dict[str, object]:
+    """Migrate cleanup confirm.
+
+    Args:
+    project_root: Description.
+    source_root: Description.
+    profile: Description.
+    existing_system_mode: Description.
+    script_path: Description.
+    source_root_arg: Description.
+    output_format: Description.
+    confirm_fingerprint: Description.
+    assume_yes: Description.
+    command_prefix: Description.
+
+    Returns:
+        Result.
+    """
     plan, results, classification = build_cleanup_plan(
         project_root,
         source_root=source_root,

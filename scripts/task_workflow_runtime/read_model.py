@@ -48,27 +48,27 @@ REGISTRY_ROW_RE = re.compile(
 UPGRADE_STATE_RELATIVE = Path("knowledge/operations/task-centric-knowledge-upgrade.md")
 
 
-## @brief A single warning or inconsistency item.
 @dataclass
 class WarningItem:
+    """A single warning or inconsistency item."""
     code: str
     severity: str
     detail: str
     path: str | None = None
 
 
-## @brief Core task identification fields.
 @dataclass
 class TaskSummary:
+    """Core task identification fields."""
     task_id: str
     short_name: str
     human_description: str
     path: str
 
 
-## @brief Lightweight task overview for listings.
 @dataclass
 class TaskPreview:
+    """Lightweight task overview for listings."""
     summary: TaskSummary
     status: str
     priority: str
@@ -76,9 +76,9 @@ class TaskPreview:
     current_stage: str | None = None
 
 
-## @brief Full read-only projection of a task card.
 @dataclass
 class TaskSnapshot:
+    """Full read-only projection of a task card."""
     summary: TaskSummary
     parent_id: str
     status: str
@@ -98,9 +98,12 @@ class TaskSnapshot:
     registry_summary: str | None = None
     registry_branch: str | None = None
 
-    ## @brief Produce a lightweight TaskPreview from this snapshot.
-    #  @return TaskPreview instance.
     def preview(self) -> TaskPreview:
+        """Produce a lightweight TaskPreview from this snapshot.
+
+        Returns:
+            TaskPreview instance.
+        """
         return TaskPreview(
             summary=self.summary,
             status=self.status,
@@ -110,9 +113,9 @@ class TaskSnapshot:
         )
 
 
-## @brief Result of resolving the current active task.
 @dataclass
 class CurrentTaskResolution:
+    """Result of resolving the current active task."""
     state: str
     reason: str
     task: TaskSnapshot | None
@@ -120,9 +123,9 @@ class CurrentTaskResolution:
     warnings: list[WarningItem] = field(default_factory=list)
 
 
-## @brief Full project knowledge status snapshot.
 @dataclass
 class StatusSnapshot:
+    """Full project knowledge status snapshot."""
     project_root: str
     active_branch: str | None
     knowledge_health: dict[str, object]
@@ -135,24 +138,39 @@ class StatusSnapshot:
     warnings: list[WarningItem]
 
 
-## @brief Serialize a WarningItem to a dictionary.
-#  @param item WarningItem instance.
-#  @return Dictionary representation.
 def warning_to_dict(item: WarningItem) -> dict[str, str | None]:
+    """Serialize a WarningItem to a dictionary.
+
+    Args:
+        item: WarningItem instance.
+
+    Returns:
+        Dictionary representation.
+    """
     return asdict(item)
 
 
-## @brief Serialize a TaskPreview to a dictionary.
-#  @param item TaskPreview instance.
-#  @return Dictionary representation.
 def task_preview_to_dict(item: TaskPreview) -> dict[str, object]:
+    """Serialize a TaskPreview to a dictionary.
+
+    Args:
+        item: TaskPreview instance.
+
+    Returns:
+        Dictionary representation.
+    """
     return asdict(item)
 
 
-## @brief Serialize a TaskSnapshot to a dictionary.
-#  @param item TaskSnapshot instance.
-#  @return Dictionary representation.
 def task_snapshot_to_dict(item: TaskSnapshot) -> dict[str, object]:
+    """Serialize a TaskSnapshot to a dictionary.
+
+    Args:
+        item: TaskSnapshot instance.
+
+    Returns:
+        Dictionary representation.
+    """
     return {
         "summary": asdict(item.summary),
         "parent_id": item.parent_id,
@@ -177,10 +195,15 @@ def task_snapshot_to_dict(item: TaskSnapshot) -> dict[str, object]:
     }
 
 
-## @brief Serialize a CurrentTaskResolution to a dictionary.
-#  @param item CurrentTaskResolution instance.
-#  @return Dictionary representation.
 def current_task_resolution_to_dict(item: CurrentTaskResolution) -> dict[str, object]:
+    """Serialize a CurrentTaskResolution to a dictionary.
+
+    Args:
+        item: CurrentTaskResolution instance.
+
+    Returns:
+        Dictionary representation.
+    """
     return {
         "state": item.state,
         "reason": item.reason,
@@ -190,10 +213,15 @@ def current_task_resolution_to_dict(item: CurrentTaskResolution) -> dict[str, ob
     }
 
 
-## @brief Serialize a StatusSnapshot to a dictionary.
-#  @param item StatusSnapshot instance.
-#  @return Dictionary representation.
 def status_snapshot_to_dict(item: StatusSnapshot) -> dict[str, object]:
+    """Serialize a StatusSnapshot to a dictionary.
+
+    Args:
+        item: StatusSnapshot instance.
+
+    Returns:
+        Dictionary representation.
+    """
     return {
         "project_root": item.project_root,
         "active_branch": item.active_branch,
@@ -208,18 +236,28 @@ def status_snapshot_to_dict(item: StatusSnapshot) -> dict[str, object]:
     }
 
 
-## @brief Return a path relative to the project root in POSIX form.
-#  @param project_root Absolute path to the project root.
-#  @param path Absolute path to convert.
-#  @return POSIX relative path string.
 def relative_path(project_root: Path, path: Path) -> str:
+    """Return a path relative to the project root in POSIX form.
+
+    Args:
+        project_root: Absolute path to the project root.
+        path: Absolute path to convert.
+
+    Returns:
+        POSIX relative path string.
+    """
     return path.relative_to(project_root).as_posix()
 
 
-## @brief Detect the state of the AGENTS.md managed block.
-#  @param project_root Absolute path to the project root.
-#  @return State string: "absent", "managed", or "invalid".
 def detect_managed_block_state(project_root: Path) -> str:
+    """Detect the state of the AGENTS.md managed block.
+
+    Args:
+        project_root: Absolute path to the project root.
+
+    Returns:
+        State string: "absent", "managed", or "invalid".
+    """
     agents_path = project_root / "AGENTS.md"
     if not agents_path.exists():
         return "absent"
@@ -265,6 +303,14 @@ def _table_rows(lines: list[str], title: str, headers: tuple[str, ...]) -> list[
 
 
 def upgrade_state_summary(project_root: Path) -> dict[str, object]:
+    """Summarize upgrade state summary.
+
+    Args:
+    project_root: Description.
+
+    Returns:
+        Result.
+    """
     state_path = project_root / UPGRADE_STATE_RELATIVE
     if not state_path.exists():
         from install_skill_runtime.environment import detect_existing_system
@@ -318,6 +364,14 @@ def upgrade_state_summary(project_root: Path) -> dict[str, object]:
 
 
 def parse_registry_rows(registry_path: Path) -> dict[str, dict[str, str]]:
+    """Parse registry rows.
+
+    Args:
+    registry_path: Description.
+
+    Returns:
+        Result.
+    """
     rows: dict[str, dict[str, str]] = {}
     if not registry_path.exists():
         return rows
@@ -338,11 +392,16 @@ def parse_registry_rows(registry_path: Path) -> dict[str, dict[str, str]]:
     return rows
 
 
-## @brief Extract body lines of a Markdown section.
-#  @param lines Document lines.
-#  @param title Section heading.
-#  @return Body lines between the heading and the next heading.
 def section_lines(lines: list[str], title: str) -> list[str]:
+    """Extract body lines of a Markdown section.
+
+    Args:
+        lines: Document lines.
+        title: Section heading.
+
+    Returns:
+        Body lines between the heading and the next heading.
+    """
     bounds = find_section_bounds(lines, title)
     if bounds is None:
         return []
@@ -350,12 +409,17 @@ def section_lines(lines: list[str], title: str) -> list[str]:
     return lines[start_index + 1 : end_index]
 
 
-## @brief Extract body lines of a Markdown subsection.
-#  @param lines Document lines.
-#  @param parent_title Parent section heading.
-#  @param title Subsection heading.
-#  @return Body lines of the subsection.
 def subsection_lines(lines: list[str], parent_title: str, title: str) -> list[str]:
+    """Extract body lines of a Markdown subsection.
+
+    Args:
+        lines: Document lines.
+        parent_title: Parent section heading.
+        title: Subsection heading.
+
+    Returns:
+        Body lines of the subsection.
+    """
     bounds = find_section_bounds(lines, parent_title)
     if bounds is None:
         return []
@@ -372,10 +436,15 @@ def subsection_lines(lines: list[str], parent_title: str, title: str) -> list[st
     return []
 
 
-## @brief Extract the first paragraph from a block of lines.
-#  @param lines Block of document lines.
-#  @return First paragraph text, or None.
 def first_paragraph(lines: list[str]) -> str | None:
+    """Extract the first paragraph from a block of lines.
+
+    Args:
+        lines: Block of document lines.
+
+    Returns:
+        First paragraph text, or None.
+    """
     paragraph: list[str] = []
     for line in lines:
         stripped = line.strip()
@@ -393,18 +462,28 @@ def first_paragraph(lines: list[str]) -> str | None:
     return " ".join(paragraph).strip()
 
 
-## @brief Join lines into a single block of text.
-#  @param lines Block of document lines.
-#  @return Combined text, or None if empty.
 def block_text(lines: list[str]) -> str | None:
+    """Join lines into a single block of text.
+
+    Args:
+        lines: Block of document lines.
+
+    Returns:
+        Combined text, or None if empty.
+    """
     content = "\n".join(line.rstrip() for line in lines).strip()
     return content or None
 
 
-## @brief Extract list items or the first paragraph from lines.
-#  @param lines Block of document lines.
-#  @return List of extracted items.
 def block_list(lines: list[str]) -> list[str]:
+    """Extract list items or the first paragraph from lines.
+
+    Args:
+        lines: Block of document lines.
+
+    Returns:
+        List of extracted items.
+    """
     items: list[str] = []
     current: list[str] = []
     for line in lines:
@@ -429,10 +508,15 @@ def block_list(lines: list[str]) -> list[str]:
     return [text] if text else []
 
 
-## @brief Find all directories containing a task.md file.
-#  @param project_root Absolute path to the project root.
-#  @return Sorted list of task directory paths.
 def task_file_directories(project_root: Path) -> list[Path]:
+    """Find all directories containing a task.md file.
+
+    Args:
+        project_root: Absolute path to the project root.
+
+    Returns:
+        Sorted list of task directory paths.
+    """
     tasks_root = project_root / TASKS_ROOT
     if not tasks_root.exists():
         return []
@@ -445,10 +529,15 @@ def task_file_directories(project_root: Path) -> list[Path]:
     return sorted(result)
 
 
-## @brief Find the first unchecked step in a plan.md file.
-#  @param plan_file Path to plan.md.
-#  @return First unchecked step text, or None.
 def next_step_from_plan(plan_file: Path) -> str | None:
+    """Find the first unchecked step in a plan.md file.
+
+    Args:
+        plan_file: Path to plan.md.
+
+    Returns:
+        First unchecked step text, or None.
+    """
     if not plan_file.exists():
         return None
     lines = plan_file.read_text(encoding="utf-8").splitlines()
@@ -459,11 +548,16 @@ def next_step_from_plan(plan_file: Path) -> str | None:
     return None
 
 
-## @brief Map canonical task file names to their relative paths.
-#  @param project_root Absolute path to the project root.
-#  @param task_dir Absolute path to the task directory.
-#  @return Dictionary of canonical name to relative path.
 def task_files_map(project_root: Path, task_dir: Path) -> dict[str, str]:
+    """Map canonical task file names to their relative paths.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_dir: Absolute path to the task directory.
+
+    Returns:
+        Dictionary of canonical name to relative path.
+    """
     files: dict[str, str] = {}
     for relative in ("task.md", "plan.md", "sdd.md", "artifacts/verification-matrix.md"):
         path = task_dir / relative
@@ -472,17 +566,27 @@ def task_files_map(project_root: Path, task_dir: Path) -> dict[str, str]:
     return files
 
 
-## @brief Check whether the task fields indicate SDD is required.
-#  @param fields Parsed task fields dictionary.
-#  @return True if the task requires an SDD.
 def task_requires_sdd(fields: dict[str, str]) -> bool:
+    """Check whether the task fields indicate SDD is required.
+
+    Args:
+        fields: Parsed task fields dictionary.
+
+    Returns:
+        True if the task requires an SDD.
+    """
     return normalize_table_value(fields.get("Требуется SDD", "")) == "да"
 
 
-## @brief Read legacy upgrade entries from the upgrade state file.
-#  @param project_root Absolute path to the project root.
-#  @return Dictionary mapping task ID to upgrade metadata.
 def legacy_upgrade_entries(project_root: Path) -> dict[str, dict[str, str]]:
+    """Read legacy upgrade entries from the upgrade state file.
+
+    Args:
+        project_root: Absolute path to the project root.
+
+    Returns:
+        Dictionary mapping task ID to upgrade metadata.
+    """
     state_path = project_root / UPGRADE_STATE_RELATIVE
     if not state_path.exists():
         return {}
@@ -509,11 +613,16 @@ def legacy_upgrade_entries(project_root: Path) -> dict[str, dict[str, str]]:
     return entries
 
 
-## @brief Check if a task has a note-only legacy backfill.
-#  @param task_dir Absolute path to the task directory.
-#  @param entry Upgrade entry for the task, or None.
-#  @return True if the task qualifies as note-only backfill.
 def note_only_legacy_backfill(task_dir: Path, entry: dict[str, str] | None) -> bool:
+    """Check if a task has a note-only legacy backfill.
+
+    Args:
+        task_dir: Absolute path to the task directory.
+        entry: Upgrade entry for the task, or None.
+
+    Returns:
+        True if the task qualifies as note-only backfill.
+    """
     if entry is None:
         return False
     if entry.get("task_class") != "closed historical" or entry.get("backfill_status") != "note-only":
@@ -521,11 +630,14 @@ def note_only_legacy_backfill(task_dir: Path, entry: dict[str, str] | None) -> b
     return (task_dir / "artifacts/migration/task-centric-knowledge-upgrade.md").exists()
 
 
-## @brief Validate delivery units and emit warnings on the snapshot.
-#  @param task TaskSnapshot to validate and mutate.
-#  @param project_root Absolute path to the project root.
-#  @param has_parse_errors Whether parse errors were encountered.
 def validate_delivery_units(task: TaskSnapshot, *, project_root: Path, has_parse_errors: bool = False) -> None:
+    """Validate delivery units and emit warnings on the snapshot.
+
+    Args:
+        task: TaskSnapshot to validate and mutate.
+        project_root: Absolute path to the project root.
+        has_parse_errors: Whether parse errors were encountered.
+    """
     for unit in task.delivery_units:
         try:
             normalize_delivery_status(unit.status)
@@ -581,18 +693,23 @@ def validate_delivery_units(task: TaskSnapshot, *, project_root: Path, has_parse
         )
 
 
-## @brief Build a full TaskSnapshot for a task directory.
-#  @param project_root Absolute path to the project root.
-#  @param task_dir Absolute path to the task directory.
-#  @param registry_rows Parsed registry rows dictionary.
-#  @param upgrade_entries Legacy upgrade entries dictionary.
-#  @return Fully populated TaskSnapshot.
 def build_task_snapshot(
     project_root: Path,
     task_dir: Path,
     registry_rows: dict[str, dict[str, str]],
     upgrade_entries: dict[str, dict[str, str]],
 ) -> TaskSnapshot:
+    """Build a full TaskSnapshot for a task directory.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_dir: Absolute path to the task directory.
+        registry_rows: Parsed registry rows dictionary.
+        upgrade_entries: Legacy upgrade entries dictionary.
+
+    Returns:
+        Fully populated TaskSnapshot.
+    """
     task_file = task_dir / "task.md"
     lines, fields = read_task_fields(task_file)
     warnings: list[WarningItem] = []
@@ -747,11 +864,16 @@ def build_task_snapshot(
     return snapshot
 
 
-## @brief Check if a dirty path belongs to a task scope.
-#  @param path Dirty path string.
-#  @param task_relative Relative task directory path.
-#  @return True if the path is within the task scope.
 def path_belongs_to_task(path: str, task_relative: str) -> bool:
+    """Check if a dirty path belongs to a task scope.
+
+    Args:
+        path: Dirty path string.
+        task_relative: Relative task directory path.
+
+    Returns:
+        True if the path is within the task scope.
+    """
     normalized_task = task_relative.rstrip("/")
     if path == normalized_task:
         return True
@@ -760,11 +882,16 @@ def path_belongs_to_task(path: str, task_relative: str) -> bool:
     return normalized_task.startswith(path + "/")
 
 
-## @brief Find tasks that own dirty paths in the working tree.
-#  @param project_root Absolute path to the project root.
-#  @param snapshots List of task snapshots.
-#  @return List of task snapshots that own dirty paths.
 def dirty_task_candidates(project_root: Path, snapshots: list[TaskSnapshot]) -> list[TaskSnapshot]:
+    """Find tasks that own dirty paths in the working tree.
+
+    Args:
+        project_root: Absolute path to the project root.
+        snapshots: List of task snapshots.
+
+    Returns:
+        List of task snapshots that own dirty paths.
+    """
     dirty = dirty_paths(project_root)
     owned_tasks: list[TaskSnapshot] = []
     for path in dirty:
@@ -786,11 +913,16 @@ def dirty_task_candidates(project_root: Path, snapshots: list[TaskSnapshot]) -> 
     return owned_tasks
 
 
-## @brief Score how well a task matches the active branch.
-#  @param snapshot TaskSnapshot to score.
-#  @param active_branch Name of the active git branch.
-#  @return Match score: 3 for delivery head, 2 for recorded branch, 1 for default branch, 0 otherwise.
 def branch_match_score(snapshot: TaskSnapshot, active_branch: str) -> int:
+    """Score how well a task matches the active branch.
+
+    Args:
+        snapshot: TaskSnapshot to score.
+        active_branch: Name of the active git branch.
+
+    Returns:
+        Match score: 3 for delivery head, 2 for recorded branch, 1 for default branch, 0 otherwise.
+    """
     for unit in snapshot.delivery_units:
         if unit.head == active_branch:
             return 3
@@ -803,20 +935,30 @@ def branch_match_score(snapshot: TaskSnapshot, active_branch: str) -> int:
     return 0
 
 
-## @brief Check if a candidate task is a subtask of a parent task.
-#  @param candidate Potential child task snapshot.
-#  @param parent Potential parent task snapshot.
-#  @return True if candidate is a descendant of parent.
 def is_task_descendant(candidate: TaskSnapshot, parent: TaskSnapshot) -> bool:
+    """Check if a candidate task is a subtask of a parent task.
+
+    Args:
+        candidate: Potential child task snapshot.
+        parent: Potential parent task snapshot.
+
+    Returns:
+        True if candidate is a descendant of parent.
+    """
     parent_path = parent.summary.path.rstrip("/")
     candidate_path = candidate.summary.path.rstrip("/")
     return candidate_path.startswith(parent_path + "/subtasks/")
 
 
-## @brief Find the common parent among candidate tasks.
-#  @param candidates List of task snapshots.
-#  @return The common parent snapshot, or None if ambiguous.
 def inherited_branch_parent_candidate(candidates: list[TaskSnapshot]) -> TaskSnapshot | None:
+    """Find the common parent among candidate tasks.
+
+    Args:
+        candidates: List of task snapshots.
+
+    Returns:
+        The common parent snapshot, or None if ambiguous.
+    """
     possible_parents = [
         candidate
         for candidate in candidates
@@ -827,18 +969,28 @@ def inherited_branch_parent_candidate(candidates: list[TaskSnapshot]) -> TaskSna
     return possible_parents[0]
 
 
-## @brief Filter out final-status candidates when possible.
-#  @param candidates List of task snapshots.
-#  @return Active candidates if any exist, otherwise the original list.
 def prefer_non_final_candidates(candidates: list[TaskSnapshot]) -> list[TaskSnapshot]:
+    """Filter out final-status candidates when possible.
+
+    Args:
+        candidates: List of task snapshots.
+
+    Returns:
+        Active candidates if any exist, otherwise the original list.
+    """
     active_candidates = [candidate for candidate in candidates if candidate.status not in FINAL_TASK_STATUSES]
     return active_candidates or candidates
 
 
-## @brief Remove duplicate warnings by code, detail, and path.
-#  @param items List of warning items.
-#  @return Deduplicated list.
 def dedupe_warnings(items: list[WarningItem]) -> list[WarningItem]:
+    """Remove duplicate warnings by code, detail, and path.
+
+    Args:
+        items: List of warning items.
+
+    Returns:
+        Deduplicated list.
+    """
     seen: set[tuple[str, str, str | None]] = set()
     result: list[WarningItem] = []
     for item in items:
@@ -850,10 +1002,15 @@ def dedupe_warnings(items: list[WarningItem]) -> list[WarningItem]:
     return result
 
 
-## @brief Discover and build snapshots for all tasks in the project.
-#  @param project_root Absolute path to the project root.
-#  @return Dictionary mapping task path to TaskSnapshot.
 def discover_tasks(project_root: Path) -> dict[str, TaskSnapshot]:
+    """Discover and build snapshots for all tasks in the project.
+
+    Args:
+        project_root: Absolute path to the project root.
+
+    Returns:
+        Dictionary mapping task path to TaskSnapshot.
+    """
     registry_rows = parse_registry_rows(project_root / REGISTRY_RELATIVE)
     upgrade_entries = legacy_upgrade_entries(project_root)
     snapshots: dict[str, TaskSnapshot] = {}
@@ -895,11 +1052,16 @@ def discover_tasks(project_root: Path) -> dict[str, TaskSnapshot]:
     return snapshots
 
 
-## @brief Assess knowledge directory health and emit warnings.
-#  @param project_root Absolute path to the project root.
-#  @param tasks Discovered task snapshots.
-#  @return Tuple of health dictionary and warning list.
 def knowledge_health(project_root: Path, tasks: dict[str, TaskSnapshot]) -> tuple[dict[str, object], list[WarningItem]]:
+    """Assess knowledge directory health and emit warnings.
+
+    Args:
+        project_root: Absolute path to the project root.
+        tasks: Discovered task snapshots.
+
+    Returns:
+        Tuple of health dictionary and warning list.
+    """
     warnings: list[WarningItem] = []
     knowledge_path = project_root / "knowledge"
     registry_path = project_root / REGISTRY_RELATIVE
@@ -940,11 +1102,16 @@ def knowledge_health(project_root: Path, tasks: dict[str, TaskSnapshot]) -> tupl
     return health, warnings
 
 
-## @brief Resolve the current active task from candidates.
-#  @param project_root Absolute path to the project root.
-#  @param tasks Discovered task snapshots.
-#  @return CurrentTaskResolution with state, task, and warnings.
 def resolve_current_task(project_root: Path, tasks: dict[str, TaskSnapshot]) -> CurrentTaskResolution:
+    """Resolve the current active task from candidates.
+
+    Args:
+        project_root: Absolute path to the project root.
+        tasks: Discovered task snapshots.
+
+    Returns:
+        CurrentTaskResolution with state, task, and warnings.
+    """
     if not tasks:
         warning = WarningItem(
             code="current_task_unresolved",
@@ -1057,10 +1224,15 @@ def resolve_current_task(project_root: Path, tasks: dict[str, TaskSnapshot]) -> 
     return CurrentTaskResolution("unresolved", "no_match", None, warnings=[warning])
 
 
-## @brief Get the current git branch, swallowing errors.
-#  @param project_root Absolute path to the project root.
-#  @return Branch name, or None if git is unavailable.
 def safe_current_git_branch(project_root: Path) -> str | None:
+    """Get the current git branch, swallowing errors.
+
+    Args:
+        project_root: Absolute path to the project root.
+
+    Returns:
+        Branch name, or None if git is unavailable.
+    """
     try:
         active_branch = current_git_branch(project_root)
     except RuntimeError:
@@ -1068,10 +1240,15 @@ def safe_current_git_branch(project_root: Path) -> str | None:
     return active_branch or None
 
 
-## @brief Count tasks by status, sorted canonically.
-#  @param tasks Discovered task snapshots.
-#  @return Ordered dictionary of status to count.
 def sorted_task_counters(tasks: dict[str, TaskSnapshot]) -> dict[str, int]:
+    """Count tasks by status, sorted canonically.
+
+    Args:
+        tasks: Discovered task snapshots.
+
+    Returns:
+        Ordered dictionary of status to count.
+    """
     counter = Counter(snapshot.status for snapshot in tasks.values())
     ordered: dict[str, int] = {}
     for status in sorted(counter, key=lambda value: (value not in VALID_TASK_STATUSES, value)):
@@ -1079,10 +1256,15 @@ def sorted_task_counters(tasks: dict[str, TaskSnapshot]) -> dict[str, int]:
     return ordered
 
 
-## @brief Collect all open delivery units across tasks.
-#  @param tasks Discovered task snapshots.
-#  @return Sorted list of open delivery unit dictionaries.
 def open_delivery_units(tasks: dict[str, TaskSnapshot]) -> list[dict[str, str]]:
+    """Collect all open delivery units across tasks.
+
+    Args:
+        tasks: Discovered task snapshots.
+
+    Returns:
+        Sorted list of open delivery unit dictionaries.
+    """
     rows: list[dict[str, str]] = []
     for snapshot in tasks.values():
         for unit in snapshot.delivery_units:
@@ -1103,10 +1285,15 @@ def open_delivery_units(tasks: dict[str, TaskSnapshot]) -> list[dict[str, str]]:
     return sorted(rows, key=lambda item: (item["task_id"], item["unit_id"]))
 
 
-## @brief Build the full project StatusSnapshot.
-#  @param project_root Absolute path to the project root.
-#  @return Populated StatusSnapshot.
 def build_status_snapshot(project_root: Path) -> StatusSnapshot:
+    """Build the full project StatusSnapshot.
+
+    Args:
+        project_root: Absolute path to the project root.
+
+    Returns:
+        Populated StatusSnapshot.
+    """
     project_root = project_root.resolve()
     tasks = discover_tasks(project_root)
     health, health_warnings = knowledge_health(project_root, tasks)
@@ -1183,20 +1370,30 @@ def build_status_snapshot(project_root: Path) -> StatusSnapshot:
     )
 
 
-## @brief Resolve and return the current task snapshot.
-#  @param project_root Absolute path to the project root.
-#  @return CurrentTaskResolution for the active task.
 def current_task_snapshot(project_root: Path) -> CurrentTaskResolution:
+    """Resolve and return the current task snapshot.
+
+    Args:
+        project_root: Absolute path to the project root.
+
+    Returns:
+        CurrentTaskResolution for the active task.
+    """
     project_root = project_root.resolve()
     tasks = discover_tasks(project_root)
     return resolve_current_task(project_root, tasks)
 
 
-## @brief Find all snapshots matching a task ID.
-#  @param project_root Absolute path to the project root.
-#  @param task_id Task ID to search for.
-#  @return Sorted list of matching TaskSnapshot objects.
 def matching_task_snapshots(project_root: Path, task_id: str) -> list[TaskSnapshot]:
+    """Find all snapshots matching a task ID.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_id: Task ID to search for.
+
+    Returns:
+        Sorted list of matching TaskSnapshot objects.
+    """
     project_root = project_root.resolve()
     tasks = discover_tasks(project_root)
     return sorted(
@@ -1205,11 +1402,16 @@ def matching_task_snapshots(project_root: Path, task_id: str) -> list[TaskSnapsh
     )
 
 
-## @brief Return the single exact match for a task ID, or None.
-#  @param project_root Absolute path to the project root.
-#  @param task_id Task ID to search for.
-#  @return Unique matching TaskSnapshot, or None if ambiguous or missing.
 def exact_task_snapshot(project_root: Path, task_id: str) -> TaskSnapshot | None:
+    """Return the single exact match for a task ID, or None.
+
+    Args:
+        project_root: Absolute path to the project root.
+        task_id: Task ID to search for.
+
+    Returns:
+        Unique matching TaskSnapshot, or None if ambiguous or missing.
+    """
     matches = matching_task_snapshots(project_root, task_id)
     if len(matches) == 1:
         return matches[0]

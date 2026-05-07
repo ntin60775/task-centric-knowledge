@@ -18,20 +18,30 @@ from .read_model import (
 )
 
 
-## @brief Format a task summary dict into header lines.
-#  @param summary Task summary dictionary.
-#  @return List of header display lines.
 def render_header(summary: dict[str, object]) -> list[str]:
+    """Format a task summary dict into header lines.
+
+    Args:
+        summary: Task summary dictionary.
+
+    Returns:
+        List of header display lines.
+    """
     return [
         f"{summary['task_id']} · {summary['short_name']}",
         str(summary["human_description"]),
     ]
 
 
-## @brief Format a task preview dict into display lines.
-#  @param item Task preview dictionary.
-#  @return List of preview display lines.
 def render_preview(item: dict[str, object]) -> list[str]:
+    """Format a task preview dict into display lines.
+
+    Args:
+        item: Task preview dictionary.
+
+    Returns:
+        List of preview display lines.
+    """
     summary = item["summary"]
     assert isinstance(summary, dict)
     lines = render_header(summary)
@@ -41,11 +51,14 @@ def render_preview(item: dict[str, object]) -> list[str]:
     return lines
 
 
-## @brief Append a titled section to a line list if rows are present.
-#  @param lines Mutable list of output lines.
-#  @param title Section title.
-#  @param rows Lines to append under the title.
 def append_section(lines: list[str], title: str, rows: list[str]) -> None:
+    """Append a titled section to a line list if rows are present.
+
+    Args:
+        lines: Mutable list of output lines.
+        title: Section title.
+        rows: Lines to append under the title.
+    """
     if not rows:
         return
     if lines:
@@ -54,10 +67,15 @@ def append_section(lines: list[str], title: str, rows: list[str]) -> None:
     lines.extend(rows)
 
 
-## @brief Format warning dicts into display strings.
-#  @param warnings List of warning dictionaries.
-#  @return List of formatted warning strings.
 def format_warnings(warnings: list[dict[str, object]]) -> list[str]:
+    """Format warning dicts into display strings.
+
+    Args:
+        warnings: List of warning dictionaries.
+
+    Returns:
+        List of formatted warning strings.
+    """
     rows: list[str] = []
     for warning in warnings:
         path = f" path={warning['path']}" if warning.get("path") else ""
@@ -65,10 +83,15 @@ def format_warnings(warnings: list[dict[str, object]]) -> list[str]:
     return rows
 
 
-## @brief Format the full status payload as human-readable text.
-#  @param payload Status snapshot dictionary.
-#  @return Formatted text output.
 def format_status_payload(payload: dict[str, object]) -> str:
+    """Format the full status payload as human-readable text.
+
+    Args:
+        payload: Status snapshot dictionary.
+
+    Returns:
+        Formatted text output.
+    """
     lines: list[str] = ["status"]
     append_section(
         lines,
@@ -163,10 +186,15 @@ def format_status_payload(payload: dict[str, object]) -> str:
     return "\n".join(lines) + "\n"
 
 
-## @brief Format the current-task payload as human-readable text.
-#  @param payload Current-task resolution dictionary.
-#  @return Formatted text output.
 def format_current_task_payload(payload: dict[str, object]) -> str:
+    """Format the current-task payload as human-readable text.
+
+    Args:
+        payload: Current-task resolution dictionary.
+
+    Returns:
+        Formatted text output.
+    """
     resolution = payload["resolution"]
     assert isinstance(resolution, dict)
     lines: list[str] = ["current-task", f"project_root={payload['project_root']}"]
@@ -220,10 +248,15 @@ def format_current_task_payload(payload: dict[str, object]) -> str:
     return "\n".join(lines) + "\n"
 
 
-## @brief Format the task-show payload as human-readable text.
-#  @param payload Task-show dictionary.
-#  @return Formatted text output.
 def format_task_show_payload(payload: dict[str, object]) -> str:
+    """Format the task-show payload as human-readable text.
+
+    Args:
+        payload: Task-show dictionary.
+
+    Returns:
+        Formatted text output.
+    """
     lines: list[str] = ["task show", f"selector={payload['selector']}"]
     resolution = payload.get("resolution")
     if resolution is not None:
@@ -286,9 +319,12 @@ def format_task_show_payload(payload: dict[str, object]) -> str:
     return "\n".join(lines) + "\n"
 
 
-## @brief Build the argparse CLI parser with all subcommands.
-#  @return Configured ArgumentParser instance.
 def build_parser() -> argparse.ArgumentParser:
+    """Build the argparse CLI parser with all subcommands.
+
+    Returns:
+        Configured ArgumentParser instance.
+    """
     format_parent = argparse.ArgumentParser(add_help=False)
     format_parent.add_argument("--format", choices=("text", "json"), default="text", help="Формат вывода.")
     parser = argparse.ArgumentParser(
@@ -306,10 +342,15 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-## @brief Dispatch a parsed CLI command to the appropriate handler.
-#  @param args Parsed argparse namespace.
-#  @return Tuple of payload dict and exit code.
 def dispatch(args: argparse.Namespace) -> tuple[dict[str, object], int]:
+    """Dispatch a parsed CLI command to the appropriate handler.
+
+    Args:
+        args: Parsed argparse namespace.
+
+    Returns:
+        Tuple of payload dict and exit code.
+    """
     project_root = Path(args.project_root).resolve()
     if args.command == "status":
         snapshot = build_status_snapshot(project_root)
@@ -401,10 +442,15 @@ def dispatch(args: argparse.Namespace) -> tuple[dict[str, object], int]:
     return payload, 0
 
 
-## @brief CLI entry point.
-#  @param argv Optional command-line argument list.
-#  @return Process exit code.
 def main(argv: list[str] | None = None) -> int:
+    """CLI entry point.
+
+    Args:
+        argv: Optional command-line argument list.
+
+    Returns:
+        Process exit code.
+    """
     parser = build_parser()
     args = parser.parse_args(argv)
     payload, exit_code = dispatch(args)

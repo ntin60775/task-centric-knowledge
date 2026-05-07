@@ -27,10 +27,15 @@ def _format_warnings(warnings: list[dict[str, object]]) -> list[str]:
     return rows
 
 
-## @brief Сформатировать payload команды `module find` в человекочитаемый текст.
-#  @param payload Словарь с результатами поиска модулей.
-#  @return        Отформатированная многострочная строка.
 def format_module_find_payload(payload: dict[str, object]) -> str:
+    """Сформатировать payload команды `module find` в человекочитаемый текст.
+
+    Args:
+        payload: Словарь с результатами поиска модулей.
+
+    Returns:
+        Отформатированная многострочная строка.
+    """
     lines: list[str] = [
         "module find",
         f"query={payload['query']}",
@@ -60,15 +65,20 @@ def format_module_find_payload(payload: dict[str, object]) -> str:
     return "\n".join(lines) + "\n"
 
 
-## @brief Сформатировать payload команды `module show` в человекочитаемый текст.
-#  @param payload        Словарь с данными модуля.
-#  @param with_sections  Набор секций для отображения (например, {"verification", "relations"}).
-#  @return               Отформатированная многострочная строка.
 def format_module_show_payload(
     payload: dict[str, object],
     *,
     with_sections: set[str] | None = None,
 ) -> str:
+    """Сформатировать payload команды `module show` в человекочитаемый текст.
+
+    Args:
+        payload: Словарь с данными модуля.
+        with_sections: Набор секций для отображения (например, {"verification", "relations"}).
+
+    Returns:
+        Отформатированная многострочная строка.
+    """
     with_sections = with_sections or set()
     lines: list[str] = ["module show", f"selector={payload['selector']}"]
     module = payload["module"]
@@ -196,17 +206,22 @@ def format_module_show_payload(
     return "\n".join(lines) + "\n"
 
 
-## @brief Сформатировать payload команды `file show` в человекочитаемый текст.
-#  @param payload         Словарь с данными файла.
-#  @param show_contracts  Показывать ли детали contract markers.
-#  @param show_blocks     Показывать ли детали blocks.
-#  @return                Отформатированная многострочная строка.
 def format_file_show_payload(
     payload: dict[str, object],
     *,
     show_contracts: bool = False,
     show_blocks: bool = False,
 ) -> str:
+    """Сформатировать payload команды `file show` в человекочитаемый текст.
+
+    Args:
+        payload: Словарь с данными файла.
+        show_contracts: Показывать ли детали contract markers.
+        show_blocks: Показывать ли детали blocks.
+
+    Returns:
+        Отформатированная многострочная строка.
+    """
     lines: list[str] = ["file show", f"path={payload['path']}"]
     file_payload = payload["file"]
     if file_payload is None:
@@ -289,10 +304,15 @@ def format_file_show_payload(
     return "\n".join(lines) + "\n"
 
 
-## @brief Диспетчеризовать команду `module` (find или show).
-#  @param args  Разобранные аргументы командной строки.
-#  @return      Кортеж (payload, exit_code).
 def dispatch_module(args) -> tuple[dict[str, object], int]:
+    """Диспетчеризовать команду `module` (find или show).
+
+    Args:
+        args: Разобранные аргументы командной строки.
+
+    Returns:
+        Кортеж (payload, exit_code).
+    """
     project_root = args.project_root.resolve()
     if args.module_command == "find":
         items, warnings = find_modules(
@@ -324,10 +344,15 @@ def dispatch_module(args) -> tuple[dict[str, object], int]:
     return payload, 0 if error_code is None else 2
 
 
-## @brief Диспетчеризовать команду `file show`.
-#  @param args  Разобранные аргументы командной строки.
-#  @return      Кортеж (payload, exit_code).
 def dispatch_file(args) -> tuple[dict[str, object], int]:
+    """Диспетчеризовать команду `file show`.
+
+    Args:
+        args: Разобранные аргументы командной строки.
+
+    Returns:
+        Кортеж (payload, exit_code).
+    """
     project_root = args.project_root.resolve()
     file_payload, warnings, error_code = file_show(
         project_root,

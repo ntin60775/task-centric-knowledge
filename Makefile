@@ -1,4 +1,4 @@
-PYTHON ?= python3
+PYTHON ?= $(shell if [ -x .venv/bin/python3 ]; then echo .venv/bin/python3; else echo python3; fi)
 USER_BIN ?= $(HOME)/.local/bin
 TASK_KNOWLEDGE_BIN := $(USER_BIN)/task-knowledge
 LIVE_SKILL_ROOT ?= $(HOME)/.agents/skills/task-centric-knowledge
@@ -51,14 +51,16 @@ typecheck:
 check-strict: lint typecheck
 
 docs:
-	doxygen Doxyfile
+	mkdocs build -f mkdocs.yml -d output/docs/site/
+
+docs-serve:
+	mkdocs serve -f mkdocs.yml
 
 docs-check:
-	@mkdir -p output/doxygen
-	doxygen Doxyfile 2>&1 | tee output/doxygen/warnings.log
-	@if grep -i "warning:" output/doxygen/warnings.log >/dev/null; then \
-		echo "Doxygen warnings detected"; exit 1; \
-	fi
+	"$(PYTHON)" -m compileall -q scripts tests
+	"$(PYTHON)" scripts/check_doc_coverage.py scripts/
+
+docs-coverage: docs-check
 
 check-production: check verify-global-install
 

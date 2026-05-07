@@ -36,14 +36,17 @@ REFERENCE_FIELD = "Справочный режим"
 REFERENCE_ENABLED = "reference"
 
 
-## @brief Immutable representation of a single legacy task entry.
-#  @param task_id Unique task identifier.
-#  @param task_class Classification of the task (active, closed historical, reference).
-#  @param backfill_status Current backfill status.
-#  @param migration_note Path or marker for the migration note.
-#  @param decision Human-readable decision text.
 @dataclass(frozen=True)
 class LegacyTaskEntry:
+    """Immutable representation of a single legacy task entry.
+
+    Args:
+        task_id: Unique task identifier.
+        task_class: Classification of the task (active, closed historical, reference).
+        backfill_status: Current backfill status.
+        migration_note: Path or marker for the migration note.
+        decision: Human-readable decision text.
+    """
     task_id: str
     task_class: str
     backfill_status: str
@@ -51,17 +54,20 @@ class LegacyTaskEntry:
     decision: str
 
 
-## @brief Immutable representation of the repository upgrade state.
-#  @param path Filesystem path to the upgrade state file.
-#  @param system Name of the knowledge system.
-#  @param compatibility_epoch Current compatibility epoch.
-#  @param upgrade_status Overall upgrade status.
-#  @param execution_rollout Current execution rollout mode.
-#  @param last_upgrade_task ID of the last task that modified upgrade state.
-#  @param updated_at ISO date string of the last update.
-#  @param entries Tuple of legacy task entries.
 @dataclass(frozen=True)
 class RepoUpgradeState:
+    """Immutable representation of the repository upgrade state.
+
+    Args:
+        path: Filesystem path to the upgrade state file.
+        system: Name of the knowledge system.
+        compatibility_epoch: Current compatibility epoch.
+        upgrade_status: Overall upgrade status.
+        execution_rollout: Current execution rollout mode.
+        last_upgrade_task: ID of the last task that modified upgrade state.
+        updated_at: ISO date string of the last update.
+        entries: Tuple of legacy task entries.
+    """
     path: Path
     system: str
     compatibility_epoch: str
@@ -72,31 +78,49 @@ class RepoUpgradeState:
     entries: tuple[LegacyTaskEntry, ...]
 
 
-## @brief Return the absolute path to the repo upgrade state file.
-#  @param project_root Path to the project root.
-#  @return Absolute path to the upgrade state markdown file.
 def repo_upgrade_state_path(project_root: Path) -> Path:
+    """Return the absolute path to the repo upgrade state file.
+
+    Args:
+        project_root: Path to the project root.
+
+    Returns:
+        Absolute path to the upgrade state markdown file.
+    """
     return project_root / UPGRADE_STATE_RELATIVE
 
 
-## @brief Return the absolute path to a task's migration note.
-#  @param task_dir Path to the task directory.
-#  @return Absolute path to the migration note markdown file.
 def task_migration_note_path(task_dir: Path) -> Path:
+    """Return the absolute path to a task's migration note.
+
+    Args:
+        task_dir: Path to the task directory.
+
+    Returns:
+        Absolute path to the migration note markdown file.
+    """
     return task_dir / MIGRATION_NOTE_RELATIVE
 
 
-## @brief Return the project-relative POSIX path to a task's migration note.
-#  @param project_root Path to the project root.
-#  @param task_dir Path to the task directory.
-#  @return Relative POSIX path string.
 def relative_task_migration_note(project_root: Path, task_dir: Path) -> str:
+    """Return the project-relative POSIX path to a task's migration note.
+
+    Args:
+        project_root: Path to the project root.
+        task_dir: Path to the task directory.
+
+    Returns:
+        Relative POSIX path string.
+    """
     return task_migration_note_path(task_dir).relative_to(project_root).as_posix()
 
 
-## @brief Return today's date as an ISO 8601 string.
-#  @return ISO date string (YYYY-MM-DD).
 def today_iso() -> str:
+    """Return today's date as an ISO 8601 string.
+
+    Returns:
+        ISO date string (YYYY-MM-DD).
+    """
     return date.today().isoformat()
 
 
@@ -144,10 +168,15 @@ def _table_rows_with_aliases(
     return []
 
 
-## @brief Classify a task based on its markdown fields.
-#  @param fields Dictionary of field names to values from a task.md file.
-#  @return Task class: "reference", "closed historical", or "active".
 def classify_task_fields(fields: dict[str, str]) -> str:
+    """Classify a task based on its markdown fields.
+
+    Args:
+        fields: Dictionary of field names to values from a task.md file.
+
+    Returns:
+        Task class: "reference", "closed historical", or "active".
+    """
     reference_mode = fields.get(REFERENCE_FIELD, "нет").strip()
     if reference_mode == REFERENCE_ENABLED:
         return "reference"
@@ -203,11 +232,16 @@ def _normalize_entry(task_id: str, task_class: str, existing: LegacyTaskEntry | 
     )
 
 
-## @brief Derive the overall upgrade status and execution rollout from entries.
-#  @param entries List of legacy task entries.
-#  @param epoch Current compatibility epoch.
-#  @return Tuple of (upgrade_status, execution_rollout).
 def derive_overall_status(entries: list[LegacyTaskEntry], epoch: str) -> tuple[str, str]:
+    """Derive the overall upgrade status and execution rollout from entries.
+
+    Args:
+        entries: List of legacy task entries.
+        epoch: Current compatibility epoch.
+
+    Returns:
+        Tuple of (upgrade_status, execution_rollout).
+    """
     if epoch == "legacy-v1":
         return "legacy-compatible", "legacy"
     pending_count = sum(1 for entry in entries if entry.backfill_status == "pending")
@@ -229,13 +263,6 @@ def _task_dirs(project_root: Path) -> list[Path]:
     return sorted(result)
 
 
-## @brief Build the repo upgrade state by scanning all task directories.
-#  @param project_root Path to the project root.
-#  @param epoch Target compatibility epoch.
-#  @param last_upgrade_task ID of the task triggering this rebuild.
-#  @param today ISO date string, or None to use today.
-#  @param existing Previous upgrade state to preserve entry decisions, or None.
-#  @return Newly constructed repo upgrade state.
 def build_repo_upgrade_state(
     project_root: Path,
     *,
@@ -244,6 +271,18 @@ def build_repo_upgrade_state(
     today: str | None = None,
     existing: RepoUpgradeState | None = None,
 ) -> RepoUpgradeState:
+    """Build the repo upgrade state by scanning all task directories.
+
+    Args:
+        project_root: Path to the project root.
+        epoch: Target compatibility epoch.
+        last_upgrade_task: ID of the task triggering this rebuild.
+        today: ISO date string, or None to use today.
+        existing: Previous upgrade state to preserve entry decisions, or None.
+
+    Returns:
+        Newly constructed repo upgrade state.
+    """
     existing_entries = {entry.task_id: entry for entry in existing.entries} if existing else {}
     entries: list[LegacyTaskEntry] = []
     for task_dir in _task_dirs(project_root):
@@ -267,10 +306,15 @@ def build_repo_upgrade_state(
     )
 
 
-## @brief Render a repo upgrade state as a markdown document.
-#  @param state Repo upgrade state to render.
-#  @return Markdown string.
 def render_repo_upgrade_state(state: RepoUpgradeState) -> str:
+    """Render a repo upgrade state as a markdown document.
+
+    Args:
+        state: Repo upgrade state to render.
+
+    Returns:
+        Markdown string.
+    """
     lines = [
         "# Состояние перехода task-centric-knowledge",
         "",
@@ -302,18 +346,28 @@ def render_repo_upgrade_state(state: RepoUpgradeState) -> str:
     return "\n".join(lines) + "\n"
 
 
-## @brief Write the repo upgrade state to its canonical file path.
-#  @param state Repo upgrade state to persist.
 def write_repo_upgrade_state(state: RepoUpgradeState) -> None:
+    """Write the repo upgrade state to its canonical file path.
+
+    Args:
+        state: Repo upgrade state to persist.
+    """
     state.path.parent.mkdir(parents=True, exist_ok=True)
     state.path.write_text(render_repo_upgrade_state(state), encoding="utf-8")
 
 
-## @brief Parse a repo upgrade state from an existing markdown file.
-#  @param state_path Path to the upgrade state markdown file.
-#  @return Parsed repo upgrade state.
-#  @exception ValueError If required fields are missing or values are invalid.
 def parse_repo_upgrade_state(state_path: Path) -> RepoUpgradeState:
+    """Parse a repo upgrade state from an existing markdown file.
+
+    Args:
+        state_path: Path to the upgrade state markdown file.
+
+    Returns:
+        Parsed repo upgrade state.
+
+    Raises:
+        ValueError: If required fields are missing or values are invalid.
+    """
     lines = state_path.read_text(encoding="utf-8").splitlines()
     passport_rows = _table_rows(lines, PASSPORT_SECTION, ("Поле", "Значение"))
     passport = {field: value for field, value in passport_rows}
@@ -373,22 +427,21 @@ def parse_repo_upgrade_state(state_path: Path) -> RepoUpgradeState:
     )
 
 
-## @brief Load the repo upgrade state if it exists, otherwise return None.
-#  @param project_root Path to the project root.
-#  @return Parsed repo upgrade state, or None if the file does not exist.
 def load_repo_upgrade_state(project_root: Path) -> RepoUpgradeState | None:
+    """Load the repo upgrade state if it exists, otherwise return None.
+
+    Args:
+        project_root: Path to the project root.
+
+    Returns:
+        Parsed repo upgrade state, or None if the file does not exist.
+    """
     state_path = repo_upgrade_state_path(project_root)
     if not state_path.exists():
         return None
     return parse_repo_upgrade_state(state_path)
 
 
-## @brief Ensure the repo upgrade state file exists and is up to date.
-#  @param project_root Path to the project root.
-#  @param epoch Target compatibility epoch.
-#  @param last_upgrade_task ID of the task triggering this update.
-#  @param today ISO date string, or None to use today.
-#  @return Current repo upgrade state.
 def ensure_repo_upgrade_state(
     project_root: Path,
     *,
@@ -396,6 +449,17 @@ def ensure_repo_upgrade_state(
     last_upgrade_task: str,
     today: str | None = None,
 ) -> RepoUpgradeState:
+    """Ensure the repo upgrade state file exists and is up to date.
+
+    Args:
+        project_root: Path to the project root.
+        epoch: Target compatibility epoch.
+        last_upgrade_task: ID of the task triggering this update.
+        today: ISO date string, or None to use today.
+
+    Returns:
+        Current repo upgrade state.
+    """
     existing = load_repo_upgrade_state(project_root)
     state = build_repo_upgrade_state(
         project_root,
@@ -408,16 +472,6 @@ def ensure_repo_upgrade_state(
     return state
 
 
-## @brief Update the backfill status of a single task entry in the upgrade state.
-#  @param state Current repo upgrade state.
-#  @param task_id ID of the task to update.
-#  @param backfill_status New backfill status.
-#  @param migration_note New migration note path or marker.
-#  @param decision New decision text.
-#  @param last_upgrade_task ID of the task performing the update.
-#  @param today ISO date string, or None to use today.
-#  @return Updated repo upgrade state.
-#  @exception ValueError If the task_id is not found in the state.
 def update_entry_status(
     state: RepoUpgradeState,
     *,
@@ -428,6 +482,23 @@ def update_entry_status(
     last_upgrade_task: str,
     today: str | None = None,
 ) -> RepoUpgradeState:
+    """Update the backfill status of a single task entry in the upgrade state.
+
+    Args:
+        state: Current repo upgrade state.
+        task_id: ID of the task to update.
+        backfill_status: New backfill status.
+        migration_note: New migration note path or marker.
+        decision: New decision text.
+        last_upgrade_task: ID of the task performing the update.
+        today: ISO date string, or None to use today.
+
+    Returns:
+        Updated repo upgrade state.
+
+    Raises:
+        ValueError: If the task_id is not found in the state.
+    """
     entries: list[LegacyTaskEntry] = []
     found = False
     for entry in state.entries:
@@ -460,11 +531,16 @@ def update_entry_status(
     )
 
 
-## @brief Compute a summary dictionary of the current upgrade state.
-#  @param project_root Path to the project root.
-#  @param existing_system_classification System classification string used when no state exists.
-#  @return Dictionary with state path, epoch, status, and counts.
 def upgrade_state_summary(project_root: Path, *, existing_system_classification: str) -> dict[str, object]:
+    """Compute a summary dictionary of the current upgrade state.
+
+    Args:
+        project_root: Path to the project root.
+        existing_system_classification: System classification string used when no state exists.
+
+    Returns:
+        Dictionary with state path, epoch, status, and counts.
+    """
     state = load_repo_upgrade_state(project_root)
     if state is None:
         compatibility_epoch = "legacy-v1" if existing_system_classification == "compatible" else "module-core-v1"
@@ -492,17 +568,6 @@ def upgrade_state_summary(project_root: Path, *, existing_system_classification:
     }
 
 
-## @brief Write a migration note markdown file for a specific task.
-#  @param project_root Path to the project root.
-#  @param task_dir Path to the task directory.
-#  @param epoch_before Compatibility epoch before the migration.
-#  @param epoch_after Compatibility epoch after the migration.
-#  @param task_class Classification of the task.
-#  @param updated_items List of items that were updated.
-#  @param untouched_items List of items that were left unchanged.
-#  @param basis_task_id ID of the task that triggered the migration.
-#  @param today ISO date string, or None to use today.
-#  @return Project-relative path to the written migration note.
 def write_task_migration_note(
     project_root: Path,
     task_dir: Path,
@@ -515,6 +580,22 @@ def write_task_migration_note(
     basis_task_id: str,
     today: str | None = None,
 ) -> str:
+    """Write a migration note markdown file for a specific task.
+
+    Args:
+        project_root: Path to the project root.
+        task_dir: Path to the task directory.
+        epoch_before: Compatibility epoch before the migration.
+        epoch_after: Compatibility epoch after the migration.
+        task_class: Classification of the task.
+        updated_items: List of items that were updated.
+        untouched_items: List of items that were left unchanged.
+        basis_task_id: ID of the task that triggered the migration.
+        today: ISO date string, or None to use today.
+
+    Returns:
+        Project-relative path to the written migration note.
+    """
     note_path = task_migration_note_path(task_dir)
     note_path.parent.mkdir(parents=True, exist_ok=True)
     updated_lines = "\n".join(f"- {item}" for item in updated_items) or "- `не требуется`"
@@ -550,19 +631,31 @@ def write_task_migration_note(
     return relative_task_migration_note(project_root, task_dir)
 
 
-## @brief Determine the task class from a task.md file.
-#  @param task_file Path to the task.md file.
-#  @return Task class string.
 def task_class_from_task_file(task_file: Path) -> str:
+    """Determine the task class from a task.md file.
+
+    Args:
+        task_file: Path to the task.md file.
+
+    Returns:
+        Task class string.
+    """
     _, fields = read_task_fields(task_file)
     return classify_task_fields(fields)
 
 
-## @brief Extract the task ID from a task.md file.
-#  @param task_file Path to the task.md file.
-#  @return Task ID string.
-#  @exception ValueError If the ID задачи field is missing or empty.
 def task_id_from_task_file(task_file: Path) -> str:
+    """Extract the task ID from a task.md file.
+
+    Args:
+        task_file: Path to the task.md file.
+
+    Returns:
+        Task ID string.
+
+    Raises:
+        ValueError: If the ID задачи field is missing or empty.
+    """
     _, fields = read_task_fields(task_file)
     task_id = fields.get("ID задачи", "").strip()
     if not task_id:

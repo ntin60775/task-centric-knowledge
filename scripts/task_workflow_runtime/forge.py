@@ -9,10 +9,15 @@ from .git_ops import command_exists, remote_hostname, remote_url, run_command
 from .models import DELIVERY_ROW_PLACEHOLDER, MERGE_REQUEST_URL_RE, PublicationSnapshot
 
 
-## @brief Extract the first HTTP(S) URL found at the end of command output.
-#  @param output_text Raw command stdout text.
-#  @return URL string, or None if no URL is found.
 def extract_publication_url(output_text: str) -> str | None:
+    """Extract the first HTTP(S) URL found at the end of command output.
+
+    Args:
+        output_text: Raw command stdout text.
+
+    Returns:
+        URL string, or None if no URL is found.
+    """
     for line in reversed(output_text.splitlines()):
         candidate = line.strip()
         if candidate.startswith("http://") or candidate.startswith("https://"):
@@ -20,49 +25,59 @@ def extract_publication_url(output_text: str) -> str | None:
     return None
 
 
-## @brief Parse a merge request reference string to extract an MR number.
-#  @param reference Reference string, potentially containing an MR URL.
-#  @param head_branch Fallback branch name if no MR number is found.
-#  @return MR number or the fallback head_branch.
 def parse_merge_request_reference(reference: str, head_branch: str) -> str:
+    """Parse a merge request reference string to extract an MR number.
+
+    Args:
+        reference: Reference string, potentially containing an MR URL.
+        head_branch: Fallback branch name if no MR number is found.
+
+    Returns:
+        MR number or the fallback head_branch.
+    """
     match = MERGE_REQUEST_URL_RE.search(reference)
     if match:
         return match.group("number")
     return head_branch
 
 
-## @brief Abstract base adapter for forge-specific publish operations.
-#  @note Subclasses must set host_kind and cli_name class attributes.
 class ForgeAdapter:
+    """Abstract base adapter for forge-specific publish operations.
+
+    Note:
+        Subclasses must set host_kind and cli_name class attributes.
+    """
     host_kind = "generic"
     cli_name = ""
 
-    ## @brief Initialize the adapter with a forge hostname.
-    #  @param hostname Forge hostname for auth checks.
     def __init__(self, hostname: str) -> None:
+        """Initialize the adapter with a forge hostname.
+
+        Args:
+            hostname: Forge hostname for auth checks.
+        """
         self.hostname = hostname
 
-    ## @brief Verify that the forge CLI is installed.
-    #  @exception ValueError If the CLI is not found on PATH.
     def ensure_cli(self) -> None:
+        """Verify that the forge CLI is installed.
+
+        Raises:
+            ValueError: If the CLI is not found on PATH.
+        """
         if not command_exists(self.cli_name):
             raise ValueError(f"Для host `{self.host_kind}` не найден CLI `{self.cli_name}`.")
 
-    ## @brief Verify that the user is authenticated with the forge.
-    #  @param project_root Path to the project root.
-    #  @exception NotImplementedError Always; must be overridden by subclasses.
     def ensure_auth(self, project_root: Path) -> None:
+        """Verify that the user is authenticated with the forge.
+
+        Args:
+            project_root: Path to the project root.
+
+        Raises:
+            NotImplementedError: Always; must be overridden by subclasses.
+        """
         raise NotImplementedError
 
-    ## @brief Create a new publication (PR/MR) on the forge.
-    #  @param project_root Path to the project root.
-    #  @param head_branch Branch containing the changes.
-    #  @param base_branch Branch to merge into.
-    #  @param title Publication title.
-    #  @param body Publication body.
-    #  @param draft Whether to create as draft.
-    #  @return Snapshot of the created publication.
-    #  @exception NotImplementedError Always; must be overridden by subclasses.
     def create_publication(
         self,
         project_root: Path,
@@ -73,15 +88,24 @@ class ForgeAdapter:
         body: str,
         draft: bool,
     ) -> PublicationSnapshot:
+        """Create a new publication (PR/MR) on the forge.
+
+        Args:
+            project_root: Path to the project root.
+            head_branch: Branch containing the changes.
+            base_branch: Branch to merge into.
+            title: Publication title.
+            body: Publication body.
+            draft: Whether to create as draft.
+
+        Returns:
+            Snapshot of the created publication.
+
+        Raises:
+            NotImplementedError: Always; must be overridden by subclasses.
+        """
         raise NotImplementedError
 
-    ## @brief Update an existing publication on the forge.
-    #  @param project_root Path to the project root.
-    #  @param reference Publication reference (URL or number).
-    #  @param head_branch Branch containing the changes.
-    #  @param base_branch Branch to merge into.
-    #  @return Snapshot of the updated publication.
-    #  @exception NotImplementedError Always; must be overridden by subclasses.
     def update_publication(
         self,
         project_root: Path,
@@ -90,15 +114,22 @@ class ForgeAdapter:
         head_branch: str,
         base_branch: str,
     ) -> PublicationSnapshot:
+        """Update an existing publication on the forge.
+
+        Args:
+            project_root: Path to the project root.
+            reference: Publication reference (URL or number).
+            head_branch: Branch containing the changes.
+            base_branch: Branch to merge into.
+
+        Returns:
+            Snapshot of the updated publication.
+
+        Raises:
+            NotImplementedError: Always; must be overridden by subclasses.
+        """
         raise NotImplementedError
 
-    ## @brief Read the current state of a publication from the forge.
-    #  @param project_root Path to the project root.
-    #  @param reference Publication reference (URL or number).
-    #  @param head_branch Branch containing the changes.
-    #  @param base_branch Branch to merge into.
-    #  @return Snapshot of the publication.
-    #  @exception NotImplementedError Always; must be overridden by subclasses.
     def read_publication(
         self,
         project_root: Path,
@@ -107,18 +138,37 @@ class ForgeAdapter:
         head_branch: str,
         base_branch: str,
     ) -> PublicationSnapshot:
+        """Read the current state of a publication from the forge.
+
+        Args:
+            project_root: Path to the project root.
+            reference: Publication reference (URL or number).
+            head_branch: Branch containing the changes.
+            base_branch: Branch to merge into.
+
+        Returns:
+            Snapshot of the publication.
+
+        Raises:
+            NotImplementedError: Always; must be overridden by subclasses.
+        """
         raise NotImplementedError
 
 
-## @brief Forge adapter for GitHub using the gh CLI.
 class GitHubAdapter(ForgeAdapter):
+    """Forge adapter for GitHub using the gh CLI."""
     host_kind = "github"
     cli_name = "gh"
 
-    ## @brief Verify GitHub CLI authentication for the configured hostname.
-    #  @param project_root Path to the project root.
-    #  @exception ValueError If gh auth status fails.
     def ensure_auth(self, project_root: Path) -> None:
+        """Verify GitHub CLI authentication for the configured hostname.
+
+        Args:
+            project_root: Path to the project root.
+
+        Raises:
+            ValueError: If gh auth status fails.
+        """
         completed = run_command(
             project_root,
             "gh",
@@ -134,15 +184,6 @@ class GitHubAdapter(ForgeAdapter):
                 "Publish-flow не должен обещать сетевые действия без валидной auth."
             )
 
-    ## @brief Create a pull request on GitHub.
-    #  @param project_root Path to the project root.
-    #  @param head_branch Branch containing the changes.
-    #  @param base_branch Branch to merge into.
-    #  @param title PR title.
-    #  @param body PR body.
-    #  @param draft Whether to create as draft.
-    #  @return Snapshot of the created PR.
-    #  @exception ValueError If the PR URL cannot be extracted from CLI output.
     def create_publication(
         self,
         project_root: Path,
@@ -153,6 +194,22 @@ class GitHubAdapter(ForgeAdapter):
         body: str,
         draft: bool,
     ) -> PublicationSnapshot:
+        """Create a pull request on GitHub.
+
+        Args:
+            project_root: Path to the project root.
+            head_branch: Branch containing the changes.
+            base_branch: Branch to merge into.
+            title: PR title.
+            body: PR body.
+            draft: Whether to create as draft.
+
+        Returns:
+            Snapshot of the created PR.
+
+        Raises:
+            ValueError: If the PR URL cannot be extracted from CLI output.
+        """
         self.ensure_cli()
         self.ensure_auth(project_root)
         command = [
@@ -181,12 +238,6 @@ class GitHubAdapter(ForgeAdapter):
             base_branch=base_branch,
         )
 
-    ## @brief Mark a GitHub pull request as ready for review.
-    #  @param project_root Path to the project root.
-    #  @param reference PR reference (URL or number).
-    #  @param head_branch Branch containing the changes.
-    #  @param base_branch Branch to merge into.
-    #  @return Snapshot of the updated PR.
     def update_publication(
         self,
         project_root: Path,
@@ -195,6 +246,17 @@ class GitHubAdapter(ForgeAdapter):
         head_branch: str,
         base_branch: str,
     ) -> PublicationSnapshot:
+        """Mark a GitHub pull request as ready for review.
+
+        Args:
+            project_root: Path to the project root.
+            reference: PR reference (URL or number).
+            head_branch: Branch containing the changes.
+            base_branch: Branch to merge into.
+
+        Returns:
+            Snapshot of the updated PR.
+        """
         self.ensure_cli()
         self.ensure_auth(project_root)
         run_command(project_root, "gh", "pr", "ready", reference)
@@ -205,12 +267,6 @@ class GitHubAdapter(ForgeAdapter):
             base_branch=base_branch,
         )
 
-    ## @brief Read the current state of a GitHub pull request.
-    #  @param project_root Path to the project root.
-    #  @param reference PR reference (URL or number).
-    #  @param head_branch Branch containing the changes.
-    #  @param base_branch Branch to merge into.
-    #  @return Snapshot of the PR.
     def read_publication(
         self,
         project_root: Path,
@@ -219,6 +275,17 @@ class GitHubAdapter(ForgeAdapter):
         head_branch: str,
         base_branch: str,
     ) -> PublicationSnapshot:
+        """Read the current state of a GitHub pull request.
+
+        Args:
+            project_root: Path to the project root.
+            reference: PR reference (URL or number).
+            head_branch: Branch containing the changes.
+            base_branch: Branch to merge into.
+
+        Returns:
+            Snapshot of the PR.
+        """
         self.ensure_cli()
         self.ensure_auth(project_root)
         completed = run_command(
@@ -257,15 +324,20 @@ class GitHubAdapter(ForgeAdapter):
         )
 
 
-## @brief Forge adapter for GitLab using the glab CLI.
 class GitLabAdapter(ForgeAdapter):
+    """Forge adapter for GitLab using the glab CLI."""
     host_kind = "gitlab"
     cli_name = "glab"
 
-    ## @brief Verify GitLab CLI authentication for the configured hostname.
-    #  @param project_root Path to the project root.
-    #  @exception ValueError If glab auth status fails.
     def ensure_auth(self, project_root: Path) -> None:
+        """Verify GitLab CLI authentication for the configured hostname.
+
+        Args:
+            project_root: Path to the project root.
+
+        Raises:
+            ValueError: If glab auth status fails.
+        """
         completed = run_command(
             project_root,
             "glab",
@@ -281,14 +353,6 @@ class GitLabAdapter(ForgeAdapter):
                 "Publish-flow не должен обещать сетевые действия без валидной auth."
             )
 
-    ## @brief Create a merge request on GitLab.
-    #  @param project_root Path to the project root.
-    #  @param head_branch Branch containing the changes.
-    #  @param base_branch Branch to merge into.
-    #  @param title MR title.
-    #  @param body MR description.
-    #  @param draft Whether to create as draft.
-    #  @return Snapshot of the created MR.
     def create_publication(
         self,
         project_root: Path,
@@ -299,6 +363,19 @@ class GitLabAdapter(ForgeAdapter):
         body: str,
         draft: bool,
     ) -> PublicationSnapshot:
+        """Create a merge request on GitLab.
+
+        Args:
+            project_root: Path to the project root.
+            head_branch: Branch containing the changes.
+            base_branch: Branch to merge into.
+            title: MR title.
+            body: MR description.
+            draft: Whether to create as draft.
+
+        Returns:
+            Snapshot of the created MR.
+        """
         self.ensure_cli()
         self.ensure_auth(project_root)
         command = [
@@ -325,12 +402,6 @@ class GitLabAdapter(ForgeAdapter):
             base_branch=base_branch,
         )
 
-    ## @brief Mark a GitLab merge request as ready for review.
-    #  @param project_root Path to the project root.
-    #  @param reference MR reference (URL or number).
-    #  @param head_branch Branch containing the changes.
-    #  @param base_branch Branch to merge into.
-    #  @return Snapshot of the updated MR.
     def update_publication(
         self,
         project_root: Path,
@@ -339,6 +410,17 @@ class GitLabAdapter(ForgeAdapter):
         head_branch: str,
         base_branch: str,
     ) -> PublicationSnapshot:
+        """Mark a GitLab merge request as ready for review.
+
+        Args:
+            project_root: Path to the project root.
+            reference: MR reference (URL or number).
+            head_branch: Branch containing the changes.
+            base_branch: Branch to merge into.
+
+        Returns:
+            Snapshot of the updated MR.
+        """
         self.ensure_cli()
         self.ensure_auth(project_root)
         run_command(
@@ -357,12 +439,6 @@ class GitLabAdapter(ForgeAdapter):
             base_branch=base_branch,
         )
 
-    ## @brief Read the current state of a GitLab merge request.
-    #  @param project_root Path to the project root.
-    #  @param reference MR reference (URL or number).
-    #  @param head_branch Branch containing the changes.
-    #  @param base_branch Branch to merge into.
-    #  @return Snapshot of the MR.
     def read_publication(
         self,
         project_root: Path,
@@ -371,6 +447,17 @@ class GitLabAdapter(ForgeAdapter):
         head_branch: str,
         base_branch: str,
     ) -> PublicationSnapshot:
+        """Read the current state of a GitLab merge request.
+
+        Args:
+            project_root: Path to the project root.
+            reference: MR reference (URL or number).
+            head_branch: Branch containing the changes.
+            base_branch: Branch to merge into.
+
+        Returns:
+            Snapshot of the MR.
+        """
         self.ensure_cli()
         self.ensure_auth(project_root)
         completed = run_command(
@@ -409,14 +496,21 @@ class GitLabAdapter(ForgeAdapter):
         )
 
 
-## @brief Resolve the appropriate forge adapter for a host kind and remote URL.
-#  @param project_root Path to the project root.
-#  @param host_kind Canonical host kind.
-#  @param remote_name Name of the git remote.
-#  @param url Explicit remote URL, or None.
-#  @return Initialized forge adapter.
-#  @exception ValueError If the hostname cannot be determined or the host kind is unsupported.
 def resolve_forge_adapter(project_root: Path, host_kind: str, remote_name: str, url: str | None) -> ForgeAdapter:
+    """Resolve the appropriate forge adapter for a host kind and remote URL.
+
+    Args:
+        project_root: Path to the project root.
+        host_kind: Canonical host kind.
+        remote_name: Name of the git remote.
+        url: Explicit remote URL, or None.
+
+    Returns:
+        Initialized forge adapter.
+
+    Raises:
+        ValueError: If the hostname cannot be determined or the host kind is unsupported.
+    """
     hostname = remote_hostname(url) or remote_hostname(remote_url(project_root, remote_name))
     if not hostname:
         raise ValueError("Не удалось определить hostname forge-хостинга по remote или URL.")

@@ -75,45 +75,45 @@ ALLOWED_RELATION_TYPES = {"depends_on"}
 ALLOWED_RELATION_STATUSES = {"required", "informational", "planned"}
 
 
-## @brief Предупреждение в контексте модуля.
 @dataclass
 class WarningItem:
+    """Предупреждение в контексте модуля."""
     code: str
     severity: str
     detail: str
     path: str | None = None
 
 
-## @brief Элемент управляемой поверхности модуля.
 @dataclass(frozen=True)
 class OwnedSurfaceItem:
+    """Элемент управляемой поверхности модуля."""
     kind: str
     path_ref: str
     role: str
     ownership_reason: str
 
 
-## @brief Публичный контракт модуля.
 @dataclass(frozen=True)
 class PublicContractItem:
+    """Публичный контракт модуля."""
     contract: str
     kind: str
     reference: str
     audience: str
 
 
-## @brief Элемент связи (relation) модуля с другим модулем.
 @dataclass(frozen=True)
 class RelationEnvelopeItem:
+    """Элемент связи (relation) модуля с другим модулем."""
     relation_type: str
     target: str
     status: str
     notes: str
 
 
-## @brief Паспорт модуля, загруженный из module.md.
 @dataclass(frozen=True)
 class ModulePassport:
+    """Паспорт модуля, загруженный из module.md."""
     path: Path
     module_id: str
     slug: str
@@ -132,9 +132,9 @@ class ModulePassport:
     relation_envelope: tuple[RelationEnvelopeItem, ...]
 
 
-## @brief Строка module registry.
 @dataclass(frozen=True)
 class RegistryRow:
+    """Строка module registry."""
     module_id: str
     slug: str
     source_state: str
@@ -147,9 +147,9 @@ class RegistryRow:
     path: str
 
 
-## @brief Краткая сводка модуля для поиска и списков.
 @dataclass
 class ModuleSummary:
+    """Краткая сводка модуля для поиска и списков."""
     module_id: str
     slug: str
     source_state: str
@@ -161,9 +161,9 @@ class ModuleSummary:
     warnings: list[WarningItem] = field(default_factory=list)
 
 
-## @brief Полная запись модуля со всеми проекциями.
 @dataclass
 class ModuleRecord:
+    """Полная запись модуля со всеми проекциями."""
     summary: ModuleSummary
     verification_record: ModuleVerificationRecord | None
     verification_excerpt: dict[str, object] | None
@@ -178,17 +178,17 @@ class ModuleRecord:
     file_local_policy: FileLocalPolicy | None
 
 
-## @brief Индекс всех модулей проекта.
 @dataclass
 class ModuleIndex:
+    """Индекс всех модулей проекта."""
     records: list[ModuleRecord]
     duplicate_module_ids: dict[str, list[ModuleRecord]]
     warnings: list[WarningItem] = field(default_factory=list)
 
 
-## @brief Владелец файла (ссылка на модуль).
 @dataclass
 class FileOwner:
+    """Владелец файла (ссылка на модуль)."""
     module_id: str
     slug: str
     source_state: str
@@ -197,22 +197,31 @@ class FileOwner:
     verification_ref: str | None
 
 
-## @brief Исключение при невалидном module passport.
 class ModulePassportError(ValueError):
-    """Raised when a module passport is invalid."""
+    """Исключение при невалидном module passport."""
 
 
-## @brief Сериализовать WarningItem в словарь.
-#  @param item Предупреждение.
-#  @return     Словарь с полями warning.
 def warning_to_dict(item: WarningItem) -> dict[str, str | None]:
+    """Сериализовать WarningItem в словарь.
+
+    Args:
+        item: Предупреждение.
+
+    Returns:
+        Словарь с полями warning.
+    """
     return asdict(item)
 
 
-## @brief Сериализовать ModuleSummary в словарь.
-#  @param item Краткая сводка модуля.
-#  @return     Словарь с полями summary.
 def module_summary_to_dict(item: ModuleSummary) -> dict[str, object]:
+    """Сериализовать ModuleSummary в словарь.
+
+    Args:
+        item: Краткая сводка модуля.
+
+    Returns:
+        Словарь с полями summary.
+    """
     return {
         "module_id": item.module_id,
         "slug": item.slug,
@@ -226,10 +235,15 @@ def module_summary_to_dict(item: ModuleSummary) -> dict[str, object]:
     }
 
 
-## @brief Сериализовать ModuleRecord в словарь.
-#  @param item Полная запись модуля.
-#  @return     Словарь с полями record.
 def module_record_to_dict(item: ModuleRecord) -> dict[str, object]:
+    """Сериализовать ModuleRecord в словарь.
+
+    Args:
+        item: Полная запись модуля.
+
+    Returns:
+        Словарь с полями record.
+    """
     return {
         "module_id": item.summary.module_id,
         "slug": item.summary.slug,
@@ -247,10 +261,15 @@ def module_record_to_dict(item: ModuleRecord) -> dict[str, object]:
     }
 
 
-## @brief Сериализовать FileOwner в словарь.
-#  @param item Владелец файла.
-#  @return     Словарь с полями owner.
 def file_owner_to_dict(item: FileOwner) -> dict[str, object]:
+    """Сериализовать FileOwner в словарь.
+
+    Args:
+        item: Владелец файла.
+
+    Returns:
+        Словарь с полями owner.
+    """
     return asdict(item)
 
 
@@ -351,15 +370,22 @@ def _serialize_verification_excerpt(record: ModuleVerificationRecord) -> dict[st
     }
 
 
-## @brief Собрать verification anchors и failure handoff refs по путям файлов.
-#  @note  Внутренний helper для связи evidence со сценариями и project-relative путями.
-#  @param project_root  Корень проекта.
-#  @param record        Запись верификации модуля.
-#  @return              Кортеж (anchors_by_path, handoff_refs_by_path, evidence_file_refs).
 def _collect_path_anchors(
     project_root: Path,
     record: ModuleVerificationRecord,
 ) -> tuple[dict[str, list[dict[str, str]]], dict[str, list[str]], list[str]]:
+    """Собрать verification anchors и failure handoff refs по путям файлов.
+
+    Args:
+        project_root: Корень проекта.
+        record: Запись верификации модуля.
+
+    Returns:
+        Кортеж (anchors_by_path, handoff_refs_by_path, evidence_file_refs).
+
+    Note:
+        Внутренний helper для связи evidence со сценариями и project-relative путями.
+    """
     anchors_by_path: dict[str, list[dict[str, str]]] = {}
     handoff_refs_by_path: dict[str, list[str]] = {}
     evidence_file_refs: list[str] = []
@@ -398,14 +424,6 @@ def _read_lines(path: Path) -> list[str]:
     return path.read_text(encoding="utf-8").splitlines()
 
 
-## @brief Разобрать строки Markdown-таблицы из указанного раздела.
-#  @note  Внутренний парсер таблиц passport/verification/policy. Валидирует заголовки и количество колонок.
-#  @param lines            Строки Markdown-файла.
-#  @param title            Заголовок раздела.
-#  @param expected_headers Ожидаемые заголовки таблицы.
-#  @param required         Если True, отсутствие раздела — ошибка.
-#  @return                 Список кортежей со значениями ячеек.
-#  @exception ModulePassportError При невалидной структуре таблицы.
 def _parse_table_rows(
     lines: list[str],
     title: str,
@@ -413,6 +431,23 @@ def _parse_table_rows(
     *,
     required: bool = True,
 ) -> list[tuple[str, ...]]:
+    """Разобрать строки Markdown-таблицы из указанного раздела.
+
+    Args:
+        lines: Строки Markdown-файла.
+        title: Заголовок раздела.
+        expected_headers: Ожидаемые заголовки таблицы.
+        required: Если True, отсутствие раздела — ошибка.
+
+    Returns:
+        Список кортежей со значениями ячеек.
+
+    Raises:
+        ModulePassportError: При невалидной структуре таблицы.
+
+    Note:
+        Внутренний парсер таблиц passport/verification/policy. Валидирует заголовки и количество колонок.
+    """
     bounds = find_section_bounds(lines, title)
     if bounds is None:
         if required:
@@ -445,12 +480,21 @@ def _parse_table_rows(
     return rows
 
 
-## @brief Разобрать поля паспорта из таблицы в разделе "## Паспорт".
-#  @note  Внутренний helper для load_module_passport. Валидирует уникальность и обязательность полей.
-#  @param lines Строки Markdown-файла.
-#  @return      Словарь полей паспорта.
-#  @exception ModulePassportError При дублирующихся или отсутствующих полях.
 def _parse_passport_fields(lines: list[str]) -> dict[str, str]:
+    """Разобрать поля паспорта из таблицы в разделе "## Паспорт".
+
+    Args:
+        lines: Строки Markdown-файла.
+
+    Returns:
+        Словарь полей паспорта.
+
+    Raises:
+        ModulePassportError: При дублирующихся или отсутствующих полях.
+
+    Note:
+        Внутренний helper для load_module_passport. Валидирует уникальность и обязательность полей.
+    """
     rows = _parse_table_rows(lines, PASSPORT_SECTION, ("Поле", "Значение"))
     fields: dict[str, str] = {}
     for field, value in rows:
@@ -463,13 +507,22 @@ def _parse_passport_fields(lines: list[str]) -> dict[str, str]:
     return fields
 
 
-## @brief Извлечь текстовое содержимое раздела Markdown.
-#  @note  Внутренний helper для загрузки scope_text. Не допускает пустых разделов.
-#  @param lines Строки Markdown-файла.
-#  @param title Заголовок раздела.
-#  @return      Объединённый текст раздела.
-#  @exception ModulePassportError При отсутствии или пустоте раздела.
 def _parse_section_text(lines: list[str], title: str) -> str:
+    """Извлечь текстовое содержимое раздела Markdown.
+
+    Args:
+        lines: Строки Markdown-файла.
+        title: Заголовок раздела.
+
+    Returns:
+        Объединённый текст раздела.
+
+    Raises:
+        ModulePassportError: При отсутствии или пустоте раздела.
+
+    Note:
+        Внутренний helper для загрузки scope_text. Не допускает пустых разделов.
+    """
     bounds = find_section_bounds(lines, title)
     if bounds is None:
         raise ModulePassportError(f"В файле не найден раздел {title!r}.")
@@ -480,12 +533,19 @@ def _parse_section_text(lines: list[str], title: str) -> str:
     return "\n".join(text_lines)
 
 
-## @brief Загрузить и провалидировать module passport из Markdown-файла.
-#  @param project_root   Корень проекта.
-#  @param passport_path  Путь к module.md.
-#  @return               Разобранный объект ModulePassport.
-#  @exception ModulePassportError При невалидной структуре или несоответствии полей.
 def load_module_passport(project_root: Path, passport_path: Path) -> ModulePassport:
+    """Загрузить и провалидировать module passport из Markdown-файла.
+
+    Args:
+        project_root: Корень проекта.
+        passport_path: Путь к module.md.
+
+    Returns:
+        Разобранный объект ModulePassport.
+
+    Raises:
+        ModulePassportError: При невалидной структуре или несоответствии полей.
+    """
     lines = _read_lines(passport_path)
     passport = _parse_passport_fields(lines)
 
@@ -770,10 +830,15 @@ def _module_ref_fields(record: ModuleRecord, *, prefix: str) -> dict[str, object
     }
 
 
-## @brief Построить relation payloads для всех записей в индексе.
-#  @note  Внутренний helper, мутирует module_index.records in-place. Валидирует типы связей, статусы и дубликаты.
-#  @param module_index Индекс модулей для обработки.
 def _build_relation_payloads(module_index: ModuleIndex) -> None:
+    """Построить relation payloads для всех записей в индексе.
+
+    Args:
+        module_index: Индекс модулей для обработки.
+
+    Note:
+        Внутренний helper, мутирует module_index.records in-place. Валидирует типы связей, статусы и дубликаты.
+    """
     unique_records_by_id = {
         record.summary.module_id.casefold(): record
         for record in module_index.records
@@ -1250,17 +1315,24 @@ def _readiness_dict(
     }
 
 
-## @brief Собрать полную запись модуля из каталога (passport + verification + registry).
-#  @note  Внутренний helper для build_module_index. Собирает все проекции и предупреждения.
-#  @param project_root    Корень проекта.
-#  @param directory_path  Каталог модуля.
-#  @param registry_rows   Строки registry для cross-check.
-#  @return                Полная запись ModuleRecord.
 def _record_from_directory(
     project_root: Path,
     directory_path: Path,
     registry_rows: dict[str, RegistryRow],
 ) -> ModuleRecord:
+    """Собрать полную запись модуля из каталога (passport + verification + registry).
+
+    Args:
+        project_root: Корень проекта.
+        directory_path: Каталог модуля.
+        registry_rows: Строки registry для cross-check.
+
+    Returns:
+        Полная запись ModuleRecord.
+
+    Note:
+        Внутренний helper для build_module_index. Собирает все проекции и предупреждения.
+    """
     passport_path = directory_path / PASSPORT_FILENAME
     verification_path = directory_path / VERIFICATION_FILENAME
     passport_ref = _relative_path(project_root, passport_path) if passport_path.exists() else None
@@ -1365,6 +1437,14 @@ def _record_from_directory(
     )
 
 def build_module_index(project_root: Path) -> ModuleIndex:
+    """Build module index.
+
+    Args:
+    project_root: Description.
+
+    Returns:
+        Result.
+    """
     modules_root = project_root / MODULES_ROOT
     if not modules_root.exists():
         return ModuleIndex(records=[], duplicate_module_ids={}, warnings=[])
@@ -1447,13 +1527,6 @@ def _match_fields(record: ModuleRecord, query: str) -> tuple[int, list[str]] | N
     return best_rank, matched_fields
 
 
-## @brief Найти модули по запросу с фильтрацией readiness и source_state.
-#  @param project_root  Корень проекта.
-#  @param query         Строка поиска.
-#  @param readiness     Фильтр по readiness (опционально).
-#  @param source_state  Фильтр по source_state (опционально).
-#  @param limit         Максимальное число результатов.
-#  @return              Кортеж (список payload-элементов, список предупреждений).
 def find_modules(
     project_root: Path,
     *,
@@ -1462,6 +1535,18 @@ def find_modules(
     source_state: str | None = None,
     limit: int | None = None,
 ) -> tuple[list[dict[str, object]], list[WarningItem]]:
+    """Найти модули по запросу с фильтрацией readiness и source_state.
+
+    Args:
+        project_root: Корень проекта.
+        query: Строка поиска.
+        readiness: Фильтр по readiness (опционально).
+        source_state: Фильтр по source_state (опционально).
+        limit: Максимальное число результатов.
+
+    Returns:
+        Кортеж (список payload-элементов, список предупреждений).
+    """
     module_index = build_module_index(project_root)
     warnings: list[WarningItem] = [*module_index.warnings]
     items: list[tuple[int, ModuleRecord, list[str]]] = []
@@ -1508,15 +1593,22 @@ def find_modules(
     return payload_items, warnings
 
 
-## @brief Разрешить модуль по MODULE-ID или slug с обработкой дубликатов.
-#  @note  Внутренний helper для module_show. Возвращает error_code при неоднозначности.
-#  @param project_root  Корень проекта.
-#  @param selector      MODULE-ID или slug.
-#  @return              Кортеж (ModuleRecord | None, warnings, error_code).
 def _resolve_module_record(
     project_root: Path,
     selector: str,
 ) -> tuple[ModuleRecord | None, list[WarningItem], str | None]:
+    """Разрешить модуль по MODULE-ID или slug с обработкой дубликатов.
+
+    Args:
+        project_root: Корень проекта.
+        selector: MODULE-ID или slug.
+
+    Returns:
+        Кортеж (ModuleRecord | None, warnings, error_code).
+
+    Note:
+        Внутренний helper для module_show. Возвращает error_code при неоднозначности.
+    """
     module_index = build_module_index(project_root)
     exact_matches = [
         record for record in module_index.records if record.summary.module_id.casefold() == selector.casefold()
@@ -1569,15 +1661,20 @@ def _resolve_module_record(
     )
 
 
-## @brief Отобразить полные данные модуля по MODULE-ID или slug.
-#  @param project_root  Корень проекта.
-#  @param selector      MODULE-ID или slug модуля.
-#  @return              Кортеж (payload, warnings, error_code).
 def module_show(
     project_root: Path,
     *,
     selector: str,
 ) -> tuple[dict[str, object] | None, list[WarningItem], str | None]:
+    """Отобразить полные данные модуля по MODULE-ID или slug.
+
+    Args:
+        project_root: Корень проекта.
+        selector: MODULE-ID или slug модуля.
+
+    Returns:
+        Кортеж (payload, warnings, error_code).
+    """
     record, warnings, error_code = _resolve_module_record(project_root, selector)
     if record is None:
         return None, warnings, error_code
@@ -1585,12 +1682,19 @@ def module_show(
     return module_payload, [*record.summary.warnings, *warnings], None
 
 
-## @brief Разрешить и провалидировать путь к файлу внутри проекта.
-#  @note  Внутренний helper для file_show. Проверяет границы проекта и существование файла.
-#  @param project_root  Корень проекта.
-#  @param raw_path      Исходный путь (строка).
-#  @return              Кортеж (resolved Path | None, warnings, error_code).
 def _resolve_file_path(project_root: Path, raw_path: str) -> tuple[Path | None, list[WarningItem], str | None]:
+    """Разрешить и провалидировать путь к файлу внутри проекта.
+
+    Args:
+        project_root: Корень проекта.
+        raw_path: Исходный путь (строка).
+
+    Returns:
+        Кортеж (resolved Path | None, warnings, error_code).
+
+    Note:
+        Внутренний helper для file_show. Проверяет границы проекта и существование файла.
+    """
     candidate = Path(raw_path)
     resolved = (candidate if candidate.is_absolute() else project_root / candidate).resolve()
     if not _is_within_project(resolved, project_root):
@@ -1632,17 +1736,22 @@ def _extend_unique_warnings(target: list[WarningItem], items: list[WarningItem])
         seen.add(signature)
 
 
-## @brief Отобразить данные файла с его владельцами и contract-разметкой.
-#  @param project_root     Корень проекта.
-#  @param raw_path         Путь к файлу (относительный или абсолютный).
-#  @param module_selector  Фильтр по MODULE-ID владельца (опционально).
-#  @return                 Кортеж (payload, warnings, error_code).
 def file_show(
     project_root: Path,
     *,
     raw_path: str,
     module_selector: str | None = None,
 ) -> tuple[dict[str, object] | None, list[WarningItem], str | None]:
+    """Отобразить данные файла с его владельцами и contract-разметкой.
+
+    Args:
+        project_root: Корень проекта.
+        raw_path: Путь к файлу (относительный или абсолютный).
+        module_selector: Фильтр по MODULE-ID владельца (опционально).
+
+    Returns:
+        Кортеж (payload, warnings, error_code).
+    """
     resolved_path, warnings, error_code = _resolve_file_path(project_root, raw_path)
     if resolved_path is None:
         return None, warnings, error_code

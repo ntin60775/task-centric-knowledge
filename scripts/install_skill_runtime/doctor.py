@@ -256,6 +256,17 @@ def _agents_check(project_root: Path, report: ExistingSystemReport) -> Dependenc
 
 
 def build_dependency_checks(project_root: Path, source_root: Path, report: ExistingSystemReport, source_results: list[StepResult]) -> list[DependencyCheck]:
+    """Build dependency checks.
+
+    Args:
+    project_root: Description.
+    source_root: Description.
+    report: Description.
+    source_results: Description.
+
+    Returns:
+        Result.
+    """
     missing_source = [item.path for item in source_results if item.status == "error" and item.path]
     source_detail = "Исходный дистрибутив целостен."
     source_status = DEPENDENCY_STATUS_OK
@@ -406,6 +417,16 @@ def build_dependency_checks(project_root: Path, source_root: Path, report: Exist
 
 
 def doctor_deps(project_root: Path, source_root: Path, profile: str) -> dict[str, object]:
+    """Doctor deps.
+
+    Args:
+    project_root: Description.
+    source_root: Description.
+    profile: Description.
+
+    Returns:
+        Result.
+    """
     results: list[StepResult] = []
     runtime_root = Path(__file__).resolve().parents[1]
     source_mode = source_root_mode(source_root, runtime_root)

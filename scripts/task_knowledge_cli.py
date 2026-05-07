@@ -310,11 +310,14 @@ def _add_borrowings_commands(subparsers) -> None:
     refresh_apply_parser.add_argument("--yes", action="store_true", help="Явно подтвердить применение refresh-plan.")
 
 
-## @brief Построить корневой парсер аргументов unified CLI.
-#
-#  Регистрирует все команды: doctor, install, task, module, file, workflow, borrowings.
-#  @return Настроенный экземпляр ArgumentParser.
 def build_parser() -> argparse.ArgumentParser:
+    """Построить корневой парсер аргументов unified CLI.
+
+    Регистрирует все команды: doctor, install, task, module, file, workflow, borrowings.
+
+    Returns:
+        Настроенный экземпляр ArgumentParser.
+    """
     parser = argparse.ArgumentParser(
         prog=COMMAND_NAME,
         description="Единый CLI для install/query/workflow контуров task-centric knowledge.",
@@ -334,15 +337,21 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-## @brief Вывести payload в формате JSON.
-#  @param payload Словарь с данными для сериализации.
 def _render_json(payload: dict[str, object]) -> None:
+    """Вывести payload в формате JSON.
+
+    Args:
+        payload: Словарь с данными для сериализации.
+    """
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
-## @brief Вывести текстовый отчёт команды doctor.
-#  @param payload Словарь с результатами диагностики.
 def _render_doctor_text(payload: dict[str, object]) -> None:
+    """Вывести текстовый отчёт команды doctor.
+
+    Args:
+        payload: Словарь с результатами диагностики.
+    """
     print("doctor")
     print(f"ok={payload['ok']}")
     print(f"version={payload['version']}")
@@ -363,9 +372,12 @@ def _render_doctor_text(payload: dict[str, object]) -> None:
     print(f"supported_commands={', '.join(SUPPORTED_COMMANDS)}")
 
 
-## @brief Вывести текстовый отчёт query-команд (status, current, show).
-#  @param payload Словарь с результатами query.
 def _render_query_text(payload: dict[str, object]) -> None:
+    """Вывести текстовый отчёт query-команд (status, current, show).
+
+    Args:
+        payload: Словарь с результатами query.
+    """
     command = payload["command"]
     if command == "status":
         print(format_status_payload(payload), end="")
@@ -375,12 +387,6 @@ def _render_query_text(payload: dict[str, object]) -> None:
         print(format_task_show_payload(payload), end="")
 
 
-## @brief Вывести текстовый отчёт module/file query.
-#
-#  @param payload         Словарь с результатами.
-#  @param with_sections   Набор дополнительных секций для вывода.
-#  @param show_contracts  Показать contract markers.
-#  @param show_blocks     Показать block anchors.
 def _render_module_query_text(
     payload: dict[str, object],
     *,
@@ -388,6 +394,14 @@ def _render_module_query_text(
     show_contracts: bool = False,
     show_blocks: bool = False,
 ) -> None:
+    """Вывести текстовый отчёт module/file query.
+
+    Args:
+        payload: Словарь с результатами.
+        with_sections: Набор дополнительных секций для вывода.
+        show_contracts: Показать contract markers.
+        show_blocks: Показать block anchors.
+    """
     command = payload["command"]
     if command == "module find":
         print(format_module_find_payload(payload), end="")
@@ -397,9 +411,12 @@ def _render_module_query_text(
         print(format_file_show_payload(payload, show_contracts=show_contracts, show_blocks=show_blocks), end="")
 
 
-## @brief Вывести текстовый отчёт borrowings-команд.
-#  @param payload Словарь с результатами borrowings-операции.
 def _render_borrowings_text(payload: dict[str, object]) -> None:
+    """Вывести текстовый отчёт borrowings-команд.
+
+    Args:
+        payload: Словарь с результатами borrowings-операции.
+    """
     print(str(payload["command"]))
     print(f"ok={payload['ok']}")
     print(f"source={payload['source']}")
@@ -429,19 +446,29 @@ def _render_borrowings_text(payload: dict[str, object]) -> None:
             print(f"- [{item['status']}] {item['key']}: {item['detail']}{suffix}")
 
 
-## @brief Получить абсолютный путь к директории runtime.
-#  @return Путь к каталогу, содержащему `task_knowledge_cli.py`.
 def _runtime_root() -> Path:
+    """Получить абсолютный путь к директории runtime.
+
+    Returns:
+        Путь к каталогу, содержащему `task_knowledge_cli.py`.
+    """
     return Path(__file__).resolve().parent
 
 
-## @brief Выполнить команду doctor — диагностику окружения.
-#
-#  Проверяет project_root, source_root, зависимости, наличие git и command в PATH.
-#  @param args Разобранные аргументы argparse.
-#  @return     Кортеж (payload, exit_code).
-#  @note       Если `--check-command-path`, отсутствие команды в PATH считается ошибкой.
 def _doctor(args: argparse.Namespace) -> tuple[dict[str, object], int]:
+    """Выполнить команду doctor — диагностику окружения.
+
+    Проверяет project_root, source_root, зависимости, наличие git и command в PATH.
+
+    Args:
+        args: Разобранные аргументы argparse.
+
+    Returns:
+        Кортеж (payload, exit_code).
+
+    Note:
+        Если `--check-command-path`, отсутствие команды в PATH считается ошибкой.
+    """
     project_root = Path(args.project_root).resolve()
     source_root = resolve_source(args.source_root)
     runtime_root = _runtime_root()
@@ -507,12 +534,16 @@ def _doctor(args: argparse.Namespace) -> tuple[dict[str, object], int]:
     return payload, 0 if ok else 2
 
 
-## @brief Выполнить install-команду (check, apply, verify-project, doctor-deps, cleanup).
-#
-#  @param args      Разобранные аргументы argparse.
-#  @param json_mode Флаг JSON-вывода.
-#  @return          Кортеж (payload, exit_code).
 def _install(args: argparse.Namespace, *, json_mode: bool) -> tuple[dict[str, object], int]:
+    """Выполнить install-команду (check, apply, verify-project, doctor-deps, cleanup).
+
+    Args:
+        args: Разобранные аргументы argparse.
+        json_mode: Флаг JSON-вывода.
+
+    Returns:
+        Кортеж (payload, exit_code).
+    """
     project_root = Path(args.project_root).resolve()
     source_root = resolve_source(args.source_root)
     output_format = _output_format(json_mode)
@@ -557,12 +588,17 @@ def _install(args: argparse.Namespace, *, json_mode: bool) -> tuple[dict[str, ob
     return payload, 0 if payload["ok"] else 2
 
 
-## @brief Выполнить task-команду (status, current, show).
-#
-#  Маршрутизирует на query_cli dispatch.
-#  @param args Разобранные аргументы argparse.
-#  @return     Кортеж (payload, exit_code).
 def _task(args: argparse.Namespace) -> tuple[dict[str, object], int]:
+    """Выполнить task-команду (status, current, show).
+
+    Маршрутизирует на query_cli dispatch.
+
+    Args:
+        args: Разобранные аргументы argparse.
+
+    Returns:
+        Кортеж (payload, exit_code).
+    """
     query_args = argparse.Namespace(project_root=args.project_root, format="json")
     if args.task_command == "status":
         query_args.command = "status"
@@ -575,12 +611,17 @@ def _task(args: argparse.Namespace) -> tuple[dict[str, object], int]:
     return dispatch_query(query_args)
 
 
-## @brief Выполнить module-команду (find, show).
-#
-#  Маршрутизирует на module_core_runtime.query_cli.dispatch_module.
-#  @param args Разобранные аргументы argparse.
-#  @return     Кортеж (payload, exit_code).
 def _module(args: argparse.Namespace) -> tuple[dict[str, object], int]:
+    """Выполнить module-команду (find, show).
+
+    Маршрутизирует на module_core_runtime.query_cli.dispatch_module.
+
+    Args:
+        args: Разобранные аргументы argparse.
+
+    Returns:
+        Кортеж (payload, exit_code).
+    """
     query_args = argparse.Namespace(
         project_root=Path(args.project_root),
         module_command=args.module_command,
@@ -593,12 +634,17 @@ def _module(args: argparse.Namespace) -> tuple[dict[str, object], int]:
     return dispatch_module(query_args)
 
 
-## @brief Выполнить file-команду (show).
-#
-#  Маршрутизирует на module_core_runtime.query_cli.dispatch_file.
-#  @param args Разобранные аргументы argparse.
-#  @return     Кортеж (payload, exit_code).
 def _file(args: argparse.Namespace) -> tuple[dict[str, object], int]:
+    """Выполнить file-команду (show).
+
+    Маршрутизирует на module_core_runtime.query_cli.dispatch_file.
+
+    Args:
+        args: Разобранные аргументы argparse.
+
+    Returns:
+        Кортеж (payload, exit_code).
+    """
     query_args = argparse.Namespace(
         project_root=Path(args.project_root),
         file_command=args.file_command,
@@ -610,13 +656,20 @@ def _file(args: argparse.Namespace) -> tuple[dict[str, object], int]:
     return dispatch_file(query_args)
 
 
-## @brief Выполнить workflow-команду (sync, backfill, finalize, publish).
-#
-#  Оборачивает workflow runtime в统一ный обработчик исключений.
-#  @param args Разобранные аргументы argparse.
-#  @return     Кортеж (payload, exit_code).
-#  @note       Все исключения перехватываются и формируются в стандартный error payload.
 def _workflow(args: argparse.Namespace) -> tuple[dict[str, object], int]:
+    """Выполнить workflow-команду (sync, backfill, finalize, publish).
+
+    Оборачивает workflow runtime в统一ный обработчик исключений.
+
+    Args:
+        args: Разобранные аргументы argparse.
+
+    Returns:
+        Кортеж (payload, exit_code).
+
+    Note:
+        Все исключения перехватываются и формируются в стандартный error payload.
+    """
     project_root = Path(args.project_root).resolve()
     task_dir = Path(args.task_dir)
     try:
@@ -691,12 +744,18 @@ def _workflow(args: argparse.Namespace) -> tuple[dict[str, object], int]:
     return payload, 0 if payload["ok"] else 2
 
 
-## @brief Выполнить borrowings-команду (status, refresh-plan, refresh-apply).
-#
-#  @param args Разобранные аргументы argparse.
-#  @return     Кортеж (payload, exit_code).
-#  @note       Все исключения перехватываются и формируются в стандартный error payload.
 def _borrowings(args: argparse.Namespace) -> tuple[dict[str, object], int]:
+    """Выполнить borrowings-команду (status, refresh-plan, refresh-apply).
+
+    Args:
+        args: Разобранные аргументы argparse.
+
+    Returns:
+        Кортеж (payload, exit_code).
+
+    Note:
+        Все исключения перехватываются и формируются в стандартный error payload.
+    """
     project_root = Path(args.project_root).resolve()
     skill_root = SCRIPT_DIR.parent.resolve()
     try:
@@ -724,13 +783,20 @@ def _borrowings(args: argparse.Namespace) -> tuple[dict[str, object], int]:
     return payload, 0 if payload["ok"] else 2
 
 
-## @brief Точка входа unified CLI task-knowledge.
-#
-#  Парсит аргументы, маршрутизирует на соответствующую команду и рендерит вывод.
-#  @param argv Список аргументов командной строки (по умолчанию sys.argv[1:]).
-#  @return     Код возврата: 0 при успехе, 2 при ошибке.
-#  @note       Поддерживает текстовый и JSON-режимы вывода.
 def main(argv: list[str] | None = None) -> int:
+    """Точка входа unified CLI task-knowledge.
+
+    Парсит аргументы, маршрутизирует на соответствующую команду и рендерит вывод.
+
+    Args:
+        argv: Список аргументов командной строки (по умолчанию sys.argv[1:]).
+
+    Returns:
+        Код возврата: 0 при успехе, 2 при ошибке.
+
+    Note:
+        Поддерживает текстовый и JSON-режимы вывода.
+    """
     argv = list(sys.argv[1:] if argv is None else argv)
     parser = build_parser()
     args = parser.parse_args(argv)

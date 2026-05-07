@@ -27,14 +27,35 @@ from .models import (
 
 
 def skill_root() -> Path:
+    """Skill root.
+
+    Returns:
+        Result.
+    """
     return Path(__file__).resolve().parents[2]
 
 
 def resolve_source(source_root: str | None) -> Path:
+    """Resolve source.
+
+    Args:
+    source_root: Description.
+
+    Returns:
+        Result.
+    """
     return Path(source_root).resolve() if source_root else skill_root()
 
 
 def source_root_ready(source_root: Path) -> bool:
+    """Get or check source root ready.
+
+    Args:
+    source_root: Description.
+
+    Returns:
+        Result.
+    """
     return all((source_root / relative).exists() for relative in REQUIRED_RELATIVE_PATHS)
 
 
@@ -49,6 +70,14 @@ def _has_standalone_source_identity(source_root: Path) -> bool:
 
 
 def embedded_runtime_ready(source_root: Path) -> bool:
+    """Check embedded runtime ready.
+
+    Args:
+    source_root: Description.
+
+    Returns:
+        Result.
+    """
     scripts_root = source_root / "scripts"
     return (
         not _has_standalone_source_identity(source_root)
@@ -66,6 +95,15 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
 
 
 def source_root_mode(source_root: Path, runtime_root: Path) -> str:
+    """Get or check source root mode.
+
+    Args:
+    source_root: Description.
+    runtime_root: Description.
+
+    Returns:
+        Result.
+    """
     if source_root_ready(source_root):
         return "standalone" if _is_relative_to(runtime_root, source_root) else "external"
     if embedded_runtime_ready(source_root):
@@ -86,10 +124,27 @@ def _embedded_source_root_unavailable_result(source_root: Path) -> StepResult:
 
 
 def asset_to_target_relative(asset_relative: str) -> str:
+    """Convert asset to target relative.
+
+    Args:
+    asset_relative: Description.
+
+    Returns:
+        Result.
+    """
     return str(Path(asset_relative).relative_to("assets"))
 
 
 def asset_to_target_path(project_root: Path, asset_relative: str) -> Path:
+    """Convert asset to target path.
+
+    Args:
+    project_root: Description.
+    asset_relative: Description.
+
+    Returns:
+        Result.
+    """
     return project_root / asset_to_target_relative(asset_relative)
 
 
@@ -171,6 +226,17 @@ def preflight_managed_write_targets(
     include_migration_note: bool,
     include_upgrade_state: bool,
 ) -> list[StepResult]:
+    """Run preflight checks for managed write targets.
+
+    Args:
+    project_root: Description.
+    profile: Description.
+    include_migration_note: Description.
+    include_upgrade_state: Description.
+
+    Returns:
+        Result.
+    """
     results: list[StepResult] = []
     seen: set[Path] = set()
     for target_path in _install_preflight_targets(
@@ -197,6 +263,14 @@ def preflight_managed_write_targets(
 
 
 def validate_source(source_root: Path) -> list[StepResult]:
+    """Validate source.
+
+    Args:
+    source_root: Description.
+
+    Returns:
+        Result.
+    """
     if not source_root_ready(source_root) and embedded_runtime_ready(source_root):
         return [_embedded_source_root_unavailable_result(source_root)]
 
@@ -211,6 +285,14 @@ def validate_source(source_root: Path) -> list[StepResult]:
 
 
 def validate_target(project_root: Path) -> list[StepResult]:
+    """Validate target.
+
+    Args:
+    project_root: Description.
+
+    Returns:
+        Result.
+    """
     results: list[StepResult] = []
     if project_root.is_dir():
         results.append(StepResult("project_root", "ok", "Каталог проекта найден", str(project_root)))
@@ -267,6 +349,14 @@ def validate_target(project_root: Path) -> list[StepResult]:
 
 
 def detect_managed_block_state(existing: str) -> str:
+    """Detect managed block state.
+
+    Args:
+    existing: Description.
+
+    Returns:
+        Result.
+    """
     begin_count = existing.count(BEGIN_MARKER)
     end_count = existing.count(END_MARKER)
     if begin_count == 0 and end_count == 0:
@@ -277,6 +367,14 @@ def detect_managed_block_state(existing: str) -> str:
 
 
 def detect_existing_system(project_root: Path) -> ExistingSystemReport:
+    """Detect existing system.
+
+    Args:
+    project_root: Description.
+
+    Returns:
+        Result.
+    """
     managed_present = [relative for relative in MANAGED_TARGET_FILES if (project_root / relative).exists()]
     foreign_present = [relative for relative in FOREIGN_SYSTEM_INDICATORS if (project_root / relative).exists()]
     missing_managed = [relative for relative in MANAGED_TARGET_FILES if relative not in managed_present]
@@ -354,6 +452,14 @@ def detect_existing_system(project_root: Path) -> ExistingSystemReport:
 
 
 def summarize_existing_system(report: ExistingSystemReport) -> list[StepResult]:
+    """Summarize existing system.
+
+    Args:
+    report: Description.
+
+    Returns:
+        Result.
+    """
     results: list[StepResult] = []
     results.append(
         StepResult(
@@ -381,6 +487,16 @@ def summarize_existing_system(report: ExistingSystemReport) -> list[StepResult]:
 
 
 def copy_knowledge_files(project_root: Path, source_root: Path, *, force: bool) -> list[StepResult]:
+    """Copy knowledge files.
+
+    Args:
+    project_root: Description.
+    source_root: Description.
+    force: Description.
+
+    Returns:
+        Result.
+    """
     results: list[StepResult] = []
     safety_results = [
         result
@@ -426,6 +542,17 @@ def _extract_managed_block(existing: str) -> str | None:
 
 
 def verify_project_install(project_root: Path, source_root: Path, profile: str, *, force: bool) -> list[StepResult]:
+    """Verify project install.
+
+    Args:
+    project_root: Description.
+    source_root: Description.
+    profile: Description.
+    force: Description.
+
+    Returns:
+        Result.
+    """
     results: list[StepResult] = []
     for relative in KNOWLEDGE_ASSET_FILES:
         source_path = source_root / relative
@@ -497,11 +624,29 @@ def verify_project_install(project_root: Path, source_root: Path, profile: str, 
 
 
 def render_agents_block(source_root: Path, profile: str) -> str:
+    """Render agents block.
+
+    Args:
+    source_root: Description.
+    profile: Description.
+
+    Returns:
+        Result.
+    """
     block_path = source_root / PROFILE_TO_BLOCK[profile]
     return block_path.read_text(encoding="utf-8").strip() + "\n"
 
 
 def upsert_block(existing: str, block: str) -> tuple[str, str]:
+    """Upsert block.
+
+    Args:
+    existing: Description.
+    block: Description.
+
+    Returns:
+        Result.
+    """
     managed_block_state = detect_managed_block_state(existing)
     if managed_block_state == "managed":
         start = existing.index(BEGIN_MARKER)
@@ -522,6 +667,16 @@ def upsert_block(existing: str, block: str) -> tuple[str, str]:
 
 
 def install_agents_block(project_root: Path, source_root: Path, profile: str) -> list[StepResult]:
+    """Install agents block.
+
+    Args:
+    project_root: Description.
+    source_root: Description.
+    profile: Description.
+
+    Returns:
+        Result.
+    """
     results: list[StepResult] = []
     block = render_agents_block(source_root, profile)
     agents_path = project_root / "AGENTS.md"
@@ -559,6 +714,15 @@ def install_agents_block(project_root: Path, source_root: Path, profile: str) ->
 
 
 def validate_existing_system_policy(classification: str, mode: str) -> list[StepResult]:
+    """Validate existing system policy.
+
+    Args:
+    classification: Description.
+    mode: Description.
+
+    Returns:
+        Result.
+    """
     if classification in {"clean", "compatible"}:
         return []
     if classification == "partial_knowledge" and mode in {"adopt", "migrate"}:
@@ -587,6 +751,16 @@ def validate_existing_system_policy(classification: str, mode: str) -> list[Step
 
 
 def write_migration_suggestion(project_root: Path, report: ExistingSystemReport, profile: str) -> StepResult:
+    """Write migration suggestion.
+
+    Args:
+    project_root: Description.
+    report: Description.
+    profile: Description.
+
+    Returns:
+        Result.
+    """
     migration_path = project_root / "knowledge" / MIGRATION_NOTE_NAME
     safety_result = _managed_write_safety_result(project_root, migration_path, key="migration")
     if safety_result is not None:
@@ -690,6 +864,18 @@ def _base_payload(
 
 
 def install(project_root: Path, source_root: Path, profile: str, *, force: bool, existing_system_mode: str) -> dict[str, object]:
+    """Install.
+
+    Args:
+    project_root: Description.
+    source_root: Description.
+    profile: Description.
+    force: Description.
+    existing_system_mode: Description.
+
+    Returns:
+        Result.
+    """
     results: list[StepResult] = []
     runtime_root = skill_root() / "scripts"
     source_mode = source_root_mode(source_root, runtime_root)
@@ -758,6 +944,17 @@ def install(project_root: Path, source_root: Path, profile: str, *, force: bool,
 
 
 def verify_project(project_root: Path, source_root: Path, profile: str, *, force: bool) -> dict[str, object]:
+    """Verify project.
+
+    Args:
+    project_root: Description.
+    source_root: Description.
+    profile: Description.
+    force: Description.
+
+    Returns:
+        Result.
+    """
     results: list[StepResult] = []
     runtime_root = skill_root() / "scripts"
     source_mode = source_root_mode(source_root, runtime_root)
@@ -781,6 +978,16 @@ def verify_project(project_root: Path, source_root: Path, profile: str, *, force
 
 
 def check(project_root: Path, source_root: Path, profile: str) -> dict[str, object]:
+    """Check.
+
+    Args:
+    project_root: Description.
+    source_root: Description.
+    profile: Description.
+
+    Returns:
+        Result.
+    """
     results: list[StepResult] = []
     runtime_root = skill_root() / "scripts"
     source_mode = source_root_mode(source_root, runtime_root)

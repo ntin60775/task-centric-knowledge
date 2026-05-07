@@ -25,9 +25,9 @@ TOKEN_RE = re.compile(
 BLOCK_ID_RE = re.compile(r"BLOCK_[A-Z0-9_]+$")
 
 
-## @brief Политика hot-spot для конкретного файла внутри модуля.
 @dataclass(frozen=True)
 class FileHotSpotPolicy:
+    """Политика hot-spot для конкретного файла внутри модуля."""
     path_ref: str
     mode: str
     allowed_markers: tuple[str, ...]
@@ -35,27 +35,32 @@ class FileHotSpotPolicy:
     purpose: str
 
 
-## @brief Локальная политика файлов модуля (file-local policy).
 @dataclass(frozen=True)
 class FileLocalPolicy:
+    """Локальная политика файлов модуля (file-local policy)."""
     policy_ref: str
     hot_spots: tuple[FileHotSpotPolicy, ...]
 
     @property
     def hot_spots_by_path(self) -> dict[str, FileHotSpotPolicy]:
+        """Hot spots by path.
+
+    Returns:
+        Result.
+        """
         return {item.path_ref: item for item in self.hot_spots}
 
 
-## @brief Предупреждение при проверке file-local contracts.
 @dataclass(frozen=True)
 class FileLocalContractWarning:
+    """Предупреждение при проверке file-local contracts."""
     code: str
     detail: str
 
 
-## @brief Статус contract marker в файле.
 @dataclass(frozen=True)
 class ContractMarkerStatus:
+    """Статус contract marker в файле."""
     marker: str
     required: bool
     present: bool
@@ -63,9 +68,9 @@ class ContractMarkerStatus:
     end_line: int | None
 
 
-## @brief Статус contract block в файле.
 @dataclass(frozen=True)
 class ContractBlockStatus:
+    """Статус contract block в файле."""
     block_id: str
     required: bool
     present: bool
@@ -73,17 +78,16 @@ class ContractBlockStatus:
     end_line: int | None
 
 
-## @brief Результат парсинга file-local contracts для одного файла.
 @dataclass(frozen=True)
 class ParsedFileLocalContracts:
+    """Результат парсинга file-local contracts для одного файла."""
     contract_markers: tuple[ContractMarkerStatus, ...]
     blocks: tuple[ContractBlockStatus, ...]
     warnings: tuple[FileLocalContractWarning, ...]
 
 
-## @brief Исключение при невалидном file-local policy markdown.
 class FileLocalPolicyError(ValueError):
-    """Raised when file-local policy markdown is invalid."""
+    """Исключение при невалидном file-local policy markdown."""
 
 
 def _relative_path(project_root: Path, path: Path) -> str:
@@ -164,12 +168,19 @@ def _split_csv(value: str) -> tuple[str, ...]:
     return tuple(result)
 
 
-## @brief Загрузить file-local policy из Markdown-файла.
-#  @param project_root  Корень проекта.
-#  @param policy_path   Путь к файлу policy.
-#  @return              Разобранный объект FileLocalPolicy.
-#  @exception FileLocalPolicyError При невалидной структуре policy.
 def load_file_local_policy(project_root: Path, policy_path: Path) -> FileLocalPolicy:
+    """Загрузить file-local policy из Markdown-файла.
+
+    Args:
+        project_root: Корень проекта.
+        policy_path: Путь к файлу policy.
+
+    Returns:
+        Разобранный объект FileLocalPolicy.
+
+    Raises:
+        FileLocalPolicyError: При невалидной структуре policy.
+    """
     lines = _read_lines(policy_path)
     rows = _parse_table_rows(lines, HOT_SPOTS_SECTION, HOT_SPOTS_HEADERS)
     if not rows:
@@ -302,11 +313,16 @@ def _serialize_contract_block(item: ContractBlockStatus) -> dict[str, object]:
     return asdict(item)
 
 
-## @brief Разобрать file-local contracts для конкретного файла.
-#  @param file_path  Путь к целевому файлу.
-#  @param hot_spot   Политика hot-spot для этого файла.
-#  @return           Результат парсинга: markers, blocks и warnings.
 def parse_file_local_contracts(file_path: Path, hot_spot: FileHotSpotPolicy) -> ParsedFileLocalContracts:
+    """Разобрать file-local contracts для конкретного файла.
+
+    Args:
+        file_path: Путь к целевому файлу.
+        hot_spot: Политика hot-spot для этого файла.
+
+    Returns:
+        Результат парсинга: markers, blocks и warnings.
+    """
     lines = _read_lines(file_path)
     captures, warnings = _scan_comment_tokens(lines)
 

@@ -28,23 +28,24 @@ FINAL_STAGE_TEXT = (
 )
 
 
-## @brief Контекст local finalize задачи.
-#
-#  @param project_root         Абсолютный путь к корню проекта.
-#  @param task_dir             Путь к каталогу задачи.
-#  @param task_file            Путь к task.md.
-#  @param registry_path        Путь к registry.md.
-#  @param lines                Строки task.md.
-#  @param fields               Поля task.md.
-#  @param task_id              Идентификатор задачи.
-#  @param short_name           Краткое имя задачи.
-#  @param active_branch        Текущая git-ветка.
-#  @param selected_base_branch Целевая base-ветка.
-#  @param task_branch          Ветка задачи из task.md.
-#  @param summary              Сводка задачи.
 @dataclass(frozen=True)
 class FinalizeContext:
-    """Контекст local finalize задачи."""
+    """Контекст local finalize задачи.
+
+    Args:
+        project_root: Абсолютный путь к корню проекта.
+        task_dir: Путь к каталогу задачи.
+        task_file: Путь к task.md.
+        registry_path: Путь к registry.md.
+        lines: Строки task.md.
+        fields: Поля task.md.
+        task_id: Идентификатор задачи.
+        short_name: Краткое имя задачи.
+        active_branch: Текущая git-ветка.
+        selected_base_branch: Целевая base-ветка.
+        task_branch: Ветка задачи из task.md.
+        summary: Сводка задачи.
+    """
     project_root: Path
     task_dir: Path
     task_file: Path
@@ -59,15 +60,16 @@ class FinalizeContext:
     summary: str
 
 
-## @brief Прогресс выполнения finalize.
-#
-#  @param results       Список результатов шагов.
-#  @param commit_created Флаг создания commit.
-#  @param commit_id      SHA созданного commit.
-#  @param merge_commit   SHA merge commit.
 @dataclass
 class FinalizeProgress:
-    """Прогресс выполнения finalize."""
+    """Прогресс выполнения finalize.
+
+    Args:
+        results: Список результатов шагов.
+        commit_created: Флаг создания commit.
+        commit_id: SHA созданного commit.
+        merge_commit: SHA merge commit.
+    """
     results: list[StepResult]
     commit_created: bool = False
     commit_id: str | None = None
@@ -506,16 +508,6 @@ def _finalize_success_payload(
     }
 
 
-## @brief Выполнить local-only finalize задачи.
-#
-#  Создаёт commit, выполняет fast-forward merge в base-ветку и переключает рабочий контекст.
-#  @param project_root    Абсолютный путь к корню проекта.
-#  @param task_dir        Путь к каталогу задачи.
-#  @param base_branch     Целевая base-ветка (по умолчанию auto-detect).
-#  @param commit_message  Явное сообщение commit.
-#  @param today           Дата в формате ISO (по умолчанию сегодня).
-#  @return                Payload с результатами finalize или blockers.
-#  @note                  При ошибке до создания commit выполняется rollback task truth.
 def finalize_task(
     project_root: Path,
     task_dir: Path,
@@ -524,6 +516,16 @@ def finalize_task(
     commit_message: str | None,
     today: str | None = None,
 ) -> dict[str, object]:
+    """Выполнить local-only finalize задачи. Создаёт commit, выполняет
+    fast-forward merge и переключает контекст. При ошибке — rollback.
+    Args:
+        project_root: Корень проекта.
+        task_dir: Каталог задачи.
+        base_branch: Целевая base-ветка.
+        commit_message: Сообщение commit.
+    Returns:
+        Payload с результатами finalize или blockers.
+    """
     project_root = project_root.resolve()
     resolved_task_dir = _resolve_task_dir(project_root, task_dir)
 

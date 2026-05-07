@@ -14,11 +14,11 @@ ALLOWED_ACTIONS = {"create", "update", "noop"}
 GIT_TIMEOUT_SECONDS = 120
 
 
-## @brief Исключение borrowed-layer runtime.
-#
-#  Возникает при некорректном входе или нарушении инвариантов borrowed-layer.
 class BorrowingsError(ValueError):
-    """Raised when borrowed-layer input cannot be interpreted safely."""
+    """Исключение borrowed-layer runtime.
+
+    Возникает при некорректном входе или нарушении инвариантов borrowed-layer.
+    """
 
 
 def _sha256_bytes(content: bytes) -> str:
@@ -249,16 +249,23 @@ def _dirty_mapped_paths(checkout: Path, manifest: dict[str, Any]) -> list[str] |
     return [line for line in status.splitlines() if line.strip()]
 
 
-## @brief Прочитать статус borrowed-layer.
-#
-#  Проверяет manifest, checkout и состояние mapped paths.
-#  @param skill_root   Абсолютный путь к корню skill.
-#  @param project_root Абсолютный путь к корню проекта.
-#  @param source       Borrowed source (допустим: `grace`).
-#  @param checkout     Путь к локальному upstream checkout или `None`.
-#  @return             Payload с состоянием manifest, checkout и warnings.
-#  @exception BorrowingsError Если source не поддерживается.
 def read_status(skill_root: Path, project_root: Path, *, source: str, checkout: str | None) -> dict[str, Any]:
+    """Прочитать статус borrowed-layer.
+
+    Проверяет manifest, checkout и состояние mapped paths.
+
+    Args:
+        skill_root: Абсолютный путь к корню skill.
+        project_root: Абсолютный путь к корню проекта.
+        source: Borrowed source (допустим: `grace`).
+        checkout: Путь к локальному upstream checkout или `None`.
+
+    Returns:
+        Payload с состоянием manifest, checkout и warnings.
+
+    Raises:
+        BorrowingsError: Если source не поддерживается.
+    """
     manifest_path, manifest = _load_manifest(skill_root, source)
     resolved_checkout, checkout_source, warnings = _resolve_checkout(checkout)
     checkout_payload = _checkout_state(resolved_checkout, manifest["pinned_revision"])
@@ -350,16 +357,23 @@ def _plan_actions(skill_root: Path, checkout: Path, manifest: dict[str, Any]) ->
     return actions
 
 
-## @brief Построить план refresh borrowed-layer.
-#
-#  Вычисляет diff между upstream source и локальными target-файлами.
-#  @param skill_root   Абсолютный путь к корню skill.
-#  @param project_root Абсолютный путь к корню проекта.
-#  @param source       Borrowed source.
-#  @param checkout     Путь к локальному upstream checkout или `None`.
-#  @return             Payload с планом действий и fingerprint.
-#  @note               Требует clean checkout на pinned revision.
 def build_refresh_plan(skill_root: Path, project_root: Path, *, source: str, checkout: str | None) -> dict[str, Any]:
+    """Построить план refresh borrowed-layer.
+
+    Вычисляет diff между upstream source и локальными target-файлами.
+
+    Args:
+        skill_root: Абсолютный путь к корню skill.
+        project_root: Абсолютный путь к корню проекта.
+        source: Borrowed source.
+        checkout: Путь к локальному upstream checkout или `None`.
+
+    Returns:
+        Payload с планом действий и fingerprint.
+
+    Note:
+        Требует clean checkout на pinned revision.
+    """
     manifest_path, manifest = _load_manifest(skill_root, source)
     resolved_checkout, checkout_source, warnings = _resolve_checkout(checkout)
     checkout_payload = _checkout_state(resolved_checkout, manifest["pinned_revision"])
@@ -503,17 +517,6 @@ def build_refresh_plan(skill_root: Path, project_root: Path, *, source: str, che
     }
 
 
-## @brief Применить ранее построенный refresh-plan.
-#
-#  Копирует файлы из upstream checkout в локальные target-пути согласно плану.
-#  @param skill_root       Абсолютный путь к корню skill.
-#  @param project_root     Абсолютный путь к корню проекта.
-#  @param source           Borrowed source.
-#  @param checkout         Путь к локальному upstream checkout или `None`.
-#  @param plan_fingerprint Ожидаемый fingerprint плана (защита от scope drift).
-#  @param assume_yes       Флаг явного подтверждения (`--yes`).
-#  @return                 Payload с результатами применения.
-#  @exception BorrowingsError Если fingerprint не совпадает или план недоступен.
 def apply_refresh(
     skill_root: Path,
     project_root: Path,
@@ -523,6 +526,24 @@ def apply_refresh(
     plan_fingerprint: str,
     assume_yes: bool,
 ) -> dict[str, Any]:
+    """Применить ранее построенный refresh-plan.
+
+    Копирует файлы из upstream checkout в локальные target-пути согласно плану.
+
+    Args:
+        skill_root: Абсолютный путь к корню skill.
+        project_root: Абсолютный путь к корню проекта.
+        source: Borrowed source.
+        checkout: Путь к локальному upstream checkout или `None`.
+        plan_fingerprint: Ожидаемый fingerprint плана (защита от scope drift).
+        assume_yes: Флаг явного подтверждения (`--yes`).
+
+    Returns:
+        Payload с результатами применения.
+
+    Raises:
+        BorrowingsError: Если fingerprint не совпадает или план недоступен.
+    """
     if not assume_yes:
         return {
             "ok": False,

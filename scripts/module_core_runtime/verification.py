@@ -54,14 +54,13 @@ SCENARIO_REF_RE = re.compile(r"SCN-[A-Z0-9][A-Z0-9-]*$")
 RISK_REF_RE = re.compile(r"RISK-[A-Z0-9][A-Z0-9-]*$")
 
 
-## @brief Исключение при невалидном артефакте модульной верификации.
 class ModuleVerificationError(ValueError):
-    """Raised when a module verification artifact is invalid."""
+    """Исключение при невалидном артефакте модульной верификации."""
 
 
-## @brief Каноническая проверка внутри verification.md.
 @dataclass(frozen=True)
 class VerificationCheck:
+    """Каноническая проверка внутри verification.md."""
     ref: str
     gate: str
     kind: str
@@ -70,9 +69,9 @@ class VerificationCheck:
     purpose: str
 
 
-## @brief Доказательство (evidence) для verification scenario.
 @dataclass(frozen=True)
 class VerificationEvidence:
+    """Доказательство (evidence) для verification scenario."""
     ref: str
     kind: str
     value: str
@@ -80,9 +79,9 @@ class VerificationEvidence:
     notes: str
 
 
-## @brief Сценарий верификации (success, failure, regression, observability).
 @dataclass(frozen=True)
 class VerificationScenario:
+    """Сценарий верификации (success, failure, regression, observability)."""
     ref: str
     kind: str
     description: str
@@ -91,18 +90,18 @@ class VerificationScenario:
     blocking: bool
 
 
-## @brief Ручной остаточный риск, требующий действия контроллера.
 @dataclass(frozen=True)
 class ManualResidualRisk:
+    """Ручной остаточный риск, требующий действия контроллера."""
     ref: str
     applies_to: str
     reason: str
     controller_action: str
 
 
-## @brief Полная запись модульной верификации, загруженная из Markdown.
 @dataclass(frozen=True)
 class ModuleVerificationRecord:
+    """Полная запись модульной верификации, загруженная из Markdown."""
     path: Path
     module_id: str
     verification_ref: str
@@ -115,9 +114,9 @@ class ModuleVerificationRecord:
     manual_residual: dict[str, ManualResidualRisk]
 
 
-## @brief Вычисленная готовность модуля к исполнению.
 @dataclass(frozen=True)
 class ExecutionReadiness:
+    """Вычисленная готовность модуля к исполнению."""
     status: str
     blocking_reasons: tuple[str, ...]
     required_verification_refs: tuple[str, ...]
@@ -125,9 +124,9 @@ class ExecutionReadiness:
     residual_manual_risk: tuple[str, ...]
 
 
-## @brief Краткая выборка данных верификации для отображения.
 @dataclass(frozen=True)
 class VerificationExcerpt:
+    """Краткая выборка данных верификации для отображения."""
     verification_ref: str
     readiness_status: str
     blocking_reasons: tuple[str, ...]
@@ -138,9 +137,9 @@ class VerificationExcerpt:
     manual_residual: tuple[ManualResidualRisk, ...]
 
 
-## @brief Артефакт передачи управления при failure scenario.
 @dataclass(frozen=True)
 class FailureHandoff:
+    """Артефакт передачи управления при failure scenario."""
     contract_ref: str
     scenario: str
     expected_evidence: tuple[str, ...]
@@ -358,18 +357,25 @@ def _collect_evidence_file_paths(
     )
 
 
-## @brief Загрузить и провалидировать module verification из Markdown-файла.
-#  @param path                      Путь к verification.md.
-#  @param expected_verification_ref Ожидаемая каноническая ссылка (опционально).
-#  @param governed_files            Кортеж управляемых файлов модуля.
-#  @return                          Разобранная запись ModuleVerificationRecord.
-#  @exception ModuleVerificationError При ошибках валидации структуры или cross-refs.
 def load_module_verification(
     path: Path,
     *,
     expected_verification_ref: str | None = None,
     governed_files: tuple[str, ...] = (),
 ) -> ModuleVerificationRecord:
+    """Загрузить и провалидировать module verification из Markdown-файла.
+
+    Args:
+        path: Путь к verification.md.
+        expected_verification_ref: Ожидаемая каноническая ссылка (опционально).
+        governed_files: Кортеж управляемых файлов модуля.
+
+    Returns:
+        Разобранная запись ModuleVerificationRecord.
+
+    Raises:
+        ModuleVerificationError: При ошибках валидации структуры или cross-refs.
+    """
     verification_path = path.resolve()
     if not verification_path.exists():
         raise ModuleVerificationError(f"Файл модульной верификации не найден: {verification_path}")
@@ -441,17 +447,22 @@ def _ready_state(record: ModuleVerificationRecord) -> ExecutionReadiness:
     )
 
 
-## @brief Определить execution readiness для модуля по его verification.md.
-#  @param path                      Путь к verification.md.
-#  @param expected_verification_ref Ожидаемая каноническая ссылка (опционально).
-#  @param governed_files            Кортеж управляемых файлов модуля.
-#  @return                          Объект ExecutionReadiness с вычисленным статусом.
 def resolve_execution_readiness(
     path: Path,
     *,
     expected_verification_ref: str | None = None,
     governed_files: tuple[str, ...] = (),
 ) -> ExecutionReadiness:
+    """Определить execution readiness для модуля по его verification.md.
+
+    Args:
+        path: Путь к verification.md.
+        expected_verification_ref: Ожидаемая каноническая ссылка (опционально).
+        governed_files: Кортеж управляемых файлов модуля.
+
+    Returns:
+        Объект ExecutionReadiness с вычисленным статусом.
+    """
     inferred_verification_ref = expected_verification_ref or _infer_verification_ref_from_path(path)
     normalized_governed_files = tuple(dict.fromkeys(item for item in governed_files if item))
     try:
@@ -472,10 +483,15 @@ def resolve_execution_readiness(
     return _ready_state(record)
 
 
-## @brief Построить краткую выборку verification для CLI-отображения.
-#  @param record Загруженная запись верификации.
-#  @return       VerificationExcerpt с ключевыми проверками и сценариями.
 def build_verification_excerpt(record: ModuleVerificationRecord) -> VerificationExcerpt:
+    """Построить краткую выборку verification для CLI-отображения.
+
+    Args:
+        record: Загруженная запись верификации.
+
+    Returns:
+        VerificationExcerpt с ключевыми проверками и сценариями.
+    """
     readiness = _ready_state(record)
     blocking_scenarios = tuple(item for item in record.scenarios.values() if item.blocking)
     required_evidence_refs: list[str] = []
@@ -499,14 +515,6 @@ def build_verification_excerpt(record: ModuleVerificationRecord) -> Verification
     )
 
 
-## @brief Построить артефакт failure handoff для конкретной проверки или сценария.
-#  @param record                Загруженная запись верификации.
-#  @param reference             Ссылка на scenario или check (ref).
-#  @param observed_evidence     Наблюдаемые доказательства (строка или кортеж).
-#  @param anchor_override       Принудительный якорь вместо вычисленного.
-#  @param suggested_next_action Предлагаемое следующее действие (опционально).
-#  @return                      Объект FailureHandoff с контрактом и рекомендацией.
-#  @exception ModuleVerificationError При неизвестной ссылке или недопустимом действии.
 def build_failure_handoff(
     record: ModuleVerificationRecord,
     *,
@@ -515,6 +523,21 @@ def build_failure_handoff(
     anchor_override: str | None = None,
     suggested_next_action: str | None = None,
 ) -> FailureHandoff:
+    """Построить артефакт failure handoff для конкретной проверки или сценария.
+
+    Args:
+        record: Загруженная запись верификации.
+        reference: Ссылка на scenario или check (ref).
+        observed_evidence: Наблюдаемые доказательства (строка или кортеж).
+        anchor_override: Принудительный якорь вместо вычисленного.
+        suggested_next_action: Предлагаемое следующее действие (опционально).
+
+    Returns:
+        Объект FailureHandoff с контрактом и рекомендацией.
+
+    Raises:
+        ModuleVerificationError: При неизвестной ссылке или недопустимом действии.
+    """
     observed = (observed_evidence,) if isinstance(observed_evidence, str) else tuple(observed_evidence)
     scenario_text = ""
     evidence_refs: tuple[str, ...] = ()

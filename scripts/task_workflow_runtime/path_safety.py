@@ -5,13 +5,20 @@ from __future__ import annotations
 from pathlib import Path
 
 
-## @brief Resolve a path and ensure it lies inside the project root.
-#  @param project_root Path to the project root.
-#  @param path Path to resolve, either absolute or relative to project_root.
-#  @param field_name Name of the field being validated (used in error messages).
-#  @return Fully resolved path inside the project root.
-#  @exception ValueError If the resolved path escapes project_root.
 def resolve_inside_project_root(project_root: Path, path: Path, *, field_name: str) -> Path:
+    """Resolve a path and ensure it lies inside the project root.
+
+    Args:
+        project_root: Path to the project root.
+        path: Path to resolve, either absolute or relative to project_root.
+        field_name: Name of the field being validated (used in error messages).
+
+    Returns:
+        Fully resolved path inside the project root.
+
+    Raises:
+        ValueError: If the resolved path escapes project_root.
+    """
     resolved_project_root = project_root.resolve()
     candidate = path if path.is_absolute() else resolved_project_root / path
     resolved_candidate = candidate.resolve()
@@ -25,10 +32,17 @@ def resolve_inside_project_root(project_root: Path, path: Path, *, field_name: s
     return resolved_candidate
 
 
-## @brief Resolve a task directory path and ensure it lies inside the project root.
-#  @param project_root Path to the project root.
-#  @param task_dir Path to the task directory.
-#  @return Fully resolved task directory path inside the project root.
-#  @exception ValueError If the resolved path escapes project_root.
 def resolve_task_dir_inside_project(project_root: Path, task_dir: Path) -> Path:
+    """Resolve a task directory path and ensure it lies inside the project root.
+
+    Args:
+        project_root: Path to the project root.
+        task_dir: Path to the task directory.
+
+    Returns:
+        Fully resolved task directory path inside the project root.
+
+    Raises:
+        ValueError: If the resolved path escapes project_root.
+    """
     return resolve_inside_project_root(project_root, task_dir, field_name="task_dir")

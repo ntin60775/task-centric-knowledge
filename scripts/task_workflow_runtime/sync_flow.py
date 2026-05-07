@@ -30,22 +30,23 @@ from .task_markdown import read_task_fields, task_summary_from_fields, update_ta
 
 
 
-## @brief Контекст controlled compatibility-backfill.
-#
-#  @param project_root      Абсолютный путь к корню проекта.
-#  @param task_dir          Путь к каталогу задачи.
-#  @param task_file         Путь к task.md.
-#  @param scope             Scope backfill (например, `compatibility`).
-#  @param summary           Явная summary для legacy-задачи.
-#  @param today             Дата в формате ISO.
-#  @param task_id           Идентификатор задачи.
-#  @param task_class        Класс задачи (`reference`, `closed historical`, `active`).
-#  @param fields            Поля task.md.
-#  @param canonical_summary Каноническая summary из полей.
-#  @param recorded_branch   Зафиксированная ветка из task.md.
 @dataclass(frozen=True)
 class BackfillContext:
-    """Контекст controlled compatibility-backfill."""
+    """Контекст controlled compatibility-backfill.
+
+    Args:
+        project_root: Абсолютный путь к корню проекта.
+        task_dir: Путь к каталогу задачи.
+        task_file: Путь к task.md.
+        scope: Scope backfill (например, `compatibility`).
+        summary: Явная summary для legacy-задачи.
+        today: Дата в формате ISO.
+        task_id: Идентификатор задачи.
+        task_class: Класс задачи (`reference`, `closed historical`, `active`).
+        fields: Поля task.md.
+        canonical_summary: Каноническая summary из полей.
+        recorded_branch: Зафиксированная ветка из task.md.
+    """
     project_root: Path
     task_dir: Path
     task_file: Path
@@ -63,6 +64,14 @@ VALID_BACKFILL_SCOPES = {"compatibility"}
 
 
 def historical_branch_from_fields(fields: dict[str, str]) -> str:
+    """Extract historical branch from fields.
+
+    Args:
+    fields: Description.
+
+    Returns:
+        Result.
+    """
     branch = fields.get("Ветка", "").strip()
     if branch in PLACEHOLDER_BRANCH_VALUES:
         raise ValueError(
@@ -73,6 +82,15 @@ def historical_branch_from_fields(fields: dict[str, str]) -> str:
 
 
 def should_use_historical_safe_sync(fields: dict[str, str], *, branch_name: str | None) -> bool:
+    """Determine whether to use historical safe sync.
+
+    Args:
+    fields: Description.
+    branch_name: Description.
+
+    Returns:
+        Result.
+    """
     if fields.get("Статус", "").strip() not in FINAL_TASK_STATUSES:
         return False
     historical_branch = historical_branch_from_fields(fields)
@@ -84,16 +102,6 @@ def should_use_historical_safe_sync(fields: dict[str, str], *, branch_name: str 
     return True
 
 
-## @brief Определить целевую ветку для sync.
-#
-#  Учитывает явное имя, наследование от родителя, записанное в task.md или дефолтное.
-#  @param project_root             Абсолютный путь к корню проекта.
-#  @param task_dir                 Путь к каталогу задачи.
-#  @param fields                   Поля task.md.
-#  @param branch_name              Явно заданное имя ветки.
-#  @param inherit_branch_from_parent Наследовать ветку от родительской задачи.
-#  @return                         Имя целевой ветки.
-#  @exception ValueError Если не удалось определить ветку (нет ID или краткого имени).
 def resolve_target_branch(
     project_root: Path,
     task_dir: Path,
@@ -102,6 +110,23 @@ def resolve_target_branch(
     branch_name: str | None,
     inherit_branch_from_parent: bool,
 ) -> str:
+    """Определить целевую ветку для sync.
+
+    Учитывает явное имя, наследование от родителя, записанное в task.md или дефолтное.
+
+    Args:
+        project_root: Абсолютный путь к корню проекта.
+        task_dir: Путь к каталогу задачи.
+        fields: Поля task.md.
+        branch_name: Явно заданное имя ветки.
+        inherit_branch_from_parent: Наследовать ветку от родительской задачи.
+
+    Returns:
+        Имя целевой ветки.
+
+    Raises:
+        ValueError: Если не удалось определить ветку (нет ID или краткого имени).
+    """
     if branch_name:
         return branch_name
     if inherit_branch_from_parent:
@@ -369,15 +394,6 @@ def _backfill_active_task(ctx: BackfillContext) -> dict[str, object]:
     )
 
 
-## @brief Выполнить controlled compatibility-backfill для legacy-задачи.
-#
-#  @param project_root Абсолютный путь к корню проекта.
-#  @param task_dir     Путь к каталогу задачи.
-#  @param scope        Scope backfill (допустим: `compatibility`).
-#  @param summary      Явная summary для активной задачи.
-#  @param today        Дата в формате ISO (по умолчанию сегодня).
-#  @return             Payload с результатами backfill.
-#  @exception ValueError  Если scope некорректен или task.md не найден.
 def backfill_task(
     project_root: Path,
     task_dir: Path,
@@ -386,6 +402,21 @@ def backfill_task(
     summary: str | None,
     today: str | None = None,
 ) -> dict[str, object]:
+    """Выполнить controlled compatibility-backfill для legacy-задачи.
+
+    Args:
+        project_root: Абсолютный путь к корню проекта.
+        task_dir: Путь к каталогу задачи.
+        scope: Scope backfill (допустим: `compatibility`).
+        summary: Явная summary для активной задачи.
+        today: Дата в формате ISO (по умолчанию сегодня).
+
+    Returns:
+        Payload с результатами backfill.
+
+    Raises:
+        ValueError: Если scope некорректен или task.md не найден.
+    """
     ctx = _load_backfill_context(project_root, task_dir, scope=scope, summary=summary, today=today)
     if ctx.task_class == "reference":
         return _backfill_reference_task(ctx)
@@ -393,19 +424,6 @@ def backfill_task(
         return _backfill_historical_task(ctx)
     return _backfill_active_task(ctx)
 
-## @brief Синхронизировать git-контекст и metadata задачи.
-#
-#  Обновляет task.md, registry.md и при необходимости создаёт/переключает ветку.
-#  @param project_root             Абсолютный путь к корню проекта.
-#  @param task_dir                 Путь к каталогу задачи.
-#  @param create_branch            Создать или переключить task-ветку.
-#  @param register_if_missing      Создать строку в registry.md при отсутствии.
-#  @param summary                  Legacy-fallback summary.
-#  @param branch_name              Явно задать имя ветки.
-#  @param inherit_branch_from_parent Наследовать ветку от родителя (для подзадач).
-#  @param today                    Дата в формате ISO (по умолчанию сегодня).
-#  @return                         Payload с результатами sync.
-#  @exception ValueError Если рабочее дерево грязное и переключение небезопасно.
 def sync_task(
     project_root: Path,
     task_dir: Path,
@@ -417,6 +435,26 @@ def sync_task(
     inherit_branch_from_parent: bool,
     today: str | None = None,
 ) -> dict[str, object]:
+    """Синхронизировать git-контекст и metadata задачи.
+
+    Обновляет task.md, registry.md и при необходимости создаёт/переключает ветку.
+
+    Args:
+        project_root: Абсолютный путь к корню проекта.
+        task_dir: Путь к каталогу задачи.
+        create_branch: Создать или переключить task-ветку.
+        register_if_missing: Создать строку в registry.md при отсутствии.
+        summary: Legacy-fallback summary.
+        branch_name: Явно задать имя ветки.
+        inherit_branch_from_parent: Наследовать ветку от родителя (для подзадач).
+        today: Дата в формате ISO (по умолчанию сегодня).
+
+    Returns:
+        Payload с результатами sync.
+
+    Raises:
+        ValueError: Если рабочее дерево грязное и переключение небезопасно.
+    """
     project_root = project_root.resolve()
     task_dir = _resolve_task_dir(project_root, task_dir)
     task_file = task_dir / "task.md"
