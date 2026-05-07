@@ -74,8 +74,30 @@ PUBLISH_FLOW_TRANSITIONS = {
 
 
 
+## @brief Опции publish-flow действия.
+#
+#  @param action             Действие (`start`, `publish`, `sync`, `merge`, `close`).
+#  @param unit_id            Идентификатор delivery unit.
+#  @param purpose            Назначение delivery unit.
+#  @param base_branch        Целевая base-ветка.
+#  @param head_branch        Явная head-ветка.
+#  @param from_ref           Ref для создания новой ветки.
+#  @param host               Хост публикации.
+#  @param publication_type   Тип публикации.
+#  @param url                URL существующей публикации.
+#  @param merge_commit       SHA merge commit.
+#  @param cleanup            Состояние cleanup.
+#  @param remote_name        Имя git remote.
+#  @param status             Явный publish-статус.
+#  @param create_publication Попытаться создать PR/MR.
+#  @param sync_from_host     Синхронизировать состояние с хоста.
+#  @param title              Заголовок публикации.
+#  @param body               Тело публикации.
+#  @param summary            Legacy-fallback summary.
+#  @param today              Дата в формате ISO.
 @dataclass(frozen=True)
 class PublishOptions:
+    """Опции publish-flow действия."""
     action: str
     unit_id: str | None
     purpose: str | None
@@ -97,8 +119,19 @@ class PublishOptions:
     today: str | None
 
 
+## @brief Контекст publish-flow.
+#
+#  @param project_root   Абсолютный путь к корню проекта.
+#  @param task_dir       Путь к каталогу задачи.
+#  @param task_file      Путь к task.md.
+#  @param lines          Строки task.md.
+#  @param fields         Поля task.md.
+#  @param delivery_units Список delivery units задачи.
+#  @param task_id        Идентификатор задачи.
+#  @param short_name     Краткое имя задачи.
 @dataclass(frozen=True)
 class PublishContext:
+    """Контекст publish-flow."""
     project_root: Path
     task_dir: Path
     task_file: Path
@@ -109,8 +142,18 @@ class PublishContext:
     short_name: str
 
 
+## @brief Результат preflight-анализа publish-flow.
+#
+#  @param selected_base_branch  Выбранная base-ветка.
+#  @param selected_head_branch  Выбранная head-ветка.
+#  @param start_ref             Ref для старта ветки.
+#  @param current_unit          Текущий delivery unit (для не-start действий).
+#  @param resolved_summary      Разрешённая summary.
+#  @param publication_summary   Summary для публикации.
+#  @param effective_summary     Эффективная summary.
 @dataclass(frozen=True)
 class PublishPreflight:
+    """Результат preflight-анализа publish-flow."""
     selected_base_branch: str | None
     selected_head_branch: str | None
     start_ref: str | None
@@ -120,14 +163,27 @@ class PublishPreflight:
     effective_summary: str | None
 
 
+## @brief Результат publish-действия.
+#
+#  @param delivery_units Обновлённый список delivery units.
+#  @param updated_unit   Изменённый delivery unit.
+#  @param branch_name    Имя затронутой ветки.
+#  @param branch_action  Действие с веткой (`created`, `switched`, `recorded`).
 @dataclass(frozen=True)
 class PublishActionResult:
+    """Результат publish-действия."""
     delivery_units: list[DeliveryUnit]
     updated_unit: DeliveryUnit
     branch_name: str
     branch_action: str
 
 
+## @brief Проверить допустимость перехода статуса delivery unit.
+#
+#  @param action        Действие publish-flow.
+#  @param current_status Текущий статус.
+#  @param target_status  Целевой статус.
+#  @raises ValueError Если переход недопустим.
 def validate_transition(action: str, current_status: str, target_status: str) -> None:
     current = normalize_delivery_status(current_status)
     target = normalize_delivery_status(target_status)
@@ -139,6 +195,13 @@ def validate_transition(action: str, current_status: str, target_status: str) ->
         )
 
 
+## @brief Определить следующий свободный идентификатор delivery unit.
+#
+#  Учитывает существующие units и delivery-ветки в git.
+#  @param project_root Абсолютный путь к корню проекта.
+#  @param task_id      Идентификатор задачи.
+#  @param units        Существующие delivery units.
+#  @return             Следующий Unit ID вида `DU-NN`.
 def next_delivery_unit_id(project_root: Path, task_id: str, units: list[DeliveryUnit]) -> str:
     known_indexes = {int(unit.unit_id.split("-", 1)[1]) for unit in units}
     branches = run_git(project_root, "for-each-ref", "--format=%(refname:short)", "refs/heads").stdout.splitlines()
@@ -171,6 +234,13 @@ def default_publication_body(
     )
 
 
+## @brief Создать новый delivery unit.
+#
+#  @param unit_id     Идентификатор unit.
+#  @param purpose     Назначение.
+#  @param head_branch Head-ветка.
+#  @param base_branch Base-ветка.
+#  @return            Новый DeliveryUnit со статусом `planned`.
 def create_delivery_unit(
     *,
     unit_id: str,
@@ -237,6 +307,27 @@ def existing_publication_reference(current_unit: DeliveryUnit, url: str | None) 
     raise ValueError("Для перехода существующей draft-публикации в review нужен URL или head-ветка.")
 
 
+## @brief Разрешить снимок состояния публикации (PublicationSnapshot).
+#
+#  Обрабатывает create_publication, sync_from_host и explicit snapshot.
+#  @param project_root             Абсолютный путь к корню проекта.
+#  @param task_dir                 Путь к каталогу задачи.
+#  @param fields                   Поля task.md.
+#  @param current_unit             Текущий delivery unit.
+#  @param action                   Действие publish-flow.
+#  @param requested_host           Запрошенный хост.
+#  @param requested_publication_type Запрошенный тип публикации.
+#  @param requested_status         Запрошенный статус.
+#  @param url                      URL публикации.
+#  @param merge_commit             SHA merge commit.
+#  @param remote_name              Имя git remote.
+#  @param create_publication       Создать публикацию через host adapter.
+#  @param sync_from_host           Синхронизировать с хоста.
+#  @param title                    Заголовок публикации.
+#  @param body                     Тело публикации.
+#  @param summary                  Legacy-fallback summary.
+#  @return                         Разрешённый PublicationSnapshot.
+#  @raises ValueError Если комбинация параметров некорректна.
 def resolve_publish_snapshot(
     project_root: Path,
     task_dir: Path,
@@ -723,6 +814,32 @@ def _publish_payload(
     }
 
 
+## @brief Выполнить publish-flow действие.
+#
+#  Оркестрирует start, publish, sync, merge, close для delivery units.
+#  @param project_root       Абсолютный путь к корню проекта.
+#  @param task_dir           Путь к каталогу задачи.
+#  @param action             Действие (`start`, `publish`, `sync`, `merge`, `close`).
+#  @param unit_id            Идентификатор delivery unit.
+#  @param purpose            Назначение delivery unit.
+#  @param base_branch        Целевая base-ветка.
+#  @param head_branch        Явная head-ветка.
+#  @param from_ref           Ref для создания новой ветки.
+#  @param host               Хост публикации.
+#  @param publication_type   Тип публикации.
+#  @param url                URL существующей публикации.
+#  @param merge_commit       SHA merge commit.
+#  @param cleanup            Состояние cleanup.
+#  @param remote_name        Имя git remote.
+#  @param status             Явный publish-статус.
+#  @param create_publication Создать PR/MR через host adapter.
+#  @param sync_from_host     Синхронизировать состояние с хоста.
+#  @param title              Заголовок публикации.
+#  @param body               Тело публикации.
+#  @param summary            Legacy-fallback summary.
+#  @param today              Дата в формате ISO (по умолчанию сегодня).
+#  @return                   Payload с результатами publish-flow.
+#  @raises ValueError Если параметры некорректны или transition недопустим.
 def run_publish_flow(
     project_root: Path,
     task_dir: Path,
