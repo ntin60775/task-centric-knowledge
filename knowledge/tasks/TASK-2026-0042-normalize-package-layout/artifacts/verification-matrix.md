@@ -43,11 +43,13 @@
 | `INV-07` | `install_global_skill.py` копирует из `scripts/` | `grep "scripts/task_knowledge" scripts/install_global_skill.py` | `covered` | Пустой результат |
 | `INV-08` | `ruff` падает с критическими ошибками | `python3 -m ruff check src/ tests/` | `covered` | Только pre-existing стилистика; E402 в тестах — известный паттерн sys.path |
 | `INV-08` | `mypy` падает | `python3 -m mypy src/` | `manual-residual` | mypy не установлен в окружении; конфигурация mypy в pyproject.toml корректна |
+| `INV-09` | `make install-global` падает | `make install-global` | `covered` | OK (smoke tests проходят) |
+| `INV-09` | `make verify-global-install` падает | `make verify-global-install` | `covered` | OK (smoke tests проходят) |
 
 ## 3. Остаточный риск и ручной остаток
 
 - `mypy` не прогонялся из-за отсутствия в окружении; конфигурация `pyproject.toml` обновлена для `src/`.
-- `make install-global` / `make verify-global-install` требуют обновления live skill copy после merge.
+- `make install-global` / `make verify-global-install` — проверены, live skill copy обновлён.
 - Визуальная проверка структуры `src/task_knowledge/` на полноту переноса — выполнена.
 
 ## 4. Правило завершения
