@@ -605,12 +605,11 @@ def run_smoke_checks(target_root: Path, project_root: Path, *, user_bin: Path | 
             sys.executable,
             "-m",
             "task_knowledge",
+            "--json",
             "install",
             "check",
             "--project-root",
             str(project_root),
-            "--format",
-            "json",
         ],
         env=direct_live_env,
     )
