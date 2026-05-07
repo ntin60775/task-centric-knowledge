@@ -20,6 +20,9 @@ from .models import (
 )
 
 
+## @brief Split a Markdown table row into individual cells.
+#  @param line Raw line from a Markdown table.
+#  @return List of cell strings, or None if not a table row.
 def split_markdown_row(line: str) -> list[str] | None:
     stripped = line.strip()
     if not stripped.startswith("|") or not stripped.endswith("|"):
@@ -27,6 +30,10 @@ def split_markdown_row(line: str) -> list[str] | None:
     return [part.strip() for part in stripped.strip("|").split("|")]
 
 
+## @brief Find the start and end line indices of a Markdown section.
+#  @param lines Document lines.
+#  @param title Section heading to search for.
+#  @return Tuple of (start_index, end_index), or None if not found.
 def find_section_bounds(lines: list[str], title: str) -> tuple[int, int] | None:
     for start_index, line in enumerate(lines):
         if line.strip() != title:
@@ -74,15 +81,24 @@ def _parse_delivery_units(
     return units, errors
 
 
+## @brief Parse delivery units from task markdown lines.
+#  @param lines Document lines.
+#  @return List of parsed DeliveryUnit objects.
 def parse_delivery_units(lines: list[str]) -> list[DeliveryUnit]:
     units, _ = _parse_delivery_units(lines, collect_errors=False)
     return units
 
 
+## @brief Parse delivery units, collecting parse errors instead of raising.
+#  @param lines Document lines.
+#  @return Tuple of parsed units and collected error messages.
 def parse_delivery_units_safe(lines: list[str]) -> tuple[list[DeliveryUnit], list[str]]:
     return _parse_delivery_units(lines, collect_errors=True)
 
 
+## @brief Render delivery units as a Markdown section.
+#  @param units List of delivery units to render.
+#  @return List of Markdown lines.
 def render_delivery_units_section(units: list[DeliveryUnit]) -> list[str]:
     rendered = [
         DELIVERY_SECTION_TITLE,
@@ -102,6 +118,10 @@ def render_delivery_units_section(units: list[DeliveryUnit]) -> list[str]:
     return rendered
 
 
+## @brief Insert or replace the delivery units section in task lines.
+#  @param lines Document lines.
+#  @param units Delivery units to insert.
+#  @return Updated document lines.
 def upsert_delivery_units_section(lines: list[str], units: list[DeliveryUnit]) -> list[str]:
     rendered = render_delivery_units_section(units)
     bounds = find_section_bounds(lines, DELIVERY_SECTION_TITLE)
@@ -126,6 +146,10 @@ def upsert_delivery_units_section(lines: list[str], units: list[DeliveryUnit]) -
     return updated
 
 
+## @brief Replace the body of a Markdown section.
+#  @param lines Mutable document lines.
+#  @param title Section heading.
+#  @param body_lines New body lines for the section.
 def replace_section_body(lines: list[str], title: str, body_lines: list[str]) -> None:
     bounds = find_section_bounds(lines, title)
     if bounds is None:
@@ -141,6 +165,11 @@ def replace_section_body(lines: list[str], title: str, body_lines: list[str]) ->
     lines[start_index:end_index] = replacement
 
 
+## @brief Replace the value of a task table field.
+#  @param lines Mutable document lines.
+#  @param field Field name to replace.
+#  @param value New field value.
+#  @exception ValueError If the field is not found.
 def replace_task_field(lines: list[str], field: str, value: str) -> None:
     replacement = f"| {field} | {format_table_value(value)} |"
     for index, line in enumerate(lines):
@@ -151,6 +180,12 @@ def replace_task_field(lines: list[str], field: str, value: str) -> None:
     raise ValueError(f"В task.md не найдено поле {field!r}.")
 
 
+## @brief Upsert a task table field after a reference field.
+#  @param lines Mutable document lines.
+#  @param field Field name to upsert.
+#  @param value Field value.
+#  @param after_field Name of the field to insert after.
+#  @exception ValueError If the reference field is not found.
 def upsert_task_field(lines: list[str], field: str, value: str, *, after_field: str) -> None:
     replacement = f"| {field} | {format_table_value(value)} |"
     insert_index: int | None = None
@@ -177,11 +212,17 @@ def upsert_task_field(lines: list[str], field: str, value: str, *, after_field: 
     raise ValueError(f"В task.md не найдено поле {after_field!r} для вставки {field!r}.")
 
 
+## @brief Read a task file and parse its fields.
+#  @param task_file Path to task.md.
+#  @return Tuple of document lines and parsed fields dictionary.
 def read_task_fields(task_file: Path) -> tuple[list[str], dict[str, str]]:
     lines = task_file.read_text(encoding="utf-8").splitlines()
     return lines, parse_task_fields(lines)
 
 
+## @brief Parse task field table rows from document lines.
+#  @param lines Document lines.
+#  @return Dictionary of field names to normalized values.
 def parse_task_fields(lines: list[str]) -> dict[str, str]:
     fields: dict[str, str] = {}
     for line in lines:
@@ -195,6 +236,14 @@ def parse_task_fields(lines: list[str]) -> dict[str, str]:
     return fields
 
 
+## @brief Update core task file fields.
+#  @param task_file Path to task.md.
+#  @param branch_name Branch name to record.
+#  @param today Today's date string.
+#  @param summary Optional summary to set.
+#  @param status Optional status to set.
+#  @param current_stage Optional current stage text.
+#  @return Updated fields dictionary.
 def update_task_file(
     task_file: Path,
     branch_name: str,
@@ -223,6 +272,15 @@ def update_task_file(
     return fields
 
 
+## @brief Update task file fields and the delivery units section.
+#  @param task_file Path to task.md.
+#  @param branch_name Branch name to record.
+#  @param delivery_units Delivery units to render.
+#  @param today Today's date string.
+#  @param summary Optional summary to set.
+#  @param status Optional status to set.
+#  @param current_stage Optional current stage text.
+#  @return Updated fields dictionary.
 def update_task_file_with_delivery_units(
     task_file: Path,
     branch_name: str,
@@ -253,6 +311,9 @@ def update_task_file_with_delivery_units(
     return fields
 
 
+## @brief Extract the canonical task summary from parsed fields.
+#  @param fields Parsed task fields dictionary.
+#  @return Summary string, or None if missing or placeholder.
 def task_summary_from_fields(fields: dict[str, str]) -> str | None:
     summary = sanitize_registry_summary(fields.get(TASK_SUMMARY_FIELD, ""))
     if not summary or summary == DELIVERY_ROW_PLACEHOLDER:
@@ -260,6 +321,10 @@ def task_summary_from_fields(fields: dict[str, str]) -> str | None:
     return summary
 
 
+## @brief Warn if the reference mode field contains an invalid value.
+#  @param fields Parsed task fields dictionary.
+#  @param field_name Name of the reference mode field.
+#  @return The invalid value, or None if acceptable.
 def reference_mode_warning(fields: dict[str, str], *, field_name: str = "Справочный режим") -> str | None:
     value = fields.get(field_name, "нет").strip()
     if value in {"", "нет", "reference"}:
@@ -267,11 +332,17 @@ def reference_mode_warning(fields: dict[str, str], *, field_name: str = "Спр�
     return value
 
 
+## @brief Derive a summary from the goal section of a task file.
+#  @param task_file Path to task.md.
+#  @return First non-empty goal line, or None.
 def derive_goal_summary_from_task(task_file: Path) -> str | None:
     lines = task_file.read_text(encoding="utf-8").splitlines()
     return derive_goal_summary_from_lines(lines)
 
 
+## @brief Derive a summary from the goal section of task lines.
+#  @param lines Document lines.
+#  @return First non-empty goal line, or None.
 def derive_goal_summary_from_lines(lines: list[str]) -> str | None:
     in_goal = False
     for line in lines:
@@ -289,6 +360,10 @@ def derive_goal_summary_from_lines(lines: list[str]) -> str | None:
     return None
 
 
+## @brief Count how many times a field appears in task lines.
+#  @param lines Document lines.
+#  @param field Field name to count.
+#  @return Occurrence count.
 def count_task_field_occurrences(lines: list[str], field: str) -> int:
     count = 0
     for line in lines:
@@ -298,6 +373,9 @@ def count_task_field_occurrences(lines: list[str], field: str) -> int:
     return count
 
 
+## @brief Derive a task summary from fields or the goal section.
+#  @param task_file Path to task.md.
+#  @return Best available summary string, or None.
 def derive_summary_from_task(task_file: Path) -> str | None:
     _, fields = read_task_fields(task_file)
     return task_summary_from_fields(fields) or derive_goal_summary_from_task(task_file)

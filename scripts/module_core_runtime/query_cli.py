@@ -27,6 +27,9 @@ def _format_warnings(warnings: list[dict[str, object]]) -> list[str]:
     return rows
 
 
+## @brief Сформатировать payload команды `module find` в человекочитаемый текст.
+#  @param payload Словарь с результатами поиска модулей.
+#  @return        Отформатированная многострочная строка.
 def format_module_find_payload(payload: dict[str, object]) -> str:
     lines: list[str] = [
         "module find",
@@ -57,6 +60,10 @@ def format_module_find_payload(payload: dict[str, object]) -> str:
     return "\n".join(lines) + "\n"
 
 
+## @brief Сформатировать payload команды `module show` в человекочитаемый текст.
+#  @param payload        Словарь с данными модуля.
+#  @param with_sections  Набор секций для отображения (например, {"verification", "relations"}).
+#  @return               Отформатированная многострочная строка.
 def format_module_show_payload(
     payload: dict[str, object],
     *,
@@ -189,6 +196,11 @@ def format_module_show_payload(
     return "\n".join(lines) + "\n"
 
 
+## @brief Сформатировать payload команды `file show` в человекочитаемый текст.
+#  @param payload         Словарь с данными файла.
+#  @param show_contracts  Показывать ли детали contract markers.
+#  @param show_blocks     Показывать ли детали blocks.
+#  @return                Отформатированная многострочная строка.
 def format_file_show_payload(
     payload: dict[str, object],
     *,
@@ -277,6 +289,9 @@ def format_file_show_payload(
     return "\n".join(lines) + "\n"
 
 
+## @brief Диспетчеризовать команду `module` (find или show).
+#  @param args  Разобранные аргументы командной строки.
+#  @return      Кортеж (payload, exit_code).
 def dispatch_module(args) -> tuple[dict[str, object], int]:
     project_root = args.project_root.resolve()
     if args.module_command == "find":
@@ -309,6 +324,9 @@ def dispatch_module(args) -> tuple[dict[str, object], int]:
     return payload, 0 if error_code is None else 2
 
 
+## @brief Диспетчеризовать команду `file show`.
+#  @param args  Разобранные аргументы командной строки.
+#  @return      Кортеж (payload, exit_code).
 def dispatch_file(args) -> tuple[dict[str, object], int]:
     project_root = args.project_root.resolve()
     file_payload, warnings, error_code = file_show(

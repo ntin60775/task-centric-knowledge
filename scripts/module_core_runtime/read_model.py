@@ -75,6 +75,7 @@ ALLOWED_RELATION_TYPES = {"depends_on"}
 ALLOWED_RELATION_STATUSES = {"required", "informational", "planned"}
 
 
+## @brief Предупреждение в контексте модуля.
 @dataclass
 class WarningItem:
     code: str
@@ -83,6 +84,7 @@ class WarningItem:
     path: str | None = None
 
 
+## @brief Элемент управляемой поверхности модуля.
 @dataclass(frozen=True)
 class OwnedSurfaceItem:
     kind: str
@@ -91,6 +93,7 @@ class OwnedSurfaceItem:
     ownership_reason: str
 
 
+## @brief Публичный контракт модуля.
 @dataclass(frozen=True)
 class PublicContractItem:
     contract: str
@@ -99,6 +102,7 @@ class PublicContractItem:
     audience: str
 
 
+## @brief Элемент связи (relation) модуля с другим модулем.
 @dataclass(frozen=True)
 class RelationEnvelopeItem:
     relation_type: str
@@ -107,6 +111,7 @@ class RelationEnvelopeItem:
     notes: str
 
 
+## @brief Паспорт модуля, загруженный из module.md.
 @dataclass(frozen=True)
 class ModulePassport:
     path: Path
@@ -127,6 +132,7 @@ class ModulePassport:
     relation_envelope: tuple[RelationEnvelopeItem, ...]
 
 
+## @brief Строка module registry.
 @dataclass(frozen=True)
 class RegistryRow:
     module_id: str
@@ -141,6 +147,7 @@ class RegistryRow:
     path: str
 
 
+## @brief Краткая сводка модуля для поиска и списков.
 @dataclass
 class ModuleSummary:
     module_id: str
@@ -154,6 +161,7 @@ class ModuleSummary:
     warnings: list[WarningItem] = field(default_factory=list)
 
 
+## @brief Полная запись модуля со всеми проекциями.
 @dataclass
 class ModuleRecord:
     summary: ModuleSummary
@@ -170,6 +178,7 @@ class ModuleRecord:
     file_local_policy: FileLocalPolicy | None
 
 
+## @brief Индекс всех модулей проекта.
 @dataclass
 class ModuleIndex:
     records: list[ModuleRecord]
@@ -177,6 +186,7 @@ class ModuleIndex:
     warnings: list[WarningItem] = field(default_factory=list)
 
 
+## @brief Владелец файла (ссылка на модуль).
 @dataclass
 class FileOwner:
     module_id: str
@@ -187,14 +197,21 @@ class FileOwner:
     verification_ref: str | None
 
 
+## @brief Исключение при невалидном module passport.
 class ModulePassportError(ValueError):
     """Raised when a module passport is invalid."""
 
 
+## @brief Сериализовать WarningItem в словарь.
+#  @param item Предупреждение.
+#  @return     Словарь с полями warning.
 def warning_to_dict(item: WarningItem) -> dict[str, str | None]:
     return asdict(item)
 
 
+## @brief Сериализовать ModuleSummary в словарь.
+#  @param item Краткая сводка модуля.
+#  @return     Словарь с полями summary.
 def module_summary_to_dict(item: ModuleSummary) -> dict[str, object]:
     return {
         "module_id": item.module_id,
@@ -209,6 +226,9 @@ def module_summary_to_dict(item: ModuleSummary) -> dict[str, object]:
     }
 
 
+## @brief Сериализовать ModuleRecord в словарь.
+#  @param item Полная запись модуля.
+#  @return     Словарь с полями record.
 def module_record_to_dict(item: ModuleRecord) -> dict[str, object]:
     return {
         "module_id": item.summary.module_id,
@@ -227,6 +247,9 @@ def module_record_to_dict(item: ModuleRecord) -> dict[str, object]:
     }
 
 
+## @brief Сериализовать FileOwner в словарь.
+#  @param item Владелец файла.
+#  @return     Словарь с полями owner.
 def file_owner_to_dict(item: FileOwner) -> dict[str, object]:
     return asdict(item)
 
@@ -328,6 +351,11 @@ def _serialize_verification_excerpt(record: ModuleVerificationRecord) -> dict[st
     }
 
 
+## @brief Собрать verification anchors и failure handoff refs по путям файлов.
+#  @note  Внутренний helper для связи evidence со сценариями и project-relative путями.
+#  @param project_root  Корень проекта.
+#  @param record        Запись верификации модуля.
+#  @return              Кортеж (anchors_by_path, handoff_refs_by_path, evidence_file_refs).
 def _collect_path_anchors(
     project_root: Path,
     record: ModuleVerificationRecord,
@@ -370,6 +398,14 @@ def _read_lines(path: Path) -> list[str]:
     return path.read_text(encoding="utf-8").splitlines()
 
 
+## @brief Разобрать строки Markdown-таблицы из указанного раздела.
+#  @note  Внутренний парсер таблиц passport/verification/policy. Валидирует заголовки и количество колонок.
+#  @param lines            Строки Markdown-файла.
+#  @param title            Заголовок раздела.
+#  @param expected_headers Ожидаемые заголовки таблицы.
+#  @param required         Если True, отсутствие раздела — ошибка.
+#  @return                 Список кортежей со значениями ячеек.
+#  @exception ModulePassportError При невалидной структуре таблицы.
 def _parse_table_rows(
     lines: list[str],
     title: str,
@@ -409,6 +445,11 @@ def _parse_table_rows(
     return rows
 
 
+## @brief Разобрать поля паспорта из таблицы в разделе "## Паспорт".
+#  @note  Внутренний helper для load_module_passport. Валидирует уникальность и обязательность полей.
+#  @param lines Строки Markdown-файла.
+#  @return      Словарь полей паспорта.
+#  @exception ModulePassportError При дублирующихся или отсутствующих полях.
 def _parse_passport_fields(lines: list[str]) -> dict[str, str]:
     rows = _parse_table_rows(lines, PASSPORT_SECTION, ("Поле", "Значение"))
     fields: dict[str, str] = {}
@@ -422,6 +463,12 @@ def _parse_passport_fields(lines: list[str]) -> dict[str, str]:
     return fields
 
 
+## @brief Извлечь текстовое содержимое раздела Markdown.
+#  @note  Внутренний helper для загрузки scope_text. Не допускает пустых разделов.
+#  @param lines Строки Markdown-файла.
+#  @param title Заголовок раздела.
+#  @return      Объединённый текст раздела.
+#  @exception ModulePassportError При отсутствии или пустоте раздела.
 def _parse_section_text(lines: list[str], title: str) -> str:
     bounds = find_section_bounds(lines, title)
     if bounds is None:
@@ -433,6 +480,11 @@ def _parse_section_text(lines: list[str], title: str) -> str:
     return "\n".join(text_lines)
 
 
+## @brief Загрузить и провалидировать module passport из Markdown-файла.
+#  @param project_root   Корень проекта.
+#  @param passport_path  Путь к module.md.
+#  @return               Разобранный объект ModulePassport.
+#  @exception ModulePassportError При невалидной структуре или несоответствии полей.
 def load_module_passport(project_root: Path, passport_path: Path) -> ModulePassport:
     lines = _read_lines(passport_path)
     passport = _parse_passport_fields(lines)
@@ -718,6 +770,9 @@ def _module_ref_fields(record: ModuleRecord, *, prefix: str) -> dict[str, object
     }
 
 
+## @brief Построить relation payloads для всех записей в индексе.
+#  @note  Внутренний helper, мутирует module_index.records in-place. Валидирует типы связей, статусы и дубликаты.
+#  @param module_index Индекс модулей для обработки.
 def _build_relation_payloads(module_index: ModuleIndex) -> None:
     unique_records_by_id = {
         record.summary.module_id.casefold(): record
@@ -1195,6 +1250,12 @@ def _readiness_dict(
     }
 
 
+## @brief Собрать полную запись модуля из каталога (passport + verification + registry).
+#  @note  Внутренний helper для build_module_index. Собирает все проекции и предупреждения.
+#  @param project_root    Корень проекта.
+#  @param directory_path  Каталог модуля.
+#  @param registry_rows   Строки registry для cross-check.
+#  @return                Полная запись ModuleRecord.
 def _record_from_directory(
     project_root: Path,
     directory_path: Path,
@@ -1386,6 +1447,13 @@ def _match_fields(record: ModuleRecord, query: str) -> tuple[int, list[str]] | N
     return best_rank, matched_fields
 
 
+## @brief Найти модули по запросу с фильтрацией readiness и source_state.
+#  @param project_root  Корень проекта.
+#  @param query         Строка поиска.
+#  @param readiness     Фильтр по readiness (опционально).
+#  @param source_state  Фильтр по source_state (опционально).
+#  @param limit         Максимальное число результатов.
+#  @return              Кортеж (список payload-элементов, список предупреждений).
 def find_modules(
     project_root: Path,
     *,
@@ -1440,6 +1508,11 @@ def find_modules(
     return payload_items, warnings
 
 
+## @brief Разрешить модуль по MODULE-ID или slug с обработкой дубликатов.
+#  @note  Внутренний helper для module_show. Возвращает error_code при неоднозначности.
+#  @param project_root  Корень проекта.
+#  @param selector      MODULE-ID или slug.
+#  @return              Кортеж (ModuleRecord | None, warnings, error_code).
 def _resolve_module_record(
     project_root: Path,
     selector: str,
@@ -1496,6 +1569,10 @@ def _resolve_module_record(
     )
 
 
+## @brief Отобразить полные данные модуля по MODULE-ID или slug.
+#  @param project_root  Корень проекта.
+#  @param selector      MODULE-ID или slug модуля.
+#  @return              Кортеж (payload, warnings, error_code).
 def module_show(
     project_root: Path,
     *,
@@ -1508,6 +1585,11 @@ def module_show(
     return module_payload, [*record.summary.warnings, *warnings], None
 
 
+## @brief Разрешить и провалидировать путь к файлу внутри проекта.
+#  @note  Внутренний helper для file_show. Проверяет границы проекта и существование файла.
+#  @param project_root  Корень проекта.
+#  @param raw_path      Исходный путь (строка).
+#  @return              Кортеж (resolved Path | None, warnings, error_code).
 def _resolve_file_path(project_root: Path, raw_path: str) -> tuple[Path | None, list[WarningItem], str | None]:
     candidate = Path(raw_path)
     resolved = (candidate if candidate.is_absolute() else project_root / candidate).resolve()
@@ -1550,6 +1632,11 @@ def _extend_unique_warnings(target: list[WarningItem], items: list[WarningItem])
         seen.add(signature)
 
 
+## @brief Отобразить данные файла с его владельцами и contract-разметкой.
+#  @param project_root     Корень проекта.
+#  @param raw_path         Путь к файлу (относительный или абсолютный).
+#  @param module_selector  Фильтр по MODULE-ID владельца (опционально).
+#  @return                 Кортеж (payload, warnings, error_code).
 def file_show(
     project_root: Path,
     *,

@@ -54,10 +54,12 @@ SCENARIO_REF_RE = re.compile(r"SCN-[A-Z0-9][A-Z0-9-]*$")
 RISK_REF_RE = re.compile(r"RISK-[A-Z0-9][A-Z0-9-]*$")
 
 
+## @brief Исключение при невалидном артефакте модульной верификации.
 class ModuleVerificationError(ValueError):
     """Raised when a module verification artifact is invalid."""
 
 
+## @brief Каноническая проверка внутри verification.md.
 @dataclass(frozen=True)
 class VerificationCheck:
     ref: str
@@ -68,6 +70,7 @@ class VerificationCheck:
     purpose: str
 
 
+## @brief Доказательство (evidence) для verification scenario.
 @dataclass(frozen=True)
 class VerificationEvidence:
     ref: str
@@ -77,6 +80,7 @@ class VerificationEvidence:
     notes: str
 
 
+## @brief Сценарий верификации (success, failure, regression, observability).
 @dataclass(frozen=True)
 class VerificationScenario:
     ref: str
@@ -87,6 +91,7 @@ class VerificationScenario:
     blocking: bool
 
 
+## @brief Ручной остаточный риск, требующий действия контроллера.
 @dataclass(frozen=True)
 class ManualResidualRisk:
     ref: str
@@ -95,6 +100,7 @@ class ManualResidualRisk:
     controller_action: str
 
 
+## @brief Полная запись модульной верификации, загруженная из Markdown.
 @dataclass(frozen=True)
 class ModuleVerificationRecord:
     path: Path
@@ -109,6 +115,7 @@ class ModuleVerificationRecord:
     manual_residual: dict[str, ManualResidualRisk]
 
 
+## @brief Вычисленная готовность модуля к исполнению.
 @dataclass(frozen=True)
 class ExecutionReadiness:
     status: str
@@ -118,6 +125,7 @@ class ExecutionReadiness:
     residual_manual_risk: tuple[str, ...]
 
 
+## @brief Краткая выборка данных верификации для отображения.
 @dataclass(frozen=True)
 class VerificationExcerpt:
     verification_ref: str
@@ -130,6 +138,7 @@ class VerificationExcerpt:
     manual_residual: tuple[ManualResidualRisk, ...]
 
 
+## @brief Артефакт передачи управления при failure scenario.
 @dataclass(frozen=True)
 class FailureHandoff:
     contract_ref: str
@@ -349,6 +358,12 @@ def _collect_evidence_file_paths(
     )
 
 
+## @brief Загрузить и провалидировать module verification из Markdown-файла.
+#  @param path                      Путь к verification.md.
+#  @param expected_verification_ref Ожидаемая каноническая ссылка (опционально).
+#  @param governed_files            Кортеж управляемых файлов модуля.
+#  @return                          Разобранная запись ModuleVerificationRecord.
+#  @exception ModuleVerificationError При ошибках валидации структуры или cross-refs.
 def load_module_verification(
     path: Path,
     *,
@@ -426,6 +441,11 @@ def _ready_state(record: ModuleVerificationRecord) -> ExecutionReadiness:
     )
 
 
+## @brief Определить execution readiness для модуля по его verification.md.
+#  @param path                      Путь к verification.md.
+#  @param expected_verification_ref Ожидаемая каноническая ссылка (опционально).
+#  @param governed_files            Кортеж управляемых файлов модуля.
+#  @return                          Объект ExecutionReadiness с вычисленным статусом.
 def resolve_execution_readiness(
     path: Path,
     *,
@@ -452,6 +472,9 @@ def resolve_execution_readiness(
     return _ready_state(record)
 
 
+## @brief Построить краткую выборку verification для CLI-отображения.
+#  @param record Загруженная запись верификации.
+#  @return       VerificationExcerpt с ключевыми проверками и сценариями.
 def build_verification_excerpt(record: ModuleVerificationRecord) -> VerificationExcerpt:
     readiness = _ready_state(record)
     blocking_scenarios = tuple(item for item in record.scenarios.values() if item.blocking)
@@ -476,6 +499,14 @@ def build_verification_excerpt(record: ModuleVerificationRecord) -> Verification
     )
 
 
+## @brief Построить артефакт failure handoff для конкретной проверки или сценария.
+#  @param record                Загруженная запись верификации.
+#  @param reference             Ссылка на scenario или check (ref).
+#  @param observed_evidence     Наблюдаемые доказательства (строка или кортеж).
+#  @param anchor_override       Принудительный якорь вместо вычисленного.
+#  @param suggested_next_action Предлагаемое следующее действие (опционально).
+#  @return                      Объект FailureHandoff с контрактом и рекомендацией.
+#  @exception ModuleVerificationError При неизвестной ссылке или недопустимом действии.
 def build_failure_handoff(
     record: ModuleVerificationRecord,
     *,
