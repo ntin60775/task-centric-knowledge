@@ -105,13 +105,24 @@ BLOCKING_LAYER_PUBLISH = "publish/integration"
 FINGERPRINT_PLACEHOLDER = "<PLAN_FINGERPRINT>"
 
 
+## @brief Результат одного шага install/runtime операции.
+#
+#  @param key    Идентификатор шага.
+#  @param status Статус выполнения.
+#  @param detail Человекочитаемое описание.
+#  @param path   Опциональный путь к затронутому файлу.
 @dataclass
 class StepResult:
+    """Результат одного шага install/runtime операции."""
     key: str
     status: str
     detail: str
     path: str | None = None
 
+    ## @brief Преобразовать результат в payload-словарь.
+    #  @return Словарь с ключом, статусом и деталями.
+    ## @brief Преобразовать результат проверки в payload-словарь.
+    #  @return Словарь с полями зависимости.
     def to_payload(self) -> dict[str, object]:
         payload = {
             "key": self.key,
@@ -123,8 +134,16 @@ class StepResult:
         return payload
 
 
+## @brief Отчёт о состоянии существующей системы в целевом проекте.
+#
+#  @param classification      Классификация системы (fresh, managed, foreign, mixed).
+#  @param recommendation      Рекомендация по установке.
+#  @param managed_present     Список обнаруженных managed-файлов.
+#  @param foreign_present     Список обнаруженных foreign-индикаторов.
+#  @param agents_block_state  Состояние managed-блока в AGENTS.md.
 @dataclass
 class ExistingSystemReport:
+    """Отчёт о состоянии существующей системы в целевом проекте."""
     classification: str
     recommendation: str
     managed_present: list[str]
@@ -132,8 +151,18 @@ class ExistingSystemReport:
     agents_block_state: str
 
 
+## @brief Результат проверки одной зависимости.
+#
+#  @param name             Имя зависимости.
+#  @param dependency_class Класс (`required`, `conditional`, `optional`, `not-applicable`).
+#  @param status           Статус проверки (`ok`, `missing`, `misconfigured`).
+#  @param blocking_layer   Блокирующий слой (`core/local mode`, `publish/integration`).
+#  @param detail           Детальное описание.
+#  @param hint             Подсказка для устранения.
+#  @param path             Опциональный путь.
 @dataclass
 class DependencyCheck:
+    """Результат проверки одной зависимости."""
     name: str
     dependency_class: str
     status: str
@@ -142,6 +171,8 @@ class DependencyCheck:
     hint: str
     path: str | None = None
 
+    ## @brief Проверить, блокирует ли эта зависимость выполнение.
+    #  @return `True`, если зависимость critical и имеет ошибку.
     def blocks_execution(self) -> bool:
         return self.blocking_layer == BLOCKING_LAYER_CORE and self.status in {
             DEPENDENCY_STATUS_MISSING,
@@ -162,14 +193,24 @@ class DependencyCheck:
         return payload
 
 
+## @brief Кандидат на cleanup (удаление или пересмотр).
+#
+#  @param path       Путь к файлу или директории.
+#  @param category   Категория кандидата.
+#  @param reason     Причина включения в cleanup.
+#  @param kind       Тип (`file`, `directory`, `symlink`).
+#  @param item_count Количество элементов (для директорий).
 @dataclass
 class CleanupCandidate:
+    """Кандидат на cleanup (удаление или пересмотр)."""
     path: str
     category: str
     reason: str
     kind: str
     item_count: int | None = None
 
+    ## @brief Преобразовать кандидата в payload-словарь.
+    #  @return Словарь с полями кандидата.
     def to_payload(self) -> dict[str, object]:
         payload = {
             "path": self.path,
@@ -182,8 +223,20 @@ class CleanupCandidate:
         return payload
 
 
+## @brief План cleanup — список кандидатов на удаление и пересмотр.
+#
+#  @param safe_delete      Список безопасных для удаления кандидатов.
+#  @param keep             Список кандидатов, которые следует оставить.
+#  @param manual_review    Список кандидатов, требующих ручного пересмотра.
+#  @param targets          Целевые пути плана.
+#  @param target_count     Количество целевых путей.
+#  @param count            Общее количество кандидатов.
+#  @param confirm_command  Команда для подтверждения плана.
+#  @param plan_fingerprint SHA256-фингерпринт плана.
+#  @param scope_locked     Флаг блокировки scope.
 @dataclass
 class CleanupPlan:
+    """План cleanup — список кандидатов на удаление и пересмотр."""
     safe_delete: list[CleanupCandidate] = field(default_factory=list)
     keep: list[CleanupCandidate] = field(default_factory=list)
     manual_review: list[CleanupCandidate] = field(default_factory=list)
@@ -196,6 +249,8 @@ class CleanupPlan:
     expanded_scope: tuple[str, ...] = field(default_factory=tuple, repr=False)
     confirm_template: str = field(default="—", repr=False)
 
+    ## @brief Преобразовать план в payload-словарь.
+    #  @return Словарь с полным описанием плана.
     def to_payload(self) -> dict[str, object]:
         return {
             "safe_delete": [item.to_payload() for item in self.safe_delete],
@@ -210,10 +265,22 @@ class CleanupPlan:
         }
 
 
+## @brief Проверить, есть ли среди результатов ошибки.
+#  @param results Список результатов шагов.
+#  @return        `True`, если хотя бы один статус равен `error`.
 def has_errors(results: list[StepResult]) -> bool:
     return any(item.status == "error" for item in results)
 
 
+## @brief Вычислить SHA256-фингерпринт scope cleanup.
+#
+#  Используется для проверки целостности плана перед подтверждением.
+#  @param targets          Целевые пути.
+#  @param expanded_scope   Расширенный scope.
+#  @param target_count     Количество целевых путей.
+#  @param count            Общее количество элементов.
+#  @param confirm_template Шаблон команды подтверждения.
+#  @return                 SHA256-хеш в шестнадцатеричном виде.
 def cleanup_scope_fingerprint(
     *,
     targets: tuple[str, ...],

@@ -13,6 +13,10 @@ from .publish_flow import run_publish_flow
 from .sync_flow import backfill_task, sync_task
 
 
+## @brief Вывести текстовый отчёт о результате workflow.
+#
+#  Форматирует payload в человекочитаемый текст с ключами, статусами и путями.
+#  @param payload Словарь с результатами workflow.
 def print_text_report(payload: dict[str, object]) -> None:
     print(f"ok={payload['ok']}")
     print(f"task_id={payload['task_id']}")
@@ -63,6 +67,11 @@ def print_text_report(payload: dict[str, object]) -> None:
         print(f"next_action={action}")
 
 
+## @brief Точка входа CLI workflow runtime.
+#
+#  Парсит аргументы и маршрутизирует на sync, backfill, publish или finalize.
+#  @return Код возврата: 0 при успехе, 2 при ошибке.
+#  @note   Все исключения перехватываются и форматируются в payload.
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Sync task-centric knowledge files with the current Git task workflow.",
