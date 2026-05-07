@@ -140,15 +140,15 @@
 
 ## Шаги
 
-- [ ] Шаг 1: Удалить `scripts/install_skill.py`, `scripts/task_workflow.py`, `scripts/task_query.py` и legacy-ветку `--mode` в `task_knowledge_cli.py`.
-- [ ] Шаг 2: Обновить `pyproject.toml`.
-- [ ] Шаг 3: Обновить `references/adoption.md`, `references/deployment.md`, `references/task-workflow.md`.
-- [ ] Шаг 4: Проверить и обновить `references/task-routing.md`, `references/upgrade-transition.md`, `references/consumer-runtime-v1.md`.
-- [ ] Шаг 5: Обновить `README.md` и `SKILL.md`.
-- [ ] Шаг 6: Обновить `Makefile`.
-- [ ] Шаг 7: Обновить тесты при необходимости.
-- [ ] Шаг 8: Прогнать полный тестовый набор и проверки.
-- [ ] Шаг 9: Доказать покрытие verification matrix.
+- [x] Шаг 1: Удалить `scripts/install_skill.py`, `scripts/task_workflow.py`, `scripts/task_query.py` и legacy-ветку `--mode` в `task_knowledge_cli.py`.
+- [x] Шаг 2: Обновить `pyproject.toml`.
+- [x] Шаг 3: Обновить `references/adoption.md`, `references/deployment.md`, `references/task-workflow.md`.
+- [x] Шаг 4: Проверить и обновить `references/task-routing.md`, `references/upgrade-transition.md`, `references/consumer-runtime-v1.md`.
+- [x] Шаг 5: Обновить `README.md` и `SKILL.md`.
+- [x] Шаг 6: Обновить `Makefile`.
+- [x] Шаг 7: Обновить тесты при необходимости.
+- [x] Шаг 8: Прогнать полный тестовый набор и проверки.
+- [x] Шаг 9: Доказать покрытие verification matrix.
 
 ## Критерии завершения
 
