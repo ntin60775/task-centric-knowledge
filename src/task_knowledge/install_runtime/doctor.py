@@ -7,7 +7,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from task_workflow_runtime.legacy_upgrade import upgrade_state_summary
+from task_knowledge.workflow_runtime.legacy_upgrade import upgrade_state_summary
 
 from .environment import (
     detect_existing_system,

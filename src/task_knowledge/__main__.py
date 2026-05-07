@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from task_knowledge_cli import main
+from task_knowledge.cli import main
 
 
 if __name__ == "__main__":

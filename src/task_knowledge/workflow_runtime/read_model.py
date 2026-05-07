@@ -313,7 +313,7 @@ def upgrade_state_summary(project_root: Path) -> dict[str, object]:
     """
     state_path = project_root / UPGRADE_STATE_RELATIVE
     if not state_path.exists():
-        from install_skill_runtime.environment import detect_existing_system
+        from task_knowledge.install_runtime.environment import detect_existing_system
 
         classification = detect_existing_system(project_root).classification
         compatibility_epoch = "legacy-v1" if classification == "compatible" else "module-core-v1"

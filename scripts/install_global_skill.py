@@ -17,10 +17,11 @@ from pathlib import Path
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
+SRC_DIR = SCRIPT_DIR.parent / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
-from install_skill_runtime.models import REQUIRED_RELATIVE_PATHS, SKILL_NAME
+from task_knowledge.install_runtime.models import REQUIRED_RELATIVE_PATHS, SKILL_NAME
 
 
 DEPLOY_INCLUDE_PATHS = (
@@ -33,6 +34,7 @@ DEPLOY_INCLUDE_PATHS = (
     "borrowings",
     "references",
     "scripts",
+    "src",
     "tests",
 )
 DEPLOY_EXCLUDED_DIR_NAMES = {"__pycache__"}
@@ -510,7 +512,6 @@ def verify_cli_layer(target_root: Path, *, user_bin: Path | None, python_site: P
     resolved_user_bin = user_bin if user_bin is not None else default_user_bin()
     resolved_python_site = python_site if python_site is not None else default_python_site()
     wrapper_path = resolved_user_bin / "task-knowledge"
-    expected_script = str((target_root / "scripts" / "task_knowledge_cli.py").resolve())
     if wrapper_path.is_symlink():
         issues.append(VerificationIssue("user-site CLI layer", f"task-knowledge wrapper is a symlink and is unsafe: {wrapper_path}"))
     elif not wrapper_path.exists():
@@ -519,16 +520,16 @@ def verify_cli_layer(target_root: Path, *, user_bin: Path | None, python_site: P
         issues.append(VerificationIssue("user-site CLI layer", f"task-knowledge wrapper is not a file: {wrapper_path}"))
     else:
         wrapper_text = wrapper_path.read_text(encoding="utf-8")
-        if expected_script not in wrapper_text:
+        if "-m task_knowledge" not in wrapper_text:
             issues.append(
                 VerificationIssue(
                     "user-site CLI layer",
-                    f"task-knowledge wrapper does not point to live skill copy: expected {expected_script}",
+                    f"task-knowledge wrapper does not invoke task_knowledge module: expected '-m task_knowledge' in wrapper",
                 )
             )
 
     pth_path = resolved_python_site / "task_knowledge_local.pth"
-    expected_pth = str((target_root / "scripts").resolve())
+    expected_pth = str((target_root / "src").resolve())
     if pth_path.is_symlink():
         issues.append(VerificationIssue("user-site CLI layer", f"task_knowledge_local.pth is a symlink and is unsafe: {pth_path}"))
     elif not pth_path.exists():
@@ -566,7 +567,7 @@ def validate_user_cli_smoke(smoke: SmokeResult, target_root: Path) -> SmokeResul
             stdout_excerpt=excerpt(smoke.stdout_excerpt),
             stderr_excerpt=f"user CLI smoke did not return JSON doctor payload: {error}",
         )
-    expected_runtime_root = str((target_root / "scripts").resolve())
+    expected_runtime_root = str((target_root / "src" / "task_knowledge").resolve())
     expected_source_root = str(target_root.resolve())
     actual_runtime_root = payload.get("runtime_root")
     actual_source_root = payload.get("source_root")
@@ -597,17 +598,21 @@ def run_smoke_checks(target_root: Path, project_root: Path, *, user_bin: Path | 
     Returns:
         List of SmokeResult entries for each check.
     """
+    direct_live_env = os.environ.copy()
+    direct_live_env["PYTHONPATH"] = str(target_root / "src")
     direct_live = run_command(
         [
             sys.executable,
-            str(target_root / "scripts" / "install_skill.py"),
+            "-m",
+            "task_knowledge",
+            "install",
+            "check",
             "--project-root",
             str(project_root),
-            "--mode",
-            "check",
             "--format",
             "json",
-        ]
+        ],
+        env=direct_live_env,
     )
     cli_path = (user_bin / "task-knowledge") if user_bin is not None else Path.home() / ".local" / "bin" / "task-knowledge"
     user_cli = validate_user_cli_smoke(

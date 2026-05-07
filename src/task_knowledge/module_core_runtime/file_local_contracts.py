@@ -6,8 +6,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 import re
 
-from task_workflow_runtime.models import DELIVERY_ROW_PLACEHOLDER, normalize_table_value
-from task_workflow_runtime.task_markdown import find_section_bounds, split_markdown_row
+from task_knowledge.workflow_runtime.models import DELIVERY_ROW_PLACEHOLDER, normalize_table_value
+from task_knowledge.workflow_runtime.task_markdown import find_section_bounds, split_markdown_row
 
 
 PLACEHOLDER = "—"

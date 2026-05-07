@@ -263,13 +263,13 @@ task-knowledge task show --project-root /abs/project TASK-2026-0001-zadacha
 - `assets/agents-managed-block-generic.md` — managed-блок для `AGENTS.md`
 - `assets/agents-managed-block-1c.md` — managed-блок для `AGENTS.md` под 1С
 - `task-knowledge` — единый CLI entrypoint для install/governance, read-only query и workflow/publish helper
-- `scripts/install_skill_runtime/**` — runtime-модули install/upgrade governance
+- `src/task_knowledge/install_runtime/**` — runtime-модули install/upgrade governance
 - `task-knowledge workflow` — синхронизация стартовой task-ветки, `task.md`, `registry.md` и publish-блока delivery units
 - `task-knowledge task` — read-only operator query для `status/current-task/task show`
-- `scripts/module_core_runtime/read_model.py` — projection runtime для partial rollout `Module Core`
-- `scripts/module_core_runtime/query_cli.py` — transport-layer и formatter для `module find/show` и `file show`
-- `scripts/task_workflow_runtime/read_model.py` — projection runtime поверх `Task Core`
-- `scripts/task_workflow_runtime/query_cli.py` — transport-layer и formatter operator CLI
+- `src/task_knowledge/module_core_runtime/read_model.py` — projection runtime для partial rollout `Module Core`
+- `src/task_knowledge/module_core_runtime/query_cli.py` — transport-layer и formatter для `module find/show` и `file show`
+- `src/task_knowledge/workflow_runtime/read_model.py` — projection runtime поверх `Task Core`
+- `src/task_knowledge/workflow_runtime/query_cli.py` — transport-layer и formatter operator CLI
 - `references/upgrade-transition.md` — безопасный порядок обновления старой версии навыка на новую и фиксации перехода в git
 - `references/core-model.md` — канонический дистрибутивный snapshot модели ядра `Task Core`
 - `references/adoption.md` — validated quickstart, field-validated bootstrap первой задачи и patterns по классам сред

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import unittest
@@ -11,10 +12,15 @@ if str(TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(TESTS_DIR))
 
 from task_workflow_testlib import ROOT, SUBPROCESS_TIMEOUT_SECONDS, TempRepoCase, git
-from task_workflow_runtime.task_markdown import parse_delivery_units
+from task_knowledge.workflow_runtime.task_markdown import parse_delivery_units
 
 
-QUERY_SCRIPT = ROOT / "scripts" / "task_knowledge_cli.py"
+def _query_cmd(*parts: str, json_mode: bool = False) -> list[str]:
+    cmd = [sys.executable, "-m", "task_knowledge"]
+    if json_mode:
+        cmd.append("--json")
+    cmd.extend(parts)
+    return cmd
 DELIVERY_HEADER = (
     "| Unit ID | Назначение | Head | Base | Host | Тип публикации | "
     "Статус | URL | Merge commit | Cleanup |"
@@ -110,24 +116,30 @@ class TaskQueryTests(TempRepoCase):
         parts = list(args)
         if not parts or parts[0] != "task":
             parts.insert(0, "task")
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(ROOT / "src")
         return subprocess.run(
-            [sys.executable, str(QUERY_SCRIPT), *parts, "--project-root", str(project_root)],
+            _query_cmd(*parts, "--project-root", str(project_root)),
             capture_output=True,
             text=True,
             check=False,
             timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            env=env,
         )
 
     def run_json_query(self, project_root: Path, *args: str) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
         filtered = [a for a in args if a not in ("--format", "json")]
         if not filtered or filtered[0] != "task":
             filtered.insert(0, "task")
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(ROOT / "src")
         result = subprocess.run(
-            [sys.executable, str(QUERY_SCRIPT), "--json", *filtered, "--project-root", str(project_root)],
+            _query_cmd(*filtered, "--project-root", str(project_root), json_mode=True),
             capture_output=True,
             text=True,
             check=False,
             timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            env=env,
         )
         return result, json.loads(result.stdout)
 

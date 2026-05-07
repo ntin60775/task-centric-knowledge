@@ -15,7 +15,7 @@ SCRIPTS_DIR = TESTS_DIR.parent / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from module_core_runtime.file_local_contracts import (
+from task_knowledge.module_core_runtime.file_local_contracts import (
     FileLocalPolicyError,
     load_file_local_policy,
     parse_file_local_contracts,

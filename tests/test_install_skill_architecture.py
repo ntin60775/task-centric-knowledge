@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNTIME_DIR = ROOT / "scripts" / "install_skill_runtime"
+RUNTIME_DIR = ROOT / "src" / "task_knowledge" / "install_runtime"
 
 
 class TestInstallSkillArchitecture(unittest.TestCase):

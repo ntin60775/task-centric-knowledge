@@ -85,7 +85,7 @@ make install-local
 ~/.local/bin/task-knowledge
 ```
 
-Команда запускает `scripts/task_knowledge_cli.py` из того каталога, где был выполнен `make install-local`.
+Команда запускает `src/task_knowledge/cli.py` (через `python -m task_knowledge`) из того каталога, где был выполнен `make install-local`.
 Поэтому зелёный `task-knowledge --help` сам по себе не доказывает, что live skill copy в
 `~/.agents/skills/task-centric-knowledge` полная и свежая. Для этого использовать `make verify-global-install`.
 

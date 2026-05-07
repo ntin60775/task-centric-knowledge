@@ -10,7 +10,7 @@ main language: русский;
 
 ## Рабочий контур
 
-- Основной пакет расположен в корне репозитория: `SKILL.md`, `assets/`, `references/`, `scripts/`, `tests/`.
+- Основной пакет расположен в корне репозитория: `SKILL.md`, `assets/`, `references/`, `scripts/`, `src/`, `tests/`.
 - Операционный источник истины задач расположен в `knowledge/tasks/`.
 - Для проверок task-контура использовать внешний или локальный wrapper `task-knowledge --project-root /abs/project`.
 - Исторические product-задачи импортированы из `ai-agents-rules`; не ретконить закрытые артефакты без отдельной задачи.

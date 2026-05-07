@@ -11,7 +11,7 @@ SCRIPTS_DIR = TESTS_DIR.parent / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from borrowings_runtime.grace import BorrowingsError, apply_refresh, build_refresh_plan, read_status
+from task_knowledge.borrowings_runtime.grace import BorrowingsError, apply_refresh, build_refresh_plan, read_status
 from task_workflow_testlib import TempRepoCase, git
 
 

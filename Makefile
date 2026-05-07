@@ -25,9 +25,9 @@ install-wrapper:
 	mkdir -p "$(USER_BIN)" "$(PYTHON_SITE)"
 	@if [ -L "$(TASK_KNOWLEDGE_BIN)" ]; then echo "Refusing to overwrite symlink: $(TASK_KNOWLEDGE_BIN)" >&2; exit 2; fi
 	@if [ -L "$(TASK_KNOWLEDGE_PTH)" ]; then echo "Refusing to overwrite symlink: $(TASK_KNOWLEDGE_PTH)" >&2; exit 2; fi
-	printf '%s\n' '#!/usr/bin/env bash' 'exec "$(PYTHON)" "$(CURDIR)/scripts/task_knowledge_cli.py" "$$@"' > "$(TASK_KNOWLEDGE_BIN)"
+	printf '%s\n' '#!/usr/bin/env bash' 'exec "$(PYTHON)" -m task_knowledge "$$@"' > "$(TASK_KNOWLEDGE_BIN)"
 	chmod +x "$(TASK_KNOWLEDGE_BIN)"
-	printf '%s\n' '$(CURDIR)/scripts' > "$(TASK_KNOWLEDGE_PTH)"
+	printf '%s\n' '$(CURDIR)/src' > "$(TASK_KNOWLEDGE_PTH)"
 
 install-global-dry-run:
 	"$(PYTHON)" scripts/install_global_skill.py --mode dry-run --source-root "$(CURDIR)" --target-root "$(LIVE_SKILL_ROOT)"
@@ -39,14 +39,14 @@ verify-global-install:
 	"$(PYTHON)" scripts/install_global_skill.py --mode verify --source-root "$(CURDIR)" --target-root "$(LIVE_SKILL_ROOT)" --project-root "$(CURDIR)"
 
 check:
-	"$(PYTHON)" -m compileall -q scripts tests
-	"$(PYTHON)" -m unittest discover -s tests -v
+	"$(PYTHON)" -m compileall -q src tests
+	PYTHONPATH=src "$(PYTHON)" -m unittest discover -s tests -v
 
 lint:
-	"$(PYTHON)" -m ruff check scripts tests
+	"$(PYTHON)" -m ruff check src tests
 
 typecheck:
-	"$(PYTHON)" -m mypy scripts
+	"$(PYTHON)" -m mypy src
 
 check-strict: lint typecheck
 
@@ -57,8 +57,8 @@ docs-serve:
 	mkdocs serve -f mkdocs.yml
 
 docs-check:
-	"$(PYTHON)" -m compileall -q scripts tests
-	"$(PYTHON)" scripts/check_doc_coverage.py scripts/
+	"$(PYTHON)" -m compileall -q src tests
+	"$(PYTHON)" scripts/check_doc_coverage.py src/
 
 docs-coverage: docs-check
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import textwrap
@@ -13,18 +14,23 @@ if str(TESTS_DIR) not in sys.path:
 from task_workflow_testlib import ROOT, SUBPROCESS_TIMEOUT_SECONDS, TempRepoCase, git
 
 
-CLI_SCRIPT = ROOT / "scripts" / "task_knowledge_cli.py"
 GOLDEN_DIR = ROOT / "tests" / "golden"
 
 
 class CliGoldenContractTests(TempRepoCase):
+    def _cli_env(self) -> dict[str, str]:
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(ROOT / "src")
+        return env
+
     def run_cli_json(self, project_root: Path, *args: str) -> dict[str, object]:
         result = subprocess.run(
-            [sys.executable, str(CLI_SCRIPT), "--json", *args],
+            [sys.executable, "-m", "task_knowledge", "--json", *args],
             capture_output=True,
             text=True,
             check=False,
             timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            env=self._cli_env(),
         )
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         payload = json.loads(result.stdout)

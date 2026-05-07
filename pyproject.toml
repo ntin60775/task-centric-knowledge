@@ -22,19 +22,16 @@ dev = [
 [project.scripts]
 task-knowledge = "task_knowledge.__main__:main"
 
-[tool.setuptools]
-py-modules = ["task_knowledge_cli"]
-
 [tool.setuptools.package-dir]
-"" = "scripts"
+"" = "src"
 
 [tool.setuptools.packages.find]
-where = ["scripts"]
+where = ["src"]
 
 [tool.ruff]
 target-version = "py311"
 line-length = 120
-src = ["scripts", "tests"]
+src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
@@ -44,7 +41,7 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.11"
-files = ["scripts"]
+files = ["src"]
 check_untyped_defs = true
 ignore_missing_imports = true
 warn_unused_ignores = true

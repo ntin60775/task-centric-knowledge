@@ -56,7 +56,7 @@ Git-жизненный цикл самой задачи начинается п�
 `make install-global` копирует только manifest-допущенные части дистрибутива:
 
 - отдельные файлы: `SKILL.md`, `README.md`, `Makefile`, `pyproject.toml`;
-- каталоги дистрибутива: `agents/`, `assets/`, `borrowings/`, `references/`, `scripts/`, `tests/`;
+- каталоги дистрибутива: `agents/`, `assets/`, `borrowings/`, `references/`, `scripts/`, `src/`, `tests/`;
 - обязательный шаблонный блок: `assets/knowledge/**`.
 
 В live-copy не должны попадать repo-local и transient артефакты:

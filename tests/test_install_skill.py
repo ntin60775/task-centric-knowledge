@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-INSTALL_SCRIPT = ROOT / "scripts" / "install_skill_runtime" / "__init__.py"
+INSTALL_SCRIPT = ROOT / "src" / "task_knowledge" / "install_runtime" / "__init__.py"
 
 
 def load_module(module_name: str, script_path: Path):

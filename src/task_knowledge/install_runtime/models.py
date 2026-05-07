@@ -41,7 +41,7 @@ REQUIRED_RELATIVE_PATHS = (
     "references/upgrade-transition.md",
     "references/task-routing.md",
     "references/task-workflow.md",
-    "scripts/task_knowledge_cli.py",
+    "src/task_knowledge/cli.py",
     "assets/agents-managed-block-generic.md",
     "assets/agents-managed-block-1c.md",
     *KNOWLEDGE_ASSET_FILES,

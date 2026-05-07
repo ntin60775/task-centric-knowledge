@@ -12,7 +12,7 @@ if str(TESTS_DIR) not in sys.path:
 from task_workflow_testlib import ROOT
 
 
-RUNTIME_DIR = ROOT / "scripts" / "task_workflow_runtime"
+RUNTIME_DIR = ROOT / "src" / "task_knowledge" / "workflow_runtime"
 
 
 class TestTaskWorkflowArchitecture(unittest.TestCase):
@@ -23,7 +23,7 @@ class TestTaskWorkflowArchitecture(unittest.TestCase):
             "registry_sync.py": {"git_ops", "models", "task_markdown"},
             "forge.py": {"git_ops", "models"},
             "path_safety.py": set(),
-            "sync_flow.py": {"git_ops", "models", "path_safety", "registry_sync", "task_markdown"},
+            "sync_flow.py": {"git_ops", "models", "registry_sync", "task_markdown", "path_safety", "legacy_upgrade"},
             "publish_flow.py": {"forge", "git_ops", "models", "path_safety", "registry_sync", "task_markdown"},
             "finalize_flow.py": {"git_ops", "models", "path_safety", "registry_sync", "task_markdown"},
             "cli.py": {"finalize_flow", "models", "publish_flow", "sync_flow"},

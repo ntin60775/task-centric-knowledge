@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from task_workflow_runtime.legacy_upgrade import ensure_repo_upgrade_state, repo_upgrade_state_path, upgrade_state_summary
+from task_knowledge.workflow_runtime.legacy_upgrade import ensure_repo_upgrade_state, repo_upgrade_state_path, upgrade_state_summary
 
 from .models import (
     ADDITIVE_MANAGED_TARGET_FILES,
@@ -32,7 +32,13 @@ def skill_root() -> Path:
     Returns:
         Result.
     """
-    return Path(__file__).resolve().parents[2]
+    path = Path(__file__).resolve()
+    for parent in path.parents:
+        if (parent / "src" / "task_knowledge").is_dir():
+            return parent
+        if (parent / "scripts" / "task_knowledge").is_dir():
+            return parent
+    return path.parents[2]
 
 
 def resolve_source(source_root: str | None) -> Path:
@@ -78,11 +84,11 @@ def embedded_runtime_ready(source_root: Path) -> bool:
     Returns:
         Result.
     """
-    scripts_root = source_root / "scripts"
+    src_pkg_root = source_root / "src" / "task_knowledge"
     return (
         not _has_standalone_source_identity(source_root)
-        and (scripts_root / "task_knowledge_cli.py").exists()
-        and (scripts_root / "task_workflow_runtime").is_dir()
+        and (src_pkg_root / "cli.py").exists()
+        and (src_pkg_root / "workflow_runtime").is_dir()
     )
 
 
@@ -877,7 +883,7 @@ def install(project_root: Path, source_root: Path, profile: str, *, force: bool,
         Result.
     """
     results: list[StepResult] = []
-    runtime_root = skill_root() / "scripts"
+    runtime_root = skill_root() / "src" / "task_knowledge"
     source_mode = source_root_mode(source_root, runtime_root)
     results.extend(validate_source(source_root))
     results.extend(validate_target(project_root))
@@ -956,7 +962,7 @@ def verify_project(project_root: Path, source_root: Path, profile: str, *, force
         Result.
     """
     results: list[StepResult] = []
-    runtime_root = skill_root() / "scripts"
+    runtime_root = skill_root() / "src" / "task_knowledge"
     source_mode = source_root_mode(source_root, runtime_root)
     results.extend(validate_source(source_root))
     results.extend(validate_target(project_root))
@@ -989,7 +995,7 @@ def check(project_root: Path, source_root: Path, profile: str) -> dict[str, obje
         Result.
     """
     results: list[StepResult] = []
-    runtime_root = skill_root() / "scripts"
+    runtime_root = skill_root() / "src" / "task_knowledge"
     source_mode = source_root_mode(source_root, runtime_root)
     results.extend(validate_source(source_root))
     results.extend(validate_target(project_root))

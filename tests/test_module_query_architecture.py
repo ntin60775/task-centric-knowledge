@@ -12,7 +12,7 @@ if str(TESTS_DIR) not in sys.path:
 from task_workflow_testlib import ROOT
 
 
-RUNTIME_DIR = ROOT / "scripts" / "module_core_runtime"
+RUNTIME_DIR = ROOT / "src" / "task_knowledge" / "module_core_runtime"
 
 
 class TestModuleQueryArchitecture(unittest.TestCase):

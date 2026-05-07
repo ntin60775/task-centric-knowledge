@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -17,8 +18,8 @@ SCRIPTS_DIR = ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-import task_workflow_runtime.finalize_flow as finalize_flow_module
-from task_workflow_runtime import (
+import task_knowledge.workflow_runtime.finalize_flow as finalize_flow_module
+from task_knowledge.workflow_runtime import (
     backfill_task as runtime_backfill_task,
     sync_task,
     run_publish_flow,
@@ -28,7 +29,7 @@ from task_workflow_runtime import (
     DELIVERY_ROW_PLACEHOLDER,
     PublicationSnapshot,
 )
-from task_workflow_runtime import publish_flow as _publish_flow_module
+from task_knowledge.workflow_runtime import publish_flow as _publish_flow_module
 
 DEFAULT_HUMAN_DESCRIPTION = object()
 
@@ -143,23 +144,30 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
         git(project_root, "add", ".")
         git(project_root, "commit", "-m", message)
 
+    def _cli_env(self) -> dict[str, str]:
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(ROOT / "src")
+        return env
+
     def _run_cli(self, *args: str) -> subprocess.CompletedProcess[str]:
         parts = list(args)
         if "--json" in parts:
             parts.remove("--json")
             return subprocess.run(
-                [sys.executable, str(ROOT / "scripts" / "task_knowledge_cli.py"), "--json", "workflow", *parts],
+                [sys.executable, "-m", "task_knowledge", "--json", "workflow", *parts],
                 capture_output=True,
                 text=True,
                 check=False,
                 timeout=SUBPROCESS_TIMEOUT_SECONDS,
+                env=self._cli_env(),
             )
         return subprocess.run(
-            [sys.executable, str(ROOT / "scripts" / "task_knowledge_cli.py"), "workflow", *parts],
+            [sys.executable, "-m", "task_knowledge", "workflow", *parts],
             capture_output=True,
             text=True,
             check=False,
             timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            env=self._cli_env(),
         )
 
     def test_sync_task_creates_branch_and_registry_row(self) -> None:

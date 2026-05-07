@@ -13,10 +13,10 @@ from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS_DIR = ROOT / "scripts"
-INSTALL_SCRIPT = SCRIPTS_DIR / "install_skill_runtime" / "__init__.py"
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
+SRC_DIR = ROOT / "src" / "task_knowledge"
+INSTALL_SCRIPT = SRC_DIR / "install_runtime" / "__init__.py"
+if str(ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(ROOT / "src"))
 
 
 def load_module(module_name: str, script_path: Path):

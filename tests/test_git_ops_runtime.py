@@ -13,7 +13,7 @@ SCRIPTS_DIR = ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from task_workflow_runtime import git_ops
+from task_knowledge.workflow_runtime import git_ops
 
 
 class GitOpsRuntimeTests(unittest.TestCase):

@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
 
-from task_workflow_runtime.legacy_upgrade import (
+from .legacy_upgrade import (
     ensure_repo_upgrade_state,
     load_repo_upgrade_state,
     task_class_from_task_file,

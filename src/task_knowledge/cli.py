@@ -10,12 +10,8 @@ import sys
 from pathlib import Path
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
-
-from borrowings_runtime import apply_refresh, build_refresh_plan, read_status
-from install_skill_runtime import (
+from task_knowledge.borrowings_runtime import apply_refresh, build_refresh_plan, read_status
+from task_knowledge.install_runtime import (
     check,
     doctor_deps,
     install,
@@ -26,17 +22,17 @@ from install_skill_runtime import (
     source_root_ready,
     verify_project,
 )
-from install_skill_runtime.cli import print_text_report as print_install_text_report
-from module_core_runtime.query_cli import (
+from task_knowledge.install_runtime.cli import print_text_report as print_install_text_report
+from task_knowledge.module_core_runtime.query_cli import (
     dispatch_file,
     dispatch_module,
     format_file_show_payload,
     format_module_find_payload,
     format_module_show_payload,
 )
-from task_workflow_runtime import backfill_task, finalize_task, run_publish_flow, sync_task
-from task_workflow_runtime.cli import print_text_report as print_workflow_text_report
-from task_workflow_runtime.query_cli import (
+from task_knowledge.workflow_runtime import backfill_task, finalize_task, run_publish_flow, sync_task
+from task_knowledge.workflow_runtime.cli import print_text_report as print_workflow_text_report
+from task_knowledge.workflow_runtime.query_cli import (
     dispatch as dispatch_query,
     format_current_task_payload,
     format_status_payload,
@@ -757,7 +753,8 @@ def _borrowings(args: argparse.Namespace) -> tuple[dict[str, object], int]:
         Все исключения перехватываются и формируются в стандартный error payload.
     """
     project_root = Path(args.project_root).resolve()
-    skill_root = SCRIPT_DIR.parent.resolve()
+    from task_knowledge.install_runtime.environment import skill_root as _skill_root
+    skill_root = _skill_root()
     try:
         if args.borrowings_command == "status":
             payload = read_status(skill_root, project_root, source=args.source, checkout=args.checkout)
