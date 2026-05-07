@@ -12,7 +12,7 @@
 | Parent ID | `—` |
 | Версия плана | `1` |
 | Связь с SDD | `sdd.md` |
-| Дата обновления | `2026-05-06` |
+| Дата обновления | `2026-05-07` |
 
 ## Цель
 
@@ -140,20 +140,20 @@
 
 ## Шаги
 
-- [ ] Шаг 1: Создать `src/task_knowledge/` пакет с `__init__.py`.
-- [ ] Шаг 2: Перенести `scripts/task_knowledge/` → `src/task_knowledge/`.
-- [ ] Шаг 3: Перенести `scripts/task_knowledge_cli.py` → `src/task_knowledge/cli.py`.
-- [ ] Шаг 4: Перенести `scripts/install_skill_runtime/` → `src/task_knowledge/install_runtime/`.
-- [ ] Шаг 5: Перенести `scripts/task_workflow_runtime/` → `src/task_knowledge/workflow_runtime/`.
-- [ ] Шаг 6: Перенести `scripts/module_core_runtime/` → `src/task_knowledge/module_core_runtime/`.
-- [ ] Шаг 7: Перенести `scripts/borrowings_runtime/` → `src/task_knowledge/borrowings_runtime/`.
-- [ ] Шаг 8: Обновить все import-ы в runtime-модулях.
-- [ ] Шаг 9: Обновить `pyproject.toml`, `ruff`, `mypy` конфигурацию.
-- [ ] Шаг 10: Обновить `Makefile` и `scripts/install_global_skill.py`.
-- [ ] Шаг 11: Обновить тесты.
-- [ ] Шаг 12: Обновить references и документацию.
-- [ ] Шаг 13: Прогнать полный тестовый набор и проверки.
-- [ ] Шаг 14: Доказать покрытие verification matrix.
+- [x] Шаг 1: Создать `src/task_knowledge/` пакет с `__init__.py`.
+- [x] Шаг 2: Перенести `scripts/task_knowledge/` → `src/task_knowledge/`.
+- [x] Шаг 3: Перенести `scripts/task_knowledge_cli.py` → `src/task_knowledge/cli.py`.
+- [x] Шаг 4: Перенести `scripts/install_skill_runtime/` → `src/task_knowledge/install_runtime/`.
+- [x] Шаг 5: Перенести `scripts/task_workflow_runtime/` → `src/task_knowledge/workflow_runtime/`.
+- [x] Шаг 6: Перенести `scripts/module_core_runtime/` → `src/task_knowledge/module_core_runtime/`.
+- [x] Шаг 7: Перенести `scripts/borrowings_runtime/` → `src/task_knowledge/borrowings_runtime/`.
+- [x] Шаг 8: Обновить все import-ы в runtime-модулях.
+- [x] Шаг 9: Обновить `pyproject.toml`, `ruff`, `mypy` конфигурацию.
+- [x] Шаг 10: Обновить `Makefile` и `scripts/install_global_skill.py`.
+- [x] Шаг 11: Обновить тесты.
+- [x] Шаг 12: Обновить references и документацию.
+- [x] Шаг 13: Прогнать полный тестовый набор и проверки.
+- [x] Шаг 14: Доказать покрытие verification matrix.
 
 ## Критерии завершения
 
