@@ -257,7 +257,7 @@ def _dirty_mapped_paths(checkout: Path, manifest: dict[str, Any]) -> list[str] |
 #  @param source       Borrowed source (допустим: `grace`).
 #  @param checkout     Путь к локальному upstream checkout или `None`.
 #  @return             Payload с состоянием manifest, checkout и warnings.
-#  @raises BorrowingsError Если source не поддерживается.
+#  @exception BorrowingsError Если source не поддерживается.
 def read_status(skill_root: Path, project_root: Path, *, source: str, checkout: str | None) -> dict[str, Any]:
     manifest_path, manifest = _load_manifest(skill_root, source)
     resolved_checkout, checkout_source, warnings = _resolve_checkout(checkout)
@@ -513,7 +513,7 @@ def build_refresh_plan(skill_root: Path, project_root: Path, *, source: str, che
 #  @param plan_fingerprint Ожидаемый fingerprint плана (защита от scope drift).
 #  @param assume_yes       Флаг явного подтверждения (`--yes`).
 #  @return                 Payload с результатами применения.
-#  @raises BorrowingsError Если fingerprint не совпадает или план недоступен.
+#  @exception BorrowingsError Если fingerprint не совпадает или план недоступен.
 def apply_refresh(
     skill_root: Path,
     project_root: Path,

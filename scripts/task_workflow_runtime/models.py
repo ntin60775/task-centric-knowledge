@@ -90,7 +90,7 @@ class DeliveryUnit:
     ## @brief Создать DeliveryUnit из списка ячеек таблицы.
     #  @param cells Список из 10 строк — колонки таблицы delivery unit.
     #  @return      Экземпляр DeliveryUnit.
-    #  @raises ValueError Если количество колонок не равно 10.
+    #  @exception ValueError Если количество колонок не равно 10.
     @classmethod
     def from_cells(cls, cells: list[str]) -> "DeliveryUnit":
         if len(cells) != 10:
@@ -206,7 +206,7 @@ def sanitize_registry_summary(value: str) -> str:
 #  Приводит к каноническому виду `DU-NN`.
 #  @param unit_id Исходный идентификатор.
 #  @return        Нормализованный идентификатор `DU-NN`.
-#  @raises ValueError Если формат не соответствует ожидаемому.
+#  @exception ValueError Если формат не соответствует ожидаемому.
 def normalize_unit_id(unit_id: str) -> str:
     match = UNIT_ID_RE.fullmatch(unit_id.strip())
     if not match:
@@ -269,7 +269,7 @@ def extract_delivery_branch_index(task_id: str, branch_name: str) -> int | None:
 #  Проверяет допустимость и приводит к нижнему регистру.
 #  @param status Исходный статус.
 #  @return       Нормализованный статус.
-#  @raises ValueError Если статус не из допустимого набора.
+#  @exception ValueError Если статус не из допустимого набора.
 def normalize_delivery_status(status: str) -> str:
     normalized = status.strip().lower()
     if normalized not in VALID_DELIVERY_STATUSES:
@@ -286,7 +286,7 @@ def normalize_delivery_status(status: str) -> str:
 #  @param cleanup Исходное значение или `None`.
 #  @param default Значение по умолчанию.
 #  @return        Нормализованное значение cleanup.
-#  @raises ValueError Если значение не из допустимого набора.
+#  @exception ValueError Если значение не из допустимого набора.
 def normalize_cleanup_value(cleanup: str | None, *, default: str) -> str:
     value = (cleanup or default).strip()
     if value not in VALID_CLEANUP_VALUES:

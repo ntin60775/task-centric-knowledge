@@ -183,7 +183,7 @@ class PublishActionResult:
 #  @param action        Действие publish-flow.
 #  @param current_status Текущий статус.
 #  @param target_status  Целевой статус.
-#  @raises ValueError Если переход недопустим.
+#  @exception ValueError Если переход недопустим.
 def validate_transition(action: str, current_status: str, target_status: str) -> None:
     current = normalize_delivery_status(current_status)
     target = normalize_delivery_status(target_status)
@@ -327,7 +327,7 @@ def existing_publication_reference(current_unit: DeliveryUnit, url: str | None) 
 #  @param body                     Тело публикации.
 #  @param summary                  Legacy-fallback summary.
 #  @return                         Разрешённый PublicationSnapshot.
-#  @raises ValueError Если комбинация параметров некорректна.
+#  @exception ValueError Если комбинация параметров некорректна.
 def resolve_publish_snapshot(
     project_root: Path,
     task_dir: Path,
@@ -839,7 +839,7 @@ def _publish_payload(
 #  @param summary            Legacy-fallback summary.
 #  @param today              Дата в формате ISO (по умолчанию сегодня).
 #  @return                   Payload с результатами publish-flow.
-#  @raises ValueError Если параметры некорректны или transition недопустим.
+#  @exception ValueError Если параметры некорректны или transition недопустим.
 def run_publish_flow(
     project_root: Path,
     task_dir: Path,

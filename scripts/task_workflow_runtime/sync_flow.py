@@ -93,7 +93,7 @@ def should_use_historical_safe_sync(fields: dict[str, str], *, branch_name: str 
 #  @param branch_name              Явно заданное имя ветки.
 #  @param inherit_branch_from_parent Наследовать ветку от родительской задачи.
 #  @return                         Имя целевой ветки.
-#  @raises ValueError Если не удалось определить ветку (нет ID или краткого имени).
+#  @exception ValueError Если не удалось определить ветку (нет ID или краткого имени).
 def resolve_target_branch(
     project_root: Path,
     task_dir: Path,
@@ -377,7 +377,7 @@ def _backfill_active_task(ctx: BackfillContext) -> dict[str, object]:
 #  @param summary      Явная summary для активной задачи.
 #  @param today        Дата в формате ISO (по умолчанию сегодня).
 #  @return             Payload с результатами backfill.
-#  @raises ValueError  Если scope некорректен или task.md не найден.
+#  @exception ValueError  Если scope некорректен или task.md не найден.
 def backfill_task(
     project_root: Path,
     task_dir: Path,
@@ -405,7 +405,7 @@ def backfill_task(
 #  @param inherit_branch_from_parent Наследовать ветку от родителя (для подзадач).
 #  @param today                    Дата в формате ISO (по умолчанию сегодня).
 #  @return                         Payload с результатами sync.
-#  @raises ValueError Если рабочее дерево грязное и переключение небезопасно.
+#  @exception ValueError Если рабочее дерево грязное и переключение небезопасно.
 def sync_task(
     project_root: Path,
     task_dir: Path,
