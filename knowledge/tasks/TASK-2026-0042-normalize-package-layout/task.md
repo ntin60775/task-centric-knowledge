@@ -11,7 +11,7 @@
 | Технический ключ для новых именуемых сущностей | `—` |
 | Краткое имя | `normalize-package-layout` |
 | Человекочитаемое описание | Нормализация package layout — перевод runtime-модулей в `src/task_knowledge/`. |
-| Статус | `на проверке` |
+| Статус | `завершена` |
 | Приоритет | `высокий` |
 | Ответственный | `Kimi Code CLI` |
 | Ветка | `task/task-2026-0042-normalize-package-layout` |
@@ -96,7 +96,7 @@
 
 | Unit ID | Назначение | Head | Base | Host | Тип публикации | Статус | URL | Merge commit | Cleanup |
 |---------|------------|------|------|------|----------------|--------|-----|--------------|---------|
-| `—` | — | `—` | `—` | `none` | `none` | `planned` | `—` | `—` | `не требуется` |
+| `DU-01` | Normalize package layout | `task/task-2026-0042-normalize-package-layout` | `main` | `github` | `pr` | `merged` | `—` | `TBD` | `не требуется` |
 
 ## Текущий этап
 
