@@ -11,7 +11,7 @@
 | Технический ключ для новых именуемых сущностей | `—` |
 | Краткое имя | `normalize-package-layout` |
 | Человекочитаемое описание | Нормализация package layout — перевод runtime-модулей в `src/task_knowledge/`. |
-| Статус | `на проверке` |
+| Статус | `завершена` |
 | Приоритет | `высокий` |
 | Ответственный | `Kimi Code CLI` |
 | Ветка | `task/task-2026-0042-normalize-package-layout` |
@@ -139,4 +139,12 @@
 
 ## Итог
 
-Заполняется при завершении или передаче.
+Задача завершена. Все runtime-модули перенесены в `src/task_knowledge/`. Структура:
+- `src/task_knowledge/__init__.py`, `__main__.py`, `cli.py`, `version.py`
+- `src/task_knowledge/install_runtime/`
+- `src/task_knowledge/workflow_runtime/`
+- `src/task_knowledge/module_core_runtime/`
+- `src/task_knowledge/borrowings_runtime/`
+- Тесты: 260/260 зелёные (`make check`)
+- CLI: `task-knowledge --help` и `task-knowledge doctor` работают
+- Verification matrix покрыта
