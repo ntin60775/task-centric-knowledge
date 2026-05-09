@@ -24,15 +24,15 @@ class PythonHardeningContractsTests(unittest.TestCase):
         self.assertIn("mypy", pyproject["tool"])
 
     def test_python_module_entrypoint_exists(self) -> None:
-        main_path = ROOT / "scripts" / "task_knowledge" / "__main__.py"
+        main_path = ROOT / "src" / "task_knowledge" / "__main__.py"
         self.assertTrue(main_path.exists())
-        self.assertIn("from task_knowledge_cli import main", main_path.read_text(encoding="utf-8"))
+        self.assertIn("from task_knowledge.cli import main", main_path.read_text(encoding="utf-8"))
 
     def test_version_and_consumer_contract_have_single_python_source(self) -> None:
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-        version_text = (ROOT / "scripts" / "task_knowledge" / "version.py").read_text(encoding="utf-8")
-        init_text = (ROOT / "scripts" / "task_knowledge" / "__init__.py").read_text(encoding="utf-8")
-        cli_text = (ROOT / "scripts" / "task_knowledge_cli.py").read_text(encoding="utf-8")
+        version_text = (ROOT / "src" / "task_knowledge" / "version.py").read_text(encoding="utf-8")
+        init_text = (ROOT / "src" / "task_knowledge" / "__init__.py").read_text(encoding="utf-8")
+        cli_text = (ROOT / "src" / "task_knowledge" / "cli.py").read_text(encoding="utf-8")
 
         self.assertIn(f'__version__ = "{pyproject["project"]["version"]}"', version_text)
         self.assertIn("CLI_VERSION = __version__", version_text)
@@ -71,17 +71,17 @@ class PythonHardeningContractsTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
             wrapper_path = user_bin / "task-knowledge"
             self.assertTrue(wrapper_path.exists())
-            self.assertIn("scripts/task_knowledge_cli.py", wrapper_path.read_text(encoding="utf-8"))
+            self.assertIn("task_knowledge", wrapper_path.read_text(encoding="utf-8"))
             pth_path = python_site / "task_knowledge_local.pth"
-            self.assertEqual(pth_path.read_text(encoding="utf-8").strip(), str(ROOT / "scripts"))
+            self.assertEqual(pth_path.read_text(encoding="utf-8").strip(), str(ROOT / "src"))
 
     def test_primary_runtime_hotspots_remain_decomposed(self) -> None:
         limits = {
-            ("scripts/task_knowledge_cli.py", "build_parser"): 40,
-            ("scripts/task_workflow_runtime/finalize_flow.py", "finalize_task"): 90,
-            ("scripts/task_workflow_runtime/publish_flow.py", "run_publish_flow"): 90,
-            ("scripts/task_workflow_runtime/sync_flow.py", "backfill_task"): 40,
-            ("scripts/module_core_runtime/read_model.py", "_record_from_directory"): 120,
+            ("src/task_knowledge/cli.py", "build_parser"): 40,
+            ("src/task_knowledge/workflow_runtime/finalize_flow.py", "finalize_task"): 90,
+            ("src/task_knowledge/workflow_runtime/publish_flow.py", "run_publish_flow"): 90,
+            ("src/task_knowledge/workflow_runtime/sync_flow.py", "backfill_task"): 40,
+            ("src/task_knowledge/module_core_runtime/read_model.py", "_record_from_directory"): 120,
         }
         for (path_text, function_name), max_lines in limits.items():
             with self.subTest(path=path_text, function=function_name):

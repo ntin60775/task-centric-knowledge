@@ -134,15 +134,14 @@ class GlobalSkillInstallTests(unittest.TestCase):
             python_site.mkdir()
             install_global.apply_plan(install_global.build_plan(ROOT, target_root))
             (user_bin / "task-knowledge").write_text(
-                f'#!/usr/bin/env bash\nexec "{sys.executable}" "{ROOT / "scripts/task_knowledge_cli.py"}" "$@"\n',
+                f'#!/usr/bin/env bash\nexec "{sys.executable}" -m task_knowledge "$@"\n',
                 encoding="utf-8",
             )
-            (python_site / "task_knowledge_local.pth").write_text(str(ROOT / "scripts"), encoding="utf-8")
+            (python_site / "task_knowledge_local.pth").write_text(str(ROOT / "src"), encoding="utf-8")
 
             issues = install_global.verify_cli_layer(target_root, user_bin=user_bin, python_site=python_site)
 
             details = "\n".join(issue.detail for issue in issues)
-            self.assertIn("task-knowledge wrapper does not point to live skill copy", details)
             self.assertIn("task_knowledge_local.pth does not point to live skill copy", details)
 
     def test_verify_cli_layer_rejects_symlinked_wrapper_and_pth(self) -> None:
@@ -229,9 +228,9 @@ class GlobalSkillInstallTests(unittest.TestCase):
             self.assertTrue(payload["ok"])
             wrapper_path = user_bin / "task-knowledge"
             self.assertTrue(wrapper_path.exists())
-            self.assertIn(str(target_root / "scripts/task_knowledge_cli.py"), wrapper_path.read_text(encoding="utf-8"))
+            self.assertIn("task_knowledge", wrapper_path.read_text(encoding="utf-8"))
             pth_path = python_site / "task_knowledge_local.pth"
-            self.assertEqual(pth_path.read_text(encoding="utf-8").strip(), str(target_root / "scripts"))
+            self.assertEqual(pth_path.read_text(encoding="utf-8").strip(), str(target_root / "src"))
 
 
 if __name__ == "__main__":

@@ -64,7 +64,7 @@ Installer и workflow helpers применяют production safety guards: manag
 `~/.agents/skills/task-centric-knowledge`, затем запускает wrapper-based CLI install уже из live-copy.
 После этого обязательны две проверки:
 
-- прямой live smoke через `~/.agents/skills/task-centric-knowledge/scripts/install_skill.py`;
+- прямой live smoke через `task-knowledge --json install check --project-root /abs/project --source-root ~/.agents/skills/task-centric-knowledge`;
 - user-facing smoke через установленный `task-knowledge`.
 
 Helper не удаляет target-only файлы. Если verify показывает лишние файлы в live-copy,
@@ -85,7 +85,7 @@ make install-local
 ~/.local/bin/task-knowledge
 ```
 
-Команда запускает `scripts/task_knowledge_cli.py` из того каталога, где был выполнен `make install-local`.
+Команда запускает `src/task_knowledge/cli.py` (через `python -m task_knowledge`) из того каталога, где был выполнен `make install-local`.
 Поэтому зелёный `task-knowledge --help` сам по себе не доказывает, что live skill copy в
 `~/.agents/skills/task-centric-knowledge` полная и свежая. Для этого использовать `make verify-global-install`.
 

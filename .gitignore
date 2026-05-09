@@ -12,3 +12,8 @@ dist/
 zip_context_ignore.md
 output/share/*-zip-context-*.zip
 # zip-context:artifacts:end
+
+# Generated documentation
+output/doxygen/
+output/docs/site/
+output/docs/api/

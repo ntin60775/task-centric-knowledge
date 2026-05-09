@@ -15,7 +15,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from task_workflow_testlib import TempRepoCase
 
-from module_core_runtime import (
+from task_knowledge.module_core_runtime import (
     ModuleVerificationError,
     build_failure_handoff,
     build_verification_excerpt,

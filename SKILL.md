@@ -23,8 +23,8 @@ description: "Развертывание и обновление операци�
 - правила безопасного upgrade-перехода между версиями skill-а;
 - repo-level upgrade-state и controlled compatibility-backfill legacy-задач;
 - install/upgrade governance с `doctor-deps` и `migrate-cleanup-plan/confirm`;
-- вспомогательный скрипт `scripts/task_workflow.py` для синхронизации стартовой task-ветки, `task.md`, `registry.md` и publish-блока delivery units.
-- read-only operator CLI `scripts/task_query.py` для `status`, `current-task` и `task show`;
+-  unified CLI `task-knowledge workflow` для синхронизации стартовой task-ветки, `task.md`, `registry.md` и publish-блока delivery units.
+- read-only operator CLI `task-knowledge task` для `status`, `current-task` и `task show`;
 - read-only query layer `task-knowledge module find/show` и `file show` для `Module Core`,
   где `module.md` является shared/public truth,
   `verification.md` — владельцем readiness/evidence,
@@ -69,9 +69,7 @@ description: "Развертывание и обновление операци�
 Операторские примеры запуска, порядок команд и JSON-контракт вынесены в `README.md`
 этого skill-а, чтобы основной `SKILL.md` оставался нормативным, а не справочным.
 
-Исторические entrypoint'ы `python3 scripts/install_skill.py`, `python3 scripts/task_query.py` и
-`python3 scripts/task_workflow.py` сохраняются для совместимости и тестов, но новый основной путь
-для человека и внешнего агента — именно `task-knowledge`.
+Единственный операторский entrypoint — `task-knowledge`.
 Governed legacy-backfill также должен идти через explicit CLI-режим,
 а не через неявное переиспользование ordinary `workflow sync`.
 
@@ -81,8 +79,8 @@ Governed legacy-backfill также должен идти через explicit CL
 2. Сначала запусти проверку:
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode check
-python3 scripts/install_skill.py --project-root /abs/project --mode check --profile 1c
+task-knowledge install check --project-root /abs/project
+task-knowledge install check --project-root /abs/project --profile 1c
 ```
 
 Для обновления самого глобально установленного навыка не используй команды выше:
@@ -93,10 +91,10 @@ python3 scripts/install_skill.py --project-root /abs/project --mode check --prof
 3. Если результат проверки устраивает, выполни установку:
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode install
-python3 scripts/install_skill.py --project-root /abs/project --mode install --profile 1c
-python3 scripts/install_skill.py --project-root /abs/project --mode install --existing-system-mode migrate
-python3 scripts/install_skill.py --project-root /abs/project --mode install --force  # полное обновление managed-шаблонов
+task-knowledge install apply --project-root /abs/project
+task-knowledge install apply --project-root /abs/project --profile 1c
+task-knowledge install apply --project-root /abs/project --existing-system-mode migrate
+task-knowledge install apply --project-root /abs/project --force  # полное обновление managed-шаблонов
 ```
 
 4. Если в проекте уже есть managed-файлы knowledge-системы и их нужно обновить шаблонами этого дистрибутива, используй `--force`.
@@ -107,8 +105,8 @@ python3 scripts/install_skill.py --project-root /abs/project --mode install --fo
 5. Для отдельного read-only аудита уже установленной проектной части используй:
 
 ```
-python3 scripts/install_skill.py --project-root /abs/project --mode verify-project  # read-only аудит установленного проекта
-python3 scripts/install_skill.py --project-root /abs/project --mode verify-project --force  # проверка полного обновления
+task-knowledge install verify-project --project-root /abs/project  # read-only аудит установленного проекта
+task-knowledge install verify-project --project-root /abs/project --force  # проверка полного обновления
 ```
 
 `verify-project --force` требует актуальность force-updatable managed-шаблонов относительно дистрибутива,
@@ -116,7 +114,7 @@ python3 scripts/install_skill.py --project-root /abs/project --mode verify-proje
 6. Для диагностики install/upgrade-контура используй:
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode doctor-deps
+task-knowledge install doctor-deps --project-root /abs/project
 ```
 
 `check`, `install`, `verify-project` и `doctor-deps` дополнительно возвращают поля
@@ -126,7 +124,7 @@ python3 scripts/install_skill.py --project-root /abs/project --mode doctor-deps
 7. Если после миграции появились installer-generated артефакты для безопасной чистки, сначала покажи план:
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode migrate-cleanup-plan
+task-knowledge install cleanup-plan --project-root /abs/project
 ```
 
 `migrate-cleanup-plan` раскрывает только auto-delete allowlist v1:
@@ -140,7 +138,7 @@ Legacy-контуры вроде `.sisyphus`, `doc/tasks`, `docs/tasks`, `docs/r
 8. Применение cleanup допустимо только через fingerprint из показанного плана:
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode migrate-cleanup-confirm --confirm-fingerprint <sha256> --yes
+task-knowledge install cleanup-confirm --project-root /abs/project --confirm-fingerprint <sha256> --yes
 ```
 
 `confirm` пересчитывает scope заново и останавливается при любом расхождении `TARGETS`, `TARGET_COUNT`, `COUNT` или confirm-команды.
@@ -153,12 +151,12 @@ python3 scripts/install_skill.py --project-root /abs/project --mode migrate-clea
     по правилам из `references/adoption.md` и `references/task-workflow.md`:
 
 ```bash
-python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --create-branch --register-if-missing --summary "Краткое описание задачи"
-python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha/subtasks/TASK-2026-0001.1-podzadacha --create-branch --inherit-branch-from-parent --register-if-missing --summary "Краткое описание подзадачи"
+task-knowledge workflow sync --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --create-branch --register-if-missing --summary "Краткое описание задачи"
+task-knowledge workflow sync --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha/subtasks/TASK-2026-0001.1-podzadacha --create-branch --inherit-branch-from-parent --register-if-missing --summary "Краткое описание подзадачи"
 ```
 
 13. Если repo уже переведён в epoch `module-core-v1`, legacy-задачи обновляй только через explicit backfill:
-    через facade-скрипт `python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --backfill-scope compatibility` или через unified CLI `task-knowledge workflow backfill --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --scope compatibility`
+    через facade-скрипт `task-knowledge workflow backfill --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --scope compatibility` или через unified CLI `task-knowledge workflow backfill --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --scope compatibility`
 
 Для `closed historical` ordinary sync сохраняет historical safe-sync policy,
 а controlled backfill ограничивается migration note и repo upgrade-state.
@@ -166,14 +164,14 @@ python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledg
 14. Для read-only operator query используй отдельный CLI:
 
 ```bash
-python3 scripts/task_query.py --project-root /abs/project status --format json
-python3 scripts/task_query.py --project-root /abs/project current-task --format json
-python3 scripts/task_query.py --project-root /abs/project task show current
-python3 scripts/task_query.py --project-root /abs/project task show TASK-2026-0001-zadacha
+task-knowledge --json task status --project-root /abs/project
+task-knowledge --json task current --project-root /abs/project
+task-knowledge task show --project-root /abs/project current
+task-knowledge task show --project-root /abs/project TASK-2026-0001-zadacha
 ```
 
-`task_query.py` не мутирует git или knowledge-контур.
-Для `current-task` он использует policy `branch -> task-scoped dirty fallback -> warning` и не выбирает задачу молча при неоднозначности.
+`task-knowledge task` не мутирует git или knowledge-контур.
+Для `current-task` unified CLI использует policy `branch -> task-scoped dirty fallback -> warning` и не выбирает задачу молча при неоднозначности.
 
 ## Профили
 
@@ -264,14 +262,14 @@ python3 scripts/task_query.py --project-root /abs/project task show TASK-2026-00
 - `assets/knowledge/**` — шаблон корня `knowledge/`
 - `assets/agents-managed-block-generic.md` — managed-блок для `AGENTS.md`
 - `assets/agents-managed-block-1c.md` — managed-блок для `AGENTS.md` под 1С
-- `scripts/install_skill.py` — facade-entrypoint для `check/install/verify-project/doctor-deps/migrate-cleanup-*`
-- `scripts/install_skill_runtime/**` — runtime-модули install/upgrade governance
-- `scripts/task_workflow.py` — вспомогательный скрипт для синхронизации стартовой task-ветки, `task.md`, `registry.md` и publish-блока delivery units
-- `scripts/task_query.py` — read-only operator facade для `status/current-task/task show`
-- `scripts/module_core_runtime/read_model.py` — projection runtime для partial rollout `Module Core`
-- `scripts/module_core_runtime/query_cli.py` — transport-layer и formatter для `module find/show` и `file show`
-- `scripts/task_workflow_runtime/read_model.py` — projection runtime поверх `Task Core`
-- `scripts/task_workflow_runtime/query_cli.py` — transport-layer и formatter operator CLI
+- `task-knowledge` — единый CLI entrypoint для install/governance, read-only query и workflow/publish helper
+- `src/task_knowledge/install_runtime/**` — runtime-модули install/upgrade governance
+- `task-knowledge workflow` — синхронизация стартовой task-ветки, `task.md`, `registry.md` и publish-блока delivery units
+- `task-knowledge task` — read-only operator query для `status/current-task/task show`
+- `src/task_knowledge/module_core_runtime/read_model.py` — projection runtime для partial rollout `Module Core`
+- `src/task_knowledge/module_core_runtime/query_cli.py` — transport-layer и formatter для `module find/show` и `file show`
+- `src/task_knowledge/workflow_runtime/read_model.py` — projection runtime поверх `Task Core`
+- `src/task_knowledge/workflow_runtime/query_cli.py` — transport-layer и formatter operator CLI
 - `references/upgrade-transition.md` — безопасный порядок обновления старой версии навыка на новую и фиксации перехода в git
 - `references/core-model.md` — канонический дистрибутивный snapshot модели ядра `Task Core`
 - `references/adoption.md` — validated quickstart, field-validated bootstrap первой задачи и patterns по классам сред

@@ -55,7 +55,7 @@
 - оператор уже создал первые `task.md` / `plan.md` из шаблонов.
 
 В такой ситуации helper не должен молча переключать ветку.
-Field validation подтвердила, что `task_workflow.py --create-branch` корректно останавливается на dirty tree.
+Field validation подтвердила, что `task-knowledge workflow sync --create-branch` корректно останавливается на dirty tree.
 
 Проверенный порядок для первой задачи:
 
@@ -70,14 +70,14 @@ git checkout -b task/<task-id-lower>-<slug>
 4. Синхронизировать metadata и `registry.md` без попытки branch switch:
 
 ```bash
-python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/<TASK-ID>-<slug> --register-if-missing --summary "Краткое описание задачи"
+task-knowledge workflow sync --project-root /abs/project --task-dir knowledge/tasks/<TASK-ID>-<slug> --register-if-missing --summary "Краткое описание задачи"
 ```
 
 5. Проверить operator UX:
 
 ```bash
-python3 scripts/task_query.py --project-root /abs/project current-task --format json
-python3 scripts/task_query.py --project-root /abs/project task show <TASK-ID> --format json
+task-knowledge --json task current --project-root /abs/project
+task-knowledge --json task show --project-root /abs/project <TASK-ID>
 ```
 
 ## Контур публикации
@@ -125,32 +125,32 @@ python3 scripts/task_query.py --project-root /abs/project task show <TASK-ID> --
 Предпочтительный детерминированный вход для синхронизации task-контекста:
 
 ```bash
-python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --create-branch --register-if-missing --summary "Краткое описание задачи"
+task-knowledge workflow sync --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --create-branch --register-if-missing --summary "Краткое описание задачи"
 ```
 
 Для подзадачи с наследованием ветки родителя:
 
 ```bash
-python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha/subtasks/TASK-2026-0001.1-podzadacha --create-branch --inherit-branch-from-parent --register-if-missing --summary "Краткое описание подзадачи"
+task-knowledge workflow sync --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha/subtasks/TASK-2026-0001.1-podzadacha --create-branch --inherit-branch-from-parent --register-if-missing --summary "Краткое описание подзадачи"
 ```
 
 Для старта первой поставки:
 
 ```bash
-python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --publish-action start --purpose "Первая поставка" --base-branch main
+task-knowledge workflow publish --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --publish-action start --purpose "Первая поставка" --base-branch main
 ```
 
 Для публикации и синхронизации PR/MR:
 
 ```bash
-python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --publish-action publish --unit-id DU-01 --host github --url https://github.com/example/repo/pull/1 --status draft
-python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --publish-action sync --unit-id DU-01 --sync-from-host
-python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --publish-action merge --unit-id DU-01 --merge-commit abc1234
+task-knowledge workflow publish --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --publish-action publish --unit-id DU-01 --host github --url https://github.com/example/repo/pull/1 --status draft
+task-knowledge workflow publish --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --publish-action sync --unit-id DU-01 --sync-from-host
+task-knowledge workflow publish --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --publish-action merge --unit-id DU-01 --merge-commit abc1234
 ```
 
 Для local-only finalize завершённой задачи:
 
-- Legacy-команда: `python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --finalize --base-branch main`
+- Legacy-команда: `task-knowledge workflow finalize --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --base-branch main`
 - Единый CLI: `task-knowledge workflow finalize --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --base-branch main`
 
 ## CLI операторских запросов
@@ -158,10 +158,10 @@ python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledg
 Для query/reporting-сценариев использовать отдельный read-only entrypoint:
 
 ```bash
-python3 scripts/task_query.py --project-root /abs/project status --format json
-python3 scripts/task_query.py --project-root /abs/project current-task --format json
-python3 scripts/task_query.py --project-root /abs/project task show current
-python3 scripts/task_query.py --project-root /abs/project task show TASK-2026-0001
+task-knowledge --json task status --project-root /abs/project
+task-knowledge --json task current --project-root /abs/project
+task-knowledge task show --project-root /abs/project current
+task-knowledge task show --project-root /abs/project TASK-2026-0001
 ```
 
 Этот CLI:

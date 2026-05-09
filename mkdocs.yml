@@ -1,0 +1,19 @@
+site_name: task-centric-knowledge API
+site_url: ""
+use_directory_urls: false
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths:
+            - scripts
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+
+theme:
+  name: material

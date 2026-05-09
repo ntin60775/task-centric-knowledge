@@ -14,13 +14,13 @@ if str(TESTS_DIR) not in sys.path:
 from task_workflow_testlib import ROOT, SUBPROCESS_TIMEOUT_SECONDS, TempRepoCase, git
 
 
-CLI_SCRIPT = ROOT / "scripts" / "task_knowledge_cli.py"
+
 
 
 class TaskKnowledgeCliTests(TempRepoCase):
     def run_cli(self, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            [sys.executable, str(CLI_SCRIPT), *args],
+            [sys.executable, "-m", "task_knowledge", *args],
             capture_output=True,
             text=True,
             check=False,
@@ -169,15 +169,15 @@ class TaskKnowledgeCliTests(TempRepoCase):
             self.write_registry(project_root)
             (project_root / "task-knowledge.project.json").write_text('{"schema": "test"}\n', encoding="utf-8")
             shutil.copytree(
-                ROOT / "scripts",
-                project_root / "scripts",
+                ROOT / "src",
+                project_root / "src",
                 ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
             )
 
             result = subprocess.run(
                 [
                     sys.executable,
-                    str(project_root / "scripts/task_knowledge_cli.py"),
+                    str(project_root / "src/task_knowledge/__main__.py"),
                     "--json",
                     "doctor",
                     "--project-root",
@@ -187,12 +187,13 @@ class TaskKnowledgeCliTests(TempRepoCase):
                 text=True,
                 check=False,
                 timeout=SUBPROCESS_TIMEOUT_SECONDS,
+                env={"PYTHONPATH": str(project_root / "src")},
             )
             payload = json.loads(result.stdout)
 
             self.assertEqual(result.returncode, 2)
             self.assertFalse(payload["ok"])
-            self.assertEqual(payload["runtime_root"], str((project_root / "scripts").resolve()))
+            self.assertEqual(payload["runtime_root"], str((project_root / "src" / "task_knowledge").resolve()))
             self.assertEqual(payload["source_root"], str(project_root.resolve()))
             self.assertFalse(payload["source_root_valid"])
             self.assertEqual(payload["source_root_mode"], "embedded")
@@ -210,15 +211,15 @@ class TaskKnowledgeCliTests(TempRepoCase):
             project_root.mkdir()
             self.write_registry(project_root)
             shutil.copytree(
-                ROOT / "scripts",
-                project_root / "scripts",
+                ROOT / "src",
+                project_root / "src",
                 ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
             )
 
             result = subprocess.run(
                 [
                     sys.executable,
-                    str(project_root / "scripts/task_knowledge_cli.py"),
+                    str(project_root / "src/task_knowledge/__main__.py"),
                     "--json",
                     "install",
                     "check",
@@ -229,12 +230,13 @@ class TaskKnowledgeCliTests(TempRepoCase):
                 text=True,
                 check=False,
                 timeout=SUBPROCESS_TIMEOUT_SECONDS,
+                env={"PYTHONPATH": str(project_root / "src")},
             )
             payload = json.loads(result.stdout)
 
             self.assertEqual(result.returncode, 2)
             self.assertFalse(payload["ok"])
-            self.assertEqual(payload["runtime_root"], str((project_root / "scripts").resolve()))
+            self.assertEqual(payload["runtime_root"], str((project_root / "src" / "task_knowledge").resolve()))
             self.assertFalse(payload["source_root_valid"])
             self.assertEqual(payload["source_root_mode"], "embedded")
             source_results = [item for item in payload["results"] if item["key"] in {"source", "source_root_unavailable"}]
@@ -252,15 +254,15 @@ class TaskKnowledgeCliTests(TempRepoCase):
             (project_root / "references").mkdir()
             (project_root / "references/product.md").write_text("# Consumer reference\n", encoding="utf-8")
             shutil.copytree(
-                ROOT / "scripts",
-                project_root / "scripts",
+                ROOT / "src",
+                project_root / "src",
                 ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
             )
 
             result = subprocess.run(
                 [
                     sys.executable,
-                    str(project_root / "scripts/task_knowledge_cli.py"),
+                    str(project_root / "src/task_knowledge/__main__.py"),
                     "--json",
                     "install",
                     "check",
@@ -271,6 +273,7 @@ class TaskKnowledgeCliTests(TempRepoCase):
                 text=True,
                 check=False,
                 timeout=SUBPROCESS_TIMEOUT_SECONDS,
+                env={"PYTHONPATH": str(project_root / "src")},
             )
             payload = json.loads(result.stdout)
 
@@ -287,15 +290,15 @@ class TaskKnowledgeCliTests(TempRepoCase):
             project_root.mkdir()
             self.write_registry(project_root)
             shutil.copytree(
-                ROOT / "scripts",
-                project_root / "scripts",
+                ROOT / "src",
+                project_root / "src",
                 ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
             )
 
             result = subprocess.run(
                 [
                     sys.executable,
-                    str(project_root / "scripts/task_knowledge_cli.py"),
+                    str(project_root / "src/task_knowledge/__main__.py"),
                     "--json",
                     "install",
                     "doctor-deps",
@@ -306,12 +309,13 @@ class TaskKnowledgeCliTests(TempRepoCase):
                 text=True,
                 check=False,
                 timeout=SUBPROCESS_TIMEOUT_SECONDS,
+                env={"PYTHONPATH": str(project_root / "src")},
             )
             payload = json.loads(result.stdout)
 
             self.assertEqual(result.returncode, 2)
             self.assertFalse(payload["ok"])
-            self.assertEqual(payload["runtime_root"], str((project_root / "scripts").resolve()))
+            self.assertEqual(payload["runtime_root"], str((project_root / "src" / "task_knowledge").resolve()))
             self.assertFalse(payload["source_root_valid"])
             self.assertEqual(payload["source_root_mode"], "embedded")
             source_results = [item for item in payload["results"] if item["key"] in {"source", "source_root_unavailable"}]
@@ -326,15 +330,15 @@ class TaskKnowledgeCliTests(TempRepoCase):
             project_root.mkdir()
             self.write_registry(project_root)
             shutil.copytree(
-                ROOT / "scripts",
-                project_root / "scripts",
+                ROOT / "src",
+                project_root / "src",
                 ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
             )
 
             result = subprocess.run(
                 [
                     sys.executable,
-                    str(project_root / "scripts/task_knowledge_cli.py"),
+                    str(project_root / "src/task_knowledge/__main__.py"),
                     "--json",
                     "install",
                     "check",
@@ -347,12 +351,13 @@ class TaskKnowledgeCliTests(TempRepoCase):
                 text=True,
                 check=False,
                 timeout=SUBPROCESS_TIMEOUT_SECONDS,
+                env={"PYTHONPATH": str(project_root / "src")},
             )
             payload = json.loads(result.stdout)
 
             self.assertEqual(result.returncode, 0)
             self.assertTrue(payload["ok"])
-            self.assertEqual(payload["runtime_root"], str((project_root / "scripts").resolve()))
+            self.assertEqual(payload["runtime_root"], str((project_root / "src" / "task_knowledge").resolve()))
             self.assertTrue(payload["source_root_valid"])
             self.assertEqual(payload["source_root_mode"], "external")
             self.assertEqual(payload["source_root"], str(ROOT.resolve()))
@@ -568,7 +573,7 @@ class TaskKnowledgeCliTests(TempRepoCase):
 
     def test_help_surface_uses_canonical_command_name_for_all_entrypoints(self) -> None:
         env = dict(os.environ)
-        pythonpath_parts = [str(ROOT / "scripts")]
+        pythonpath_parts = [str(ROOT / "src")]
         existing_pythonpath = env.get("PYTHONPATH")
         if existing_pythonpath:
             pythonpath_parts.append(existing_pythonpath)

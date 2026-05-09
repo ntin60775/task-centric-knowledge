@@ -21,25 +21,25 @@ source-of-truth и допустимые warning-first сценарии,
 ## 2. Общий validated порядок
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode check
-python3 scripts/install_skill.py --project-root /abs/project --mode install
-python3 scripts/install_skill.py --project-root /abs/project --mode doctor-deps
+task-knowledge install check --project-root /abs/project
+task-knowledge install apply --project-root /abs/project
+task-knowledge install doctor-deps --project-root /abs/project
 ```
 
 Для `mixed_system`:
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode install --existing-system-mode migrate
-python3 scripts/install_skill.py --project-root /abs/project --mode migrate-cleanup-plan
+task-knowledge install apply --project-root /abs/project --existing-system-mode migrate
+task-knowledge install cleanup-plan --project-root /abs/project
 ```
 
 Для `compatible/1c`:
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode check --profile 1c
-python3 scripts/install_skill.py --project-root /abs/project --mode install --force --profile 1c
-python3 scripts/install_skill.py --project-root /abs/project --mode doctor-deps --profile 1c
-python3 scripts/install_skill.py --project-root /abs/project --mode migrate-cleanup-plan --profile 1c
+task-knowledge install check --project-root /abs/project --profile 1c
+task-knowledge install apply --project-root /abs/project --force --profile 1c
+task-knowledge install doctor-deps --project-root /abs/project --profile 1c
+task-knowledge install cleanup-plan --project-root /abs/project --profile 1c
 ```
 
 ## 3. Чистая установка: чего ожидать
@@ -51,7 +51,7 @@ python3 scripts/install_skill.py --project-root /abs/project --mode migrate-clea
 Проверка:
 
 ```bash
-python3 scripts/task_query.py --project-root /abs/project status --format json
+task-knowledge --json task status --project-root /abs/project
 ```
 
 ## 4. Первый task bootstrap после clean install
@@ -59,7 +59,7 @@ python3 scripts/task_query.py --project-root /abs/project status --format json
 Прямой запуск:
 
 ```bash
-python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/<TASK-ID>-<slug> --create-branch --register-if-missing --summary "..."
+task-knowledge workflow sync --project-root /abs/project --task-dir knowledge/tasks/<TASK-ID>-<slug> --create-branch --register-if-missing --summary "..."
 ```
 
 не является универсально безопасным для самой первой задачи,
@@ -73,9 +73,9 @@ git checkout -b task/<task-id-lower>-<slug>
 mkdir -p knowledge/tasks/<TASK-ID>-<slug>
 cp knowledge/tasks/_templates/task.md knowledge/tasks/<TASK-ID>-<slug>/task.md
 cp knowledge/tasks/_templates/plan.md knowledge/tasks/<TASK-ID>-<slug>/plan.md
-python3 scripts/task_workflow.py --project-root /abs/project --task-dir knowledge/tasks/<TASK-ID>-<slug> --register-if-missing --summary "..."
-python3 scripts/task_query.py --project-root /abs/project current-task --format json
-python3 scripts/task_query.py --project-root /abs/project task show <TASK-ID> --format json
+task-knowledge workflow sync --project-root /abs/project --task-dir knowledge/tasks/<TASK-ID>-<slug> --register-if-missing --summary "..."
+task-knowledge --json task current --project-root /abs/project
+task-knowledge --json task show --project-root /abs/project <TASK-ID>
 ```
 
 Смысл этого порядка:
@@ -112,8 +112,8 @@ python3 scripts/task_query.py --project-root /abs/project task show <TASK-ID> --
 Если в репозитории уже много задач с `branch=main`, команды:
 
 ```bash
-python3 scripts/task_query.py --project-root /abs/project status --format json
-python3 scripts/task_query.py --project-root /abs/project current-task --format json
+task-knowledge --json task status --project-root /abs/project
+task-knowledge --json task current --project-root /abs/project
 ```
 
 могут вернуть `ambiguous/branch_tie` и поднять legacy warnings (`summary_drift`, `registry_row_missing`, `next_step_missing`).

@@ -35,7 +35,7 @@ Installer управляет только следующими сущностя�
 - не придумывает naming conventions для проекта;
 - не переносит старые ad-hoc планы и заметки в новую структуру автоматически.
 
-Git-жизненный цикл самой задачи начинается после установки и задаётся managed-правилами плюс вспомогательным скриптом `scripts/task_workflow.py`.
+Git-жизненный цикл самой задачи начинается после установки и задаётся managed-правилами плюс вспомогательным скриптом `task-knowledge workflow`.
 Сам installer не переопределяет `Task Core`, а только разворачивает и обновляет управляемый контур вокруг него.
 До запуска git-процедур нужно определить, продолжается ли текущая задача, создаётся подзадача или открывается новая задача; правила для этого вынесены в `references/task-routing.md`.
 Если обновляется старая версия skill-а, порядок перехода и git-фиксации вынесен в `references/upgrade-transition.md`.
@@ -56,7 +56,7 @@ Git-жизненный цикл самой задачи начинается п�
 `make install-global` копирует только manifest-допущенные части дистрибутива:
 
 - отдельные файлы: `SKILL.md`, `README.md`, `Makefile`, `pyproject.toml`;
-- каталоги дистрибутива: `agents/`, `assets/`, `borrowings/`, `references/`, `scripts/`, `tests/`;
+- каталоги дистрибутива: `agents/`, `assets/`, `borrowings/`, `references/`, `scripts/`, `src/`, `tests/`;
 - обязательный шаблонный блок: `assets/knowledge/**`.
 
 В live-copy не должны попадать repo-local и transient артефакты:
@@ -72,7 +72,7 @@ Symlinked manifest targets в live-copy не перезаписываются: a
 
 Обязательные smoke-checks:
 
-- прямой smoke: `python3 ~/.agents/skills/task-centric-knowledge/scripts/install_skill.py --project-root /abs/project --mode check --format json`;
+- прямой smoke: `task-knowledge --json install check --project-root /abs/project --source-root ~/.agents/skills/task-centric-knowledge`;
 - smoke пользовательского CLI: `task-knowledge --json doctor --project-root /abs/project --source-root ~/.agents/skills/task-centric-knowledge`.
 
 Helper не выполняет destructive cleanup и не использует `--delete`.
@@ -249,7 +249,7 @@ task-knowledge workflow sync --project-root /abs/project --task-dir /abs/project
 ### Проверка
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode check
+task-knowledge install check --project-root /abs/project
 ```
 
 Проверяет:
@@ -265,8 +265,8 @@ python3 scripts/install_skill.py --project-root /abs/project --mode check
 ### Установка
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode install
-python3 scripts/install_skill.py --project-root /abs/project --mode install --force  # полное обновление managed-шаблонов
+task-knowledge install apply --project-root /abs/project
+task-knowledge install apply --project-root /abs/project --force  # полное обновление managed-шаблонов
 ```
 
 Поведение:
@@ -286,8 +286,8 @@ Project data не сравнивается с source-шаблоном по со�
 ### Read-only проверка проектной установки
 
 ```
-python3 scripts/install_skill.py --project-root /abs/project --mode verify-project  # read-only аудит установленного проекта
-python3 scripts/install_skill.py --project-root /abs/project --mode verify-project --force  # проверка полного обновления
+task-knowledge install verify-project --project-root /abs/project  # read-only аудит установленного проекта
+task-knowledge install verify-project --project-root /abs/project --force  # проверка полного обновления
 ```
 
 `verify-project` повторяет post-install verification без записи в целевой проект.
@@ -308,14 +308,14 @@ task-knowledge install verify-project --project-root /abs/project --force  # rea
 
 Важно для самого первого task bootstrap после clean install:
 если `install` и создание первых task-файлов уже сделали рабочее дерево грязным,
-не нужно ожидать, что `task_workflow.py --create-branch` сам переключит ветку.
+не нужно ожидать, что `task-knowledge workflow sync --create-branch` сам переключит ветку.
 Field validation подтвердила безопасный порядок:
 сначала явно создать `task/...` ветку вручную, затем вызвать helper в режиме `--register-if-missing`.
 
 ### Диагностика зависимостей
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode doctor-deps
+task-knowledge install doctor-deps --project-root /abs/project
 ```
 
 `doctor-deps` показывает:
@@ -351,7 +351,7 @@ read-only runtime commands должны продолжать работать о
 ### План cleanup после миграции
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode migrate-cleanup-plan
+task-knowledge install cleanup-plan --project-root /abs/project
 ```
 
 `migrate-cleanup-plan` не удаляет ничего и вместо этого:
@@ -376,7 +376,7 @@ Field validation показала два ожидаемых паттерна:
 ### Подтверждённый cleanup
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode migrate-cleanup-confirm --confirm-fingerprint <sha256> --yes
+task-knowledge install cleanup-confirm --project-root /abs/project --confirm-fingerprint <sha256> --yes
 ```
 
 `migrate-cleanup-confirm` заново строит cleanup-plan и останавливается, если изменились:
@@ -391,8 +391,8 @@ python3 scripts/install_skill.py --project-root /abs/project --mode migrate-clea
 ### Принудительное обновление
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode install --force
-python3 scripts/install_skill.py --project-root /abs/project --mode verify-project --force  # проверка полного обновления
+task-knowledge install apply --project-root /abs/project --force
+task-knowledge install verify-project --project-root /abs/project --force  # проверка полного обновления
 ```
 
 Используй, если нужно обновить именно managed-шаблоны из этого дистрибутива.
@@ -419,9 +419,9 @@ explicit backfill legacy-задач через команду `task-knowledge wo
 ### Режимы работы с существующей системой
 
 ```bash
-python3 scripts/install_skill.py --project-root /abs/project --mode install --existing-system-mode abort
-python3 scripts/install_skill.py --project-root /abs/project --mode install --existing-system-mode adopt
-python3 scripts/install_skill.py --project-root /abs/project --mode install --existing-system-mode migrate
+task-knowledge install apply --project-root /abs/project --existing-system-mode abort
+task-knowledge install apply --project-root /abs/project --existing-system-mode adopt
+task-knowledge install apply --project-root /abs/project --existing-system-mode migrate
 ```
 
 - `abort` — безопасный режим по умолчанию; при конфликте установка останавливается;

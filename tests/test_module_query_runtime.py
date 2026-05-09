@@ -14,7 +14,7 @@ SCRIPTS_DIR = TESTS_DIR.parent / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from module_core_runtime.query_cli import dispatch_file, dispatch_module, format_module_show_payload
+from task_knowledge.module_core_runtime.query_cli import dispatch_file, dispatch_module, format_module_show_payload
 from task_workflow_testlib import TempRepoCase
 
 

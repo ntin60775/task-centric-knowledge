@@ -11,9 +11,9 @@ SCRIPTS_DIR = ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from task_workflow_runtime.models import DeliveryUnit, DeliveryUnitVersion
-from task_workflow_runtime import registry_sync
-from task_workflow_runtime.registry_sync import merge_delivery_unit_versions, preferred_registry_summary
+from task_knowledge.workflow_runtime.models import DeliveryUnit, DeliveryUnitVersion
+from task_knowledge.workflow_runtime import registry_sync
+from task_knowledge.workflow_runtime.registry_sync import merge_delivery_unit_versions, preferred_registry_summary
 
 
 class TaskWorkflowRegistryTests:

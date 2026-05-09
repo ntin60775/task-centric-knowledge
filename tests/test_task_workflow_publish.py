@@ -11,8 +11,8 @@ SCRIPTS_DIR = TESTS_DIR.parent / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from task_workflow_runtime.models import DeliveryUnit
-from task_workflow_runtime.publish_flow import branch_for_task_context, resolve_publish_snapshot
+from task_knowledge.workflow_runtime.models import DeliveryUnit
+from task_knowledge.workflow_runtime.publish_flow import branch_for_task_context, resolve_publish_snapshot
 from task_workflow_testlib import TempRepoCase, git
 
 

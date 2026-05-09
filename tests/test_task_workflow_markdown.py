@@ -10,8 +10,8 @@ SCRIPTS_DIR = ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from task_workflow_runtime.models import DeliveryUnit
-from task_workflow_runtime.task_markdown import (
+from task_knowledge.workflow_runtime.models import DeliveryUnit
+from task_knowledge.workflow_runtime.task_markdown import (
     parse_delivery_units,
     task_summary_from_fields,
     update_task_file_with_delivery_units,

@@ -12,7 +12,7 @@
 
 - `project_root` — корень consumer repo, где живут `knowledge/`, task data и product runtime subroot.
 - `runtime_root` — каталог, из которого реально исполняется runtime subset или установленная команда.
-- `source_root` — standalone-дистрибутив `task-centric-knowledge` с `SKILL.md`, `assets/`, `references/` и `scripts/`.
+- `source_root` — standalone-дистрибутив `task-centric-knowledge` с `SKILL.md`, `assets/`, `references/`, `scripts/` и `src/`.
 
 `project_root` не является fallback-ом для `source_root`. Если команда требует install assets, а доступен только embedded runtime subset, она должна вернуть один blocker `source_root_unavailable`, а не искать `SKILL.md` и `assets/...` внутри consumer repo.
 Собственные каталоги consumer-а вроде `assets/` и `references/` не превращают `project_root` в standalone `source_root`.
@@ -39,7 +39,7 @@ Consumer-owned manifest может использовать следующий m
 {
   "integration_contract": "consumer-runtime-v1",
   "pinned_commit": "<upstream commit>",
-  "included_paths": ["scripts/task_query.py"],
+  "included_paths": ["src/task_knowledge/cli.py"],
   "consumer_runtime_root": "knowledge/runtime/<consumer-id>",
   "consumer_entrypoint": "task-knowledge task status --project-root /abs/project"
 }

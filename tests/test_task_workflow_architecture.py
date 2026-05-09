@@ -12,8 +12,7 @@ if str(TESTS_DIR) not in sys.path:
 from task_workflow_testlib import ROOT
 
 
-RUNTIME_DIR = ROOT / "scripts" / "task_workflow_runtime"
-FACADE_PATH = ROOT / "scripts" / "task_workflow.py"
+RUNTIME_DIR = ROOT / "src" / "task_knowledge" / "workflow_runtime"
 
 
 class TestTaskWorkflowArchitecture(unittest.TestCase):
@@ -24,7 +23,7 @@ class TestTaskWorkflowArchitecture(unittest.TestCase):
             "registry_sync.py": {"git_ops", "models", "task_markdown"},
             "forge.py": {"git_ops", "models"},
             "path_safety.py": set(),
-            "sync_flow.py": {"git_ops", "models", "path_safety", "registry_sync", "task_markdown"},
+            "sync_flow.py": {"git_ops", "models", "registry_sync", "task_markdown", "path_safety", "legacy_upgrade"},
             "publish_flow.py": {"forge", "git_ops", "models", "path_safety", "registry_sync", "task_markdown"},
             "finalize_flow.py": {"git_ops", "models", "path_safety", "registry_sync", "task_markdown"},
             "cli.py": {"finalize_flow", "models", "publish_flow", "sync_flow"},
@@ -39,13 +38,3 @@ class TestTaskWorkflowArchitecture(unittest.TestCase):
                 if isinstance(node, ast.ImportFrom) and node.module and node.level == 1
             }
             assert actual <= expected, (filename, actual, expected)
-
-    def test_task_workflow_facade_is_thin_entrypoint(self) -> None:
-        source = FACADE_PATH.read_text(encoding="utf-8")
-        tree = ast.parse(source)
-        function_names = [node.name for node in tree.body if isinstance(node, ast.FunctionDef)]
-        class_defs = [node.name for node in tree.body if isinstance(node, ast.ClassDef)]
-
-        assert len(source.splitlines()) <= 50
-        assert class_defs == []
-        assert function_names == ["sync_task", "run_publish_flow", "finalize_task"]
