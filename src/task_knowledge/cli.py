@@ -11,6 +11,7 @@ from pathlib import Path
 
 
 from task_knowledge.borrowings_runtime import apply_refresh, build_refresh_plan, read_status
+from task_knowledge.bootstrap import bootstrap as do_bootstrap, BootstrapResult
 from task_knowledge.install_runtime import (
     check,
     doctor_deps,
@@ -42,7 +43,7 @@ from task_knowledge.version import CLI_VERSION, CONSUMER_RUNTIME_CONTRACT, CONSU
 
 
 COMMAND_NAME = "task-knowledge"
-SUPPORTED_COMMANDS = ["doctor", "install", "task", "module", "file", "workflow", "borrowings"]
+SUPPORTED_COMMANDS = ["bootstrap", "doctor", "install", "task", "module", "file", "workflow", "borrowings"]
 
 
 def _command_prefix(*parts: str) -> tuple[str, ...]:
@@ -306,6 +307,19 @@ def _add_borrowings_commands(subparsers) -> None:
     refresh_apply_parser.add_argument("--yes", action="store_true", help="Явно подтвердить применение refresh-plan.")
 
 
+def _add_bootstrap_command(subparsers) -> None:
+    bootstrap_parser = subparsers.add_parser(
+        "bootstrap",
+        help="Full bootstrap of task-centric-knowledge in a new project.",
+    )
+    bootstrap_parser.add_argument("--project-root", required=True, help="Абсолютный путь к корню целевого проекта.")
+    bootstrap_parser.add_argument("--source-root", help="Путь к исходному skill. По умолчанию — текущий каталог skill.")
+    bootstrap_parser.add_argument("--profile", choices=("generic", "1c"), default="generic", help="Профиль managed-блока для AGENTS.md.")
+    bootstrap_parser.add_argument("--dry-run", action="store_true", help="Показать план действий без мутации.")
+    bootstrap_parser.add_argument("--first-task-id", default="2026-0001", help="Task ID для первой задачи (по умолчанию 2026-0001).")
+    bootstrap_parser.add_argument("--first-task-name", default="initial-setup", help="Короткое имя для первой задачи.")
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Построить корневой парсер аргументов unified CLI.
 
@@ -330,6 +344,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_file_commands(subparsers)
     _add_workflow_commands(subparsers)
     _add_borrowings_commands(subparsers)
+    _add_bootstrap_command(subparsers)
     return parser
 
 
@@ -440,6 +455,24 @@ def _render_borrowings_text(payload: dict[str, object]) -> None:
         if isinstance(item, dict):
             suffix = f" path={item['path']}" if item.get("path") else ""
             print(f"- [{item['status']}] {item['key']}: {item['detail']}{suffix}")
+
+
+def _render_bootstrap_text(payload: dict[str, object]) -> None:
+    """Вывести текстовый отчёт bootstrap-команды.
+
+    Args:
+        payload: Словарь с результатами bootstrap.
+    """
+    print("bootstrap")
+    print(f"ok={payload['ok']}")
+    print(f"profile={payload['profile']}")
+    print(f"project_root={payload['project_root']}")
+    print(f"dry_run={payload.get('dry_run', False)}")
+    if payload.get("error"):
+        print(f"error={payload['error']}")
+    for step in payload.get("steps", []):
+        suffix = f" path={step['path']}" if step.get("path") else ""
+        print(f"- [{step['status']}] {step['key']}: {step['detail']}{suffix}")
 
 
 def _runtime_root() -> Path:
@@ -780,6 +813,49 @@ def _borrowings(args: argparse.Namespace) -> tuple[dict[str, object], int]:
     return payload, 0 if payload["ok"] else 2
 
 
+def _bootstrap(args: argparse.Namespace, *, json_mode: bool) -> tuple[dict[str, object], int]:
+    """Выполнить команду bootstrap — полный bootstrap knowledge-системы.
+
+    Args:
+        args: Разобранные аргументы argparse.
+        json_mode: Флаг JSON-вывода.
+
+    Returns:
+        Кортеж (payload, exit_code).
+    """
+    project_root = Path(args.project_root).resolve()
+    source_root = resolve_source(args.source_root)
+    try:
+        result = do_bootstrap(
+            project_root,
+            profile=args.profile,
+            dry_run=args.dry_run,
+            first_task_id=args.first_task_id,
+            first_task_name=args.first_task_name,
+        )
+    except Exception as error:  # noqa: BLE001
+        payload = {
+            "ok": False,
+            "command": "bootstrap",
+            "profile": args.profile,
+            "project_root": str(project_root),
+            "steps": [{"key": "bootstrap", "status": "error", "detail": str(error), "path": None}],
+        }
+        return payload, 2
+
+    payload = {
+        "ok": result.ok,
+        "command": "bootstrap",
+        "profile": result.profile,
+        "project_root": str(result.project_root),
+        "dry_run": result.dry_run,
+        "steps": [step.__dict__ for step in result.steps],
+    }
+    if result.error:
+        payload["error"] = result.error
+    return payload, 0 if result.ok else 2
+
+
 def main(argv: list[str] | None = None) -> int:
     """Точка входа unified CLI task-knowledge.
 
@@ -844,6 +920,14 @@ def main(argv: list[str] | None = None) -> int:
             _render_json(payload)
         else:
             print_workflow_text_report(payload)
+        return exit_code
+
+    if args.command == "bootstrap":
+        payload, exit_code = _bootstrap(args, json_mode=args.json)
+        if args.json:
+            _render_json(payload)
+        else:
+            _render_bootstrap_text(payload)
         return exit_code
 
     payload, exit_code = _borrowings(args)

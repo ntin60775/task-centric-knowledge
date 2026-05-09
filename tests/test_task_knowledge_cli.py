@@ -51,7 +51,7 @@ class TaskKnowledgeCliTests(TempRepoCase):
             self.assertIn("dependency_check", payload)
             self.assertEqual(
                 payload["supported_commands"],
-                ["doctor", "install", "task", "module", "file", "workflow", "borrowings"],
+                ["bootstrap", "doctor", "install", "task", "module", "file", "workflow", "borrowings"],
             )
 
     def test_install_cleanup_plan_uses_new_confirm_command_surface(self) -> None:
