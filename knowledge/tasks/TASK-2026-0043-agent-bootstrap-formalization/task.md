@@ -16,7 +16,7 @@
 | Ответственный | `не назначен` |
 | Ветка | `task/task-2026-0043-agent-bootstrap-formalization` |
 | Требуется SDD | `да` |
-| Статус SDD | `черновик` |
+| Статус SDD | `утверждён` |
 | Ссылка на SDD | `sdd.md` |
 | Дата создания | `2026-05-06` |
 | Дата обновления | `2026-05-06` |
@@ -81,6 +81,7 @@
 - файл SDD: `sdd.md`
 - файл verification matrix: `artifacts/verification-matrix.md`
 - нормативный документ: `references/adoption.md`
+- артефакт валидированной модели: `artifacts/semantic-model-bootstrap.json`
 
 ## Контур публикации
 

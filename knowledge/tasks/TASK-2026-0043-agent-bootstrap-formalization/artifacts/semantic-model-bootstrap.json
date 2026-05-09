@@ -1,0 +1,419 @@
+{
+  "schema_version": "1.0.0",
+  "algorithm": {
+    "name": "bootstrap",
+    "description": "Полный bootstrap knowledge-системы в проекте одной командой без интерактивных шагов",
+    "task_ref": "TASK-2026-0043"
+  },
+  "contract": {
+    "inputs": [
+      {
+        "name": "project_root",
+        "type": "str",
+        "constraints": ["непустой абсолютный путь"],
+        "precondition": "os.path.isabs(project_root)"
+      },
+      {
+        "name": "profile",
+        "type": "str",
+        "constraints": ["одно из: generic, 1c"],
+        "precondition": "profile in ('generic', '1c')"
+      },
+      {
+        "name": "dry_run",
+        "type": "bool",
+        "constraints": [],
+        "precondition": "True"
+      },
+      {
+        "name": "first_task_id",
+        "type": "str",
+        "constraints": ["формат TASK-YYYY-NNNN"],
+        "precondition": "True"
+      },
+      {
+        "name": "first_task_name",
+        "type": "str",
+        "constraints": ["непустой"],
+        "precondition": "len(first_task_name) > 0"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "result",
+        "type": "dict",
+        "postcondition": "result['status'] in ('success', 'error', 'dry_run_preview')"
+      }
+    ]
+  },
+  "states": [
+    {
+      "id": "S0",
+      "label": "initial",
+      "description": "Начальное состояние — вход в bootstrap",
+      "is_initial": true,
+      "is_terminal": false
+    },
+    {
+      "id": "S1",
+      "label": "preflight_checked",
+      "description": "Preflight выполнен: git-репозиторий подтверждён, dirty paths определены",
+      "is_initial": false,
+      "is_terminal": false
+    },
+    {
+      "id": "S2",
+      "label": "install_done",
+      "description": "Install check + apply выполнены, knowledge-файлы установлены",
+      "is_initial": false,
+      "is_terminal": false
+    },
+    {
+      "id": "S3",
+      "label": "doctor_deps_done",
+      "description": "Doctor-deps выполнен, зависимости проверены",
+      "is_initial": false,
+      "is_terminal": false
+    },
+    {
+      "id": "S4",
+      "label": "first_task_created",
+      "description": "Первая задача создана из шаблонов",
+      "is_initial": false,
+      "is_terminal": false
+    },
+    {
+      "id": "S5",
+      "label": "knowledge_committed",
+      "description": "Knowledge-файлы закоммичены (если требовалось)",
+      "is_initial": false,
+      "is_terminal": false
+    },
+    {
+      "id": "S6",
+      "label": "synced",
+      "description": "Workflow sync выполнен, ветка создана, задача зарегистрирована",
+      "is_initial": false,
+      "is_terminal": false
+    },
+    {
+      "id": "ST_success",
+      "label": "success",
+      "description": "Терминальное состояние — bootstrap завершён успешно",
+      "is_initial": false,
+      "is_terminal": true
+    },
+    {
+      "id": "ST_error",
+      "label": "error",
+      "description": "Терминальное состояние — bootstrap завершён с ошибкой",
+      "is_initial": false,
+      "is_terminal": true
+    }
+  ],
+  "transitions": [
+    {
+      "id": "T0",
+      "from": "S0",
+      "to": "S1",
+      "condition": "project_root is git repo and (not dry_run or dry_run is True)",
+      "action": "preflight: check git, detect dirty paths, classify system state",
+      "is_recursive": false
+    },
+    {
+      "id": "T1",
+      "from": "S1",
+      "to": "S2",
+      "condition": "system_state in ('clean', 'compatible') and profile is valid",
+      "action": "install_check + install_apply",
+      "is_recursive": false
+    },
+    {
+      "id": "T2",
+      "from": "S1",
+      "to": "ST_error",
+      "condition": "system_state in ('partial_knowledge', 'foreign_system', 'mixed_system')",
+      "action": "abort with descriptive error",
+      "is_recursive": false
+    },
+    {
+      "id": "T3",
+      "from": "S1",
+      "to": "ST_error",
+      "condition": "project_root is not git repo",
+      "action": "abort: not a git repository",
+      "is_recursive": false
+    },
+    {
+      "id": "T4",
+      "from": "S2",
+      "to": "S3",
+      "condition": "install completed successfully",
+      "action": "run doctor-deps",
+      "is_recursive": false
+    },
+    {
+      "id": "T5",
+      "from": "S2",
+      "to": "ST_error",
+      "condition": "install failed",
+      "action": "abort with install error",
+      "is_recursive": false
+    },
+    {
+      "id": "T6",
+      "from": "S3",
+      "to": "S5",
+      "condition": "dirty_paths only contains knowledge files and not dry_run",
+      "action": "auto-commit knowledge files with message 'task-knowledge bootstrap: initial setup'",
+      "is_recursive": false
+    },
+    {
+      "id": "T7",
+      "from": "S3",
+      "to": "ST_error",
+      "condition": "dirty_paths contains non-knowledge files and not dry_run",
+      "action": "abort: tree is dirty with non-knowledge changes",
+      "is_recursive": false
+    },
+    {
+      "id": "T8",
+      "from": "S3",
+      "to": "S4",
+      "condition": "dry_run is True",
+      "action": "skip commit, proceed to first task",
+      "is_recursive": false
+    },
+    {
+      "id": "T9",
+      "from": "S3",
+      "to": "S4",
+      "condition": "tree is clean (no dirty paths) and not dry_run",
+      "action": "proceed without commit",
+      "is_recursive": false
+    },
+    {
+      "id": "T10",
+      "from": "S4",
+      "to": "S6",
+      "condition": "True",
+      "action": "create first task directory from templates, then workflow sync --create-branch --register-if-missing",
+      "is_recursive": false
+    },
+    {
+      "id": "T11",
+      "from": "S5",
+      "to": "S4",
+      "condition": "True",
+      "action": "create first task directory from templates",
+      "is_recursive": false
+    },
+    {
+      "id": "T12",
+      "from": "S6",
+      "to": "ST_success",
+      "condition": "sync completed successfully",
+      "action": "bootstrap complete",
+      "is_recursive": false
+    },
+    {
+      "id": "T13",
+      "from": "S6",
+      "to": "ST_error",
+      "condition": "sync failed",
+      "action": "abort with sync error",
+      "is_recursive": false
+    }
+  ],
+  "invariants": [
+    {
+      "id": "INV-01",
+      "statement": "bootstrap выполняет полный цикл одной командой без ручного создания ветки или каталога",
+      "scope": ["S0", "ST_success"],
+      "holds_at": ["entry", "exit"]
+    },
+    {
+      "id": "INV-02",
+      "statement": "dry_run не мутирует файловую систему или git",
+      "scope": ["S0", "S1", "S2", "S3", "S4", "S5", "S6"],
+      "holds_at": ["entry", "exit"]
+    },
+    {
+      "id": "INV-03",
+      "statement": "на чистом проекте bootstrap создаёт knowledge-систему, делает commit, создаёт ветку и первую задачу",
+      "scope": ["S0", "ST_success"],
+      "holds_at": ["exit"]
+    },
+    {
+      "id": "INV-04",
+      "statement": "на проекте с совместимой системой bootstrap обновляет её, не перезаписывая project data",
+      "scope": ["S0", "ST_success"],
+      "holds_at": ["exit"]
+    },
+    {
+      "id": "INV-05",
+      "statement": "чужие dirty changes (не knowledge files) не коммитятся",
+      "scope": ["S3", "S5"],
+      "holds_at": ["entry", "exit"]
+    },
+    {
+      "id": "INV-06",
+      "statement": "если проект не git-репозиторий, bootstrap останавливается с ошибкой",
+      "scope": ["S0", "S1"],
+      "holds_at": ["entry", "exit"]
+    },
+    {
+      "id": "INV-07",
+      "statement": "профиль 1c корректно применяется (managed-блок, файлы шаблонов)",
+      "scope": ["S2", "S4"],
+      "holds_at": ["exit"]
+    },
+    {
+      "id": "INV-08",
+      "statement": "после успешного bootstrap task-knowledge task status возвращает корректный статус",
+      "scope": ["ST_success"],
+      "holds_at": ["exit"]
+    }
+  ],
+  "edge_cases": [
+    {
+      "id": "EC-01",
+      "input_ref": "project_root",
+      "description": "project_root не является git-репозиторием",
+      "handling": "abort с ошибкой 'not a git repository'",
+      "modeled": true
+    },
+    {
+      "id": "EC-02",
+      "input_ref": "project_root",
+      "description": "project_root не существует",
+      "handling": "abort с ошибкой 'path does not exist'",
+      "modeled": true
+    },
+    {
+      "id": "EC-03",
+      "input_ref": "dry_run",
+      "description": "dry_run=True на чистом дереве",
+      "handling": "показать план действий без мутации",
+      "modeled": true
+    },
+    {
+      "id": "EC-04",
+      "input_ref": "dry_run",
+      "description": "dry_run=False на грязном дереве с knowledge-файлами",
+      "handling": "авто-commit knowledge-файлов",
+      "modeled": true
+    },
+    {
+      "id": "EC-05",
+      "input_ref": "dry_run",
+      "description": "dry_run=False на чистом дереве",
+      "handling": "продолжить без commit",
+      "modeled": true
+    },
+    {
+      "id": "EC-06",
+      "input_ref": "profile",
+      "description": "profile=generic с валидной managed-системой",
+      "handling": "install apply --force с generic профилем",
+      "modeled": true
+    },
+    {
+      "id": "EC-07",
+      "input_ref": "profile",
+      "description": "profile=1c без managed-блока в проекте",
+      "handling": "abort с ошибкой 'profile 1c requires managed block'",
+      "modeled": true
+    },
+    {
+      "id": "EC-08",
+      "input_ref": "profile",
+      "description": "profile=unknown",
+      "handling": "abort с ошибкой 'unknown profile'",
+      "modeled": true
+    },
+    {
+      "id": "EC-09",
+      "input_ref": "first_task_id",
+      "description": "first_task_id уже существует в registry",
+      "handling": "использовать существующий ID или запросить новый",
+      "modeled": true
+    },
+    {
+      "id": "EC-10",
+      "input_ref": "first_task_id",
+      "description": "first_task_id в невалидном формате",
+      "handling": "abort с ошибкой 'invalid task ID format'",
+      "modeled": true
+    },
+    {
+      "id": "EC-11",
+      "input_ref": "first_task_id",
+      "description": "first_task_id=TASK-2026-0001 (минимальный валидный ID)",
+      "handling": "создать задачу с указанным ID",
+      "modeled": true
+    },
+    {
+      "id": "EC-12",
+      "input_ref": "first_task_name",
+      "description": "first_task_name пустая строка",
+      "handling": "abort с ошибкой 'task name cannot be empty'",
+      "modeled": true
+    },
+    {
+      "id": "EC-13",
+      "input_ref": "first_task_name",
+      "description": "first_task_name содержит специальные символы",
+      "handling": "использовать как есть (slug генерируется отдельно)",
+      "modeled": true
+    },
+    {
+      "id": "EC-14",
+      "input_ref": "first_task_name",
+      "description": "first_task_name слишком длинная (более 100 символов)",
+      "handling": "использовать первые 100 символов",
+      "modeled": true
+    },
+    {
+      "id": "EC-15",
+      "input_ref": "project_root",
+      "description": "в проекте уже есть knowledge-система в состоянии 'partial_knowledge'",
+      "handling": "abort с ошибкой 'requires manual resolution'",
+      "modeled": true
+    },
+    {
+      "id": "EC-16",
+      "input_ref": "project_root",
+      "description": "грязное дерево со смесью knowledge-файлов и чужих изменений",
+      "handling": "abort с ошибкой 'tree is dirty with non-knowledge changes'",
+      "modeled": true
+    },
+    {
+      "id": "EC-17",
+      "input_ref": "project_root",
+      "description": "у проекта нет прав на запись",
+      "handling": "abort с ошибкой 'permission denied'",
+      "modeled": true
+    },
+    {
+      "id": "EC-18",
+      "input_ref": "project_root",
+      "description": "системное состояние 'foreign_system'",
+      "handling": "abort с ошибкой 'requires migration'",
+      "modeled": true
+    }
+  ],
+  "termination": {
+    "metric": "number of pending steps in bootstrap flow",
+    "initial_value": "7",
+    "bounded_below_by": "0",
+    "decreases_on": ["T1", "T4", "T6", "T9", "T10", "T11", "T12"],
+    "converges_to": "all steps completed or error encountered"
+  },
+  "complexity": {
+    "time": "O(n)",
+    "space": "O(1)",
+    "justification": "линейный проход по шагам bootstrap, без вложенных циклов"
+  },
+  "suppressed_warnings": []
+}
