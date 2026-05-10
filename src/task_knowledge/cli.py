@@ -465,8 +465,8 @@ def _render_bootstrap_text(payload: dict[str, object]) -> None:
     """
     print("bootstrap")
     print(f"ok={payload['ok']}")
-    print(f"profile={payload['profile']}")
-    print(f"project_root={payload['project_root']}")
+    print(f"profile={payload.get('profile', 'unknown')}")
+    print(f"project_root={payload.get('project_root', 'unknown')}")
     print(f"dry_run={payload.get('dry_run', False)}")
     if payload.get("error"):
         print(f"error={payload['error']}")
@@ -839,6 +839,7 @@ def _bootstrap(args: argparse.Namespace, *, json_mode: bool) -> tuple[dict[str, 
             "command": "bootstrap",
             "profile": args.profile,
             "project_root": str(project_root),
+            "dry_run": args.dry_run,
             "steps": [{"key": "bootstrap", "status": "error", "detail": str(error), "path": None}],
         }
         return payload, 2

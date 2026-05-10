@@ -44,7 +44,7 @@ def _is_git_repo(project_root: Path) -> bool:
     try:
         run_git(project_root, "rev-parse", "--git-dir", check=False)
         return True
-    except RuntimeError:
+    except Exception:
         return False
 
 
@@ -71,8 +71,12 @@ def _commit_knowledge_files(project_root: Path, dry_run: bool) -> list[StepResul
     if dry_run:
         results.append(StepResult("git_commit", "skipped", "dry-run: commit knowledge files", str(project_root)))
         return results
+    knowledge_paths = [p for p in _get_dirty_paths_list(project_root) if any(p.startswith(pat) for pat in KNOWN_KNOWLEDGE_PATTERNS)]
+    if not knowledge_paths:
+        results.append(StepResult("git_commit", "skipped", "no knowledge files to commit", str(project_root)))
+        return results
     try:
-        run_git(project_root, "add", *(p for p in _get_dirty_paths_list(project_root) if any(p.startswith(pat) for pat in KNOWN_KNOWLEDGE_PATTERNS)))
+        run_git(project_root, "add", *knowledge_paths)
         run_git(project_root, "commit", "-m", "task-knowledge bootstrap: initial knowledge setup")
         results.append(StepResult("git_commit", "ok", "Knowledge files committed", str(project_root)))
     except RuntimeError as e:
@@ -82,16 +86,18 @@ def _commit_knowledge_files(project_root: Path, dry_run: bool) -> list[StepResul
 
 def _detect_system_classification(project_root: Path) -> tuple[str, str]:
     report = detect_existing_system(project_root)
+    if report is None or not hasattr(report, 'classification'):
+        return ("unknown", "unknown")
     return report.classification, report.recommendation
 
 
-def _bootstrap_preflight(project_root: Path) -> BootstrapResult:
+def _bootstrap_preflight(project_root: Path, profile: str) -> BootstrapResult:
     results: list[StepResult] = []
     if not project_root.exists():
         return BootstrapResult(
             ok=False,
             command="bootstrap",
-            profile="generic",
+            profile=profile,
             project_root=project_root,
             steps=results,
             error=f"project-root does not exist: {project_root}",
@@ -100,7 +106,7 @@ def _bootstrap_preflight(project_root: Path) -> BootstrapResult:
         return BootstrapResult(
             ok=False,
             command="bootstrap",
-            profile="generic",
+            profile=profile,
             project_root=project_root,
             steps=results,
             error="Проект не является git-репозиторием. Bootstrap требует git.",
@@ -115,12 +121,12 @@ def _bootstrap_preflight(project_root: Path) -> BootstrapResult:
             return BootstrapResult(
                 ok=False,
                 command="bootstrap",
-                profile="generic",
+                profile=profile,
                 project_root=project_root,
                 steps=results,
                 error="Worktree is dirty with non-knowledge changes. Commit them before bootstrap.",
             )
-    return BootstrapResult(ok=True, command="bootstrap", profile="generic", project_root=project_root, steps=results)
+    return BootstrapResult(ok=True, command="bootstrap", profile=profile, project_root=project_root, steps=results)
 
 
 def _bootstrap_install(project_root: Path, source_root: Path, profile: str, dry_run: bool) -> BootstrapResult:
@@ -139,14 +145,23 @@ def _bootstrap_install(project_root: Path, source_root: Path, profile: str, dry_
     results.append(StepResult("install_check", "ok", "install check passed", str(project_root)))
 
     sys_class, _ = _detect_system_classification(project_root)
-    if sys_class == "foreign_system":
+    if sys_class in ("foreign_system", "mixed_system"):
         return BootstrapResult(
             ok=False,
             command="bootstrap",
             profile=profile,
             project_root=project_root,
             steps=results,
-            error=f"Existing system classification: {sys_class}. Bootstrap cannot proceed.",
+            error=f"Existing system classification: {sys_class}. Bootstrap requires migration first.",
+        )
+    if sys_class == "partial_knowledge":
+        return BootstrapResult(
+            ok=False,
+            command="bootstrap",
+            profile=profile,
+            project_root=project_root,
+            steps=results,
+            error=f"Existing system classification: {sys_class}. Manual resolution required before bootstrap.",
         )
 
     if dry_run:
@@ -214,8 +229,12 @@ def _bootstrap_first_task(
         results.append(StepResult("task_branch", "skipped", f"dry-run: would create branch {task_branch}", str(project_root)))
         return BootstrapResult(ok=True, command="bootstrap", profile="generic", project_root=project_root, steps=results, dry_run=True)
 
-    task_dir.mkdir(parents=True, exist_ok=True)
-    results.append(StepResult("task_dir", "ok", f"Created task directory: {task_dir}", str(task_dir)))
+    try:
+        task_dir.mkdir(parents=True, exist_ok=True)
+        results.append(StepResult("task_dir", "ok", f"Created task directory: {task_dir}", str(task_dir)))
+    except OSError as e:
+        results.append(StepResult("task_dir", "error", f"Failed to create task directory: {e}", str(project_root)))
+        return BootstrapResult(ok=False, command="bootstrap", profile="generic", project_root=project_root, steps=results, error=str(e))
 
     if task_template.exists():
         _copy_template(
@@ -333,8 +352,17 @@ def bootstrap(
     """
     project_root = project_root.resolve()
     source_root = resolve_source(None)
+    if source_root is None or not source_root.exists():
+        return BootstrapResult(
+            ok=False,
+            command="bootstrap",
+            profile=profile,
+            project_root=project_root,
+            steps=[],
+            error="source_root resolve failed: source is None or does not exist",
+        )
 
-    preflight = _bootstrap_preflight(project_root)
+    preflight = _bootstrap_preflight(project_root, profile)
     if not preflight.ok:
         return preflight
 

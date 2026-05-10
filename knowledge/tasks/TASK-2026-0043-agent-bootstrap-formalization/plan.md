@@ -122,8 +122,8 @@
 - [x] Шаг 3: Добавить подкоманду `bootstrap` в CLI.
 - [x] Шаг 4: Доработать `sync_task` для авто-commit (при необходимости) — реализован авто-commit в bootstrap.py.
 - [x] Шаг 5: Написать тесты для bootstrap.
-- [ ] Шаг 6: Обновить `references/adoption.md`.
-- [ ] Шаг 7: Обновить `README.md`.
+- [x] Шаг 6: Обновить `references/adoption.md`.
+- [x] Шаг 7: Обновить `README.md`.
 - [x] Шаг 8: Прогнать тесты и проверки.
 - [x] Шаг 9: Доказать покрытие verification matrix.
 

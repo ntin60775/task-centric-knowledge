@@ -93,3 +93,37 @@ class BootstrapTestCase(TestCase):
         result = self._bootstrap()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("dirty", result.stdout.lower())
+
+    def test_bootstrap_profile_1c(self):
+        """INV-07: bootstrap с profile=1c корректно применяет блок."""
+        self._init_repo()
+        result = self._bootstrap(["--profile", "1c"])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("ok=True", result.stdout)
+
+    def test_bootstrap_knowledge_only_dirty_commits(self):
+        """INV-07: знание only dirty tree авто-коммитится."""
+        self._init_repo()
+        self._run_git("commit", "--allow-empty", "-m", "initial")
+        (self.project_root / "knowledge").mkdir(parents=True, exist_ok=True)
+        (self.project_root / "knowledge" / "tasks").mkdir(parents=True, exist_ok=True)
+        (self.project_root / "knowledge" / "tasks" / "test.md").write_text("# Test")
+        self._run_git("add", ".")
+        result = self._bootstrap()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        log_result = subprocess.run(
+            ["git", "-C", str(self.project_root), "log", "--oneline", "-1"],
+            capture_output=True, text=True,
+        )
+        self.assertIn("task-knowledge bootstrap", log_result.stdout)
+
+    def test_bootstrap_unknown_system_classification(self):
+        """INV-04: unknown classification не блокирует bootstrap."""
+        self._init_repo()
+        self._run_git("commit", "--allow-empty", "-m", "initial")
+        (self.project_root / ".task-knowledge").mkdir(parents=True, exist_ok=True)
+        (self.project_root / ".task-knowledge" / "config").write_text("some content")
+        self._run_git("add", ".")
+        result = self._bootstrap()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("ok=True", result.stdout)

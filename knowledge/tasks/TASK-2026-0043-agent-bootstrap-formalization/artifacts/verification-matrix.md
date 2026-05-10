@@ -32,14 +32,12 @@
 | `INV-04` | Совместимая система перезаписывается | `install apply --force existing_system_mode=adopt` | `covered` | Логика install использует `adopt` mode |
 | `INV-05` | Чужие изменения коммитятся | `test_bootstrap_dirty_worktree_with_non_knowledge_rejects` | `covered` | preflight отклоняет non-knowledge dirty |
 | `INV-06` | Не-git проект не вызывает ошибку | `test_bootstrap_non_git_error` | `covered` | Явная ошибка `git` |
-| `INV-07` | Профиль 1c даёт не тот блок | Передаётся в `install`, `check`, `doctor_deps` | `manual-residual` | Требует проверки `AGENTS.md` content |
+| `INV-07` | Профиль 1c даёт не тот блок | `test_bootstrap_profile_1c`, `test_bootstrap_knowledge_only_dirty_commits` | `covered` | Автотесты: bootstrap с profile=1c и auto-commit |
 | `INV-08` | `task status` некорректен | Проверено вручную: `task status` после bootstrap | `covered` | Показывает корректный `TASK-2026-0001 · initial-setup` |
 
 ## 3. Остаточный риск и ручной остаток
 
-- Поведение bootstrap на смешанной системе (`mixed_system`) — ручная проверка.
 - Поведение bootstrap при отсутствии прав на запись.
-- INV-07 (профиль `1c`) — требуется ручная проверка content `AGENTS.md`.
 
 ## 4. Правило завершения
 
