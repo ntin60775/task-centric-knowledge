@@ -56,17 +56,28 @@ task-knowledge --json task status --project-root /abs/project
 
 ## 4. Первый task bootstrap после clean install
 
-Прямой запуск:
+### Автоматизированный способ (рекомендуется)
 
 ```bash
-task-knowledge workflow sync --project-root /abs/project --task-dir knowledge/tasks/<TASK-ID>-<slug> --create-branch --register-if-missing --summary "..."
+task-knowledge bootstrap --project-root /abs/project [--profile generic|1c] [--first-task-id TASK-2026-0001] [--first-task-name "initial-setup"]
 ```
 
-не является универсально безопасным для самой первой задачи,
-если `install` и создание первых task-файлов уже сделали рабочее дерево грязным.
-Field validation подтвердила stop-signal helper-а на dirty tree.
+Bootstrap выполняет полный цикл одной командой:
+1. Проверяет, что проект — git-репозиторий.
+2. Выполняет `install check`.
+3. Выполняет `install apply --force`.
+4. Если дерево грязное только knowledge-файлами — коммитит их.
+5. Выполняет `doctor-deps`.
+6. Создаёт каталог первой задачи из шаблонов с подстановкой ID и имени.
+7. Выполняет `workflow sync --create-branch --register-if-missing`.
 
-Validated порядок для первой задачи:
+Dry-run для предварительного просмотра:
+
+```bash
+task-knowledge bootstrap --project-root /abs/project --dry-run
+```
+
+### Ручной способ (для сравнения)
 
 ```bash
 git checkout -b task/<task-id-lower>-<slug>

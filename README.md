@@ -117,6 +117,15 @@ task-knowledge install doctor-deps --project-root /abs/project
 task-knowledge install cleanup-plan --project-root /abs/project --existing-system-mode migrate
 ```
 
+Полный bootstrap нового проекта одной командой:
+
+```bash
+task-knowledge bootstrap --project-root /abs/project --profile generic
+task-knowledge bootstrap --project-root /abs/project --profile 1c  # для 1c-профиля
+task-knowledge bootstrap --project-root /abs/project --dry-run     # предпросмотр без мутации
+task-knowledge bootstrap --project-root /abs/project --first-task-id TASK-2026-0001 --first-task-name "initial-setup"
+```
+
 `install apply` всегда выполняет post-install verification перед успешным `ok=True`.
 `install verify-project` повторяет ту же проверку read-only и нужен для отдельного аудита уже установленного проекта.
 Для полного обновления managed-шаблонов используй `--force`: шаблоны должны совпасть с дистрибутивом,

@@ -18,7 +18,9 @@ def _timeout_stream(value: str | bytes | None) -> str:
         return ""
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="replace")
-    return value
+    if isinstance(value, str):
+        return value
+    return ""
 
 
 def _timeout_completed_process(
@@ -26,7 +28,7 @@ def _timeout_completed_process(
     error: subprocess.TimeoutExpired,
     *,
     kind: str,
-) -> subprocess.CompletedProcess[str]:
+) -> str:
     command_text = " ".join(command)
     message = f"{kind} timed out after {SUBPROCESS_TIMEOUT_SECONDS}s: {command_text}"
     stdout = _timeout_stream(error.stdout)
@@ -66,7 +68,7 @@ def run_git(project_root: Path, *args: str, check: bool = True) -> subprocess.Co
     if check and completed.returncode != 0:
         stderr = completed.stderr.strip()
         stdout = completed.stdout.strip()
-        message = stderr or stdout or "git command failed"
+        message = stderr or stdout or f"git command failed: exit {completed.returncode}"
         raise RuntimeError(message)
     return completed
 
@@ -106,8 +108,9 @@ def dirty_paths(project_root: Path) -> list[str]:
     """
     output = run_git(project_root, "status", "--porcelain").stdout.splitlines()
     paths: list[str] = []
+    STATUS_LEN = 3
     for line in output:
-        if len(line) < 4:
+        if len(line) < STATUS_LEN:
             continue
         candidate = line[3:]
         if " -> " in candidate:
