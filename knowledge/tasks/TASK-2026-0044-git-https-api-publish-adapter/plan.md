@@ -6,19 +6,19 @@
 
 ## Этапы
 
-1. Исследовать GitHub REST API и GitLab REST API для создания PR/MR.
-2. Добавить `zapros` в `pyproject.toml` как optional или dev-зависимость (решить: core или optional).
-3. Спроектировать `HttpsApiAdapter` в отдельном модуле `task_workflow_runtime/https_api_adapter.py` на базе `zapros.Client`.
-4. Реализовать middleware для авторизации через `GITHUB_TOKEN` / `GITLAB_TOKEN` environment variables.
-5. Реализовать fallback-логику: `gh` → `glab` → `zapros HTTPS API` → error с инструкцией.
-6. Обновить `task_knowledge_cli.py` и `publish_flow.py` для использования нового адаптера.
-7. Добавить тесты для HTTPS API adapter с `zapros.mock` или `unittest.mock`.
-8. Обновить документацию (`README.md`, `references/task-workflow.md`).
-9. Прогнать полный тестовый контур.
+1. [x] Исследовать GitHub REST API и GitLab REST API для создания PR/MR.
+2. [x] Использовать `urllib.request` из stdlib (без внешних зависимостей).
+3. [x] Реализовать `GitHubAPIAdapter` и `GitLabAPIAdapter` в `forge.py`.
+4. [x] Реализовать авторизацию через `GITHUB_TOKEN` / `GITLAB_TOKEN` переменные окружения.
+5. [x] Реализовать fallback-логику в `resolve_forge_adapter`: CLI → HTTP → error.
+6. [x] Тесты с `unittest.mock` (23 теста в test_forge_http.py).
+7. [x] Обновить документацию (`references/deployment.md`, `references/cli-reference.md`).
+8. [x] Прогнать полный тестовый контур (290 тестов, все зелены).
 
 ## Проверки
 
-- [ ] `python3 -m unittest discover -s tests` проходит.
-- [ ] Mock-тесты для HTTPS API adapter проходят.
-- [ ] Fallback-логика протестирована: при отсутствии `gh`/`glab` используется HTTPS API.
-- [ ] Документация описывает новый adapter и требования к токенам.
+- [x] `python3 -m unittest discover -s tests` проходит (290 тестов).
+- [x] Mock-тесты для HTTP адаптеров проходят (23 теста).
+- [x] Fallback-логика протестирована: при отсутствии `gh`/`glab` используется HTTP API.
+- [x] Документация обновлена.
+- [x] Архитектурный тест проходит (import graph не нарушен).
