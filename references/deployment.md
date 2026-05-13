@@ -328,6 +328,12 @@ task-knowledge install doctor-deps --project-root /abs/project
 Для `publish/integration` отдельными строками проверяются `publish_remote`, `gh`, `glab` и доступная offline-auth диагностика.
 Отсутствие `gh` или `glab` не должно выглядеть как поломка всего skill-а, если `core/local mode` остаётся зелёным.
 
+Альтернативный путь: `GitHubAPIAdapter` и `GitLabAPIAdapter` работают напрямую через HTTPS REST API
+с аутентификацией по переменным окружения `GITHUB_TOKEN` / `GITLAB_TOKEN`.
+Эти адаптеры не требуют `gh`/`glab` CLI и автоматически выбираются при отсутствии CLI-тулзов,
+если переменная токена установлена.
+Приоритет выбора: CLI-адаптер → HTTP-адаптер → ошибка.
+
 Начиная с governed legacy-upgrade rollout, install/governance payload'ы также обязаны возвращать поля:
 
 совместимости `compatibility_epoch`, `upgrade_status`, `execution_rollout`,

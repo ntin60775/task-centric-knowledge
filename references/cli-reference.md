@@ -185,6 +185,11 @@ task-knowledge workflow sync \
 task-knowledge workflow backfill --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --scope compatibility
 ```
 
+Publish-контур поддерживает два пути аутентификации:
+- **CLI-адаптеры** — через `gh` (GitHub) или `glab` (GitLab);
+- **HTTP-адаптеры** — напрямую через HTTPS REST API с токенами `GITHUB_TOKEN` или `GITLAB_TOKEN` в переменных окружения. HTTP-адаптер выбирается автоматически при отсутствии CLI-тулза.
+```
+
 ### `workflow finalize` — локальное завершение задачи
 
 ```bash
