@@ -24,6 +24,7 @@ from task_knowledge.install_runtime import (
     verify_project,
 )
 from task_knowledge.install_runtime.cli import print_text_report as print_install_text_report
+from task_knowledge.install_runtime.mass_update import mass_update
 from task_knowledge.module_core_runtime.query_cli import (
     dispatch_file,
     dispatch_module,
@@ -118,6 +119,7 @@ def _add_install_commands(subparsers) -> None:
         help="Диагностика install/upgrade зависимостей.",
     )
     _add_install_cleanup_commands(install_subparsers)
+    _add_install_mass_update(install_subparsers)
 
 
 def _add_install_cleanup_commands(install_subparsers) -> None:
@@ -146,6 +148,33 @@ def _add_install_cleanup_commands(install_subparsers) -> None:
     )
     cleanup_confirm_parser.add_argument("--confirm-fingerprint", required=True, help="Fingerprint ранее показанного cleanup-plan.")
     cleanup_confirm_parser.add_argument("--yes", action="store_true", help="Явно подтвердить применение cleanup-plan.")
+
+
+def _add_install_mass_update(install_subparsers) -> None:
+    mass_update_parser = install_subparsers.add_parser(
+        "mass-update",
+        help="Массовое обновление knowledge-системы в установленных проектах.",
+    )
+    mass_update_parser.add_argument("--project-root", help="Путь к корню проекта (не используется; для обратной совместимости).")
+    mass_update_parser.add_argument("--source-root", help="Путь к исходному skill. По умолчанию — текущий каталог skill.")
+    mass_update_parser.add_argument("--profile", choices=("generic", "1c"), default="generic", help="Профиль managed-блока для AGENTS.md.")
+    mass_update_parser.add_argument(
+        "--projects",
+        nargs="+",
+        default=[],
+        help="Список абсолютных путей к проектам для обновления.",
+    )
+    mass_update_parser.add_argument(
+        "--search-roots",
+        nargs="+",
+        default=[],
+        help="Каталоги для поиска проектов с knowledge-системой.",
+    )
+    mass_update_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Только проверка без применения изменений.",
+    )
 
 
 def _add_task_commands(subparsers) -> None:
@@ -573,10 +602,21 @@ def _install(args: argparse.Namespace, *, json_mode: bool) -> tuple[dict[str, ob
     Returns:
         Кортеж (payload, exit_code).
     """
-    project_root = Path(args.project_root).resolve()
+    project_root = Path(args.project_root).resolve() if args.project_root else Path.cwd()
     source_root = resolve_source(args.source_root)
     output_format = _output_format(json_mode)
-    if args.install_command == "check":
+    if args.install_command == "mass-update":
+        project_paths = [Path(p) for p in (args.projects or [])]
+        search_paths = [Path(p) for p in (args.search_roots or [])]
+        payload = mass_update(
+            source_root=source_root,
+            projects=project_paths if project_paths else None,
+            search_roots=search_paths if search_paths else None,
+            profile=args.profile or "generic",
+            dry_run=args.dry_run,
+            output_format=output_format,
+        )
+    elif args.install_command == "check":
         payload = check(project_root, source_root, args.profile)
     elif args.install_command == "apply":
         payload = install(
