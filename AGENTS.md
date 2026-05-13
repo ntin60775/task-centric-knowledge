@@ -115,7 +115,7 @@ main language: русский;
 
 - `git status`, `git branch --show-current`, `git diff --check` и другие безопасные проверки только на чтение.
 - `git checkout -b` / `git switch -c` для task-ветки на чистом рабочем дереве.
-- `python3 scripts/task_workflow.py --publish-action start|publish|sync|merge|close` для локальной синхронизации publish-контура, если контекст задачи ясен и helper не требует недоступных сетевых действий.
+- `task-knowledge workflow sync --project-root /abs/project --task-dir ... --register-if-missing` для локальной синхронизации task-контура
 - `git add` файлов задачи и `git commit` с префиксом `TASK-ID`, если границы изменения ясны.
 - Без явного запроса пользователя не выполнять `git push`, `git rebase`, `git reset`, `git clean`, удаление веток и любое переписывание истории.
 
