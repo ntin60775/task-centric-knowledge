@@ -1,0 +1,224 @@
+# CLI reference для task-centric-knowledge
+
+`task-knowledge` собирает в одну команду все контуры навыка:
+
+- установку и upgrade-governance;
+- read-only операторскую отчётность по knowledge-задачам;
+- read-only query layer по `Module Core`;
+- workflow / publish helper для task-веток, compatibility-backfill и delivery units;
+- versioned consumer runtime contract для проектов, которые встраивают минимальный runtime subset.
+
+## Поверхности установки
+
+У `task-centric-knowledge` есть четыре разные поверхности. Их нельзя подменять друг другом:
+
+| Поверхность | Назначение | Команда |
+|-------------|------------|---------|
+| Source repo | Канонический standalone-дистрибутив для разработки и релиза. | `python3 -m unittest discover -s tests -v` |
+| Live skill copy | Глобальная копия навыка для Codex skills. | `make install-global` |
+| User-site CLI layer | Команда `task-knowledge` и Python import path. | `make install-local` |
+| Target project knowledge | Managed `knowledge/` и блок `AGENTS.md` в целевом проекте. | `task-knowledge install apply --project-root /abs/project --force` |
+
+## Production rollout внутри команды
+
+Командный rollout проходит по уровням без смешивания source repo, live-copy и проектной установки:
+
+```bash
+# 1. Обязательный source gate перед публикацией новой версии skill-а
+make check
+
+# 2. Опциональный strict gate для dev-окружения с установленными ruff и mypy
+make check-strict
+
+# 3. Проверка и обновление глобальной live-copy + CLI layer
+make install-global-dry-run
+make install-global
+make verify-global-install
+
+# 4. Обновление managed-контура в каждом целевом проекте
+make project-install-check PROJECT_ROOT=/abs/project SOURCE_ROOT=$HOME/.agents/skills/task-centric-knowledge PROFILE=generic
+make project-install-apply PROJECT_ROOT=/abs/project SOURCE_ROOT=$HOME/.agents/skills/task-centric-knowledge PROFILE=generic
+make project-install-verify PROJECT_ROOT=/abs/project SOURCE_ROOT=$HOME/.agents/skills/task-centric-knowledge PROFILE=generic
+```
+
+`check-production` объединяет mandatory source gate и verify глобальной установки. `ruff` и `mypy` остаются отдельным `check-strict`: если dev tools не установлены или baseline ещё не очищен, это не должно делать обязательный production gate ложным.
+
+Перед commit-ом project upgrade обязательны:
+
+```bash
+git status --short
+git diff -- AGENTS.md knowledge
+task-knowledge install verify-project --project-root /abs/project --source-root $HOME/.agents/skills/task-centric-knowledge --force
+```
+
+Installer и workflow helpers применяют production safety guards: managed-файлы не читаются и не пишутся через symlink, а mutating workflow-команды принимают только `task_dir`, который после `resolve()` остаётся внутри `project_root`.
+Если команда возвращает `symlink`, `blocked-target-symlink`, `blocked-target-outside-root` или `task_dir_outside_project_root`, это blocker для ручного исправления структуры проекта.
+
+## Глобальная установка навыка
+
+Полная глобальная установка должна обновлять live skill copy и CLI layer вместе:
+
+Порядок команд: `make install-global-dry-run`, затем `make install-global`, затем `make verify-global-install`.
+
+`make install-global` выполняет source-controlled overlay из текущего source repo в
+`~/.agents/skills/task-centric-knowledge`, затем запускает wrapper-based CLI install уже из live-copy.
+После этого обязательны две проверки:
+
+- прямой live smoke через `task-knowledge --json install check --project-root /abs/project --source-root ~/.agents/skills/task-centric-knowledge`;
+- user-facing smoke через установленный `task-knowledge`.
+
+Helper не удаляет target-only файлы. Если verify показывает лишние файлы в live-copy,
+это отдельный cleanup-контур и он требует обычного delete-gate.
+Overlay не пишет через symlinked manifest target. Если в live-copy обнаружен symlink на пути manifest-файла, apply/verify блокируют такой target вместо перезаписи внешнего файла.
+
+## Установка CLI layer
+
+Из каталога skill-а:
+
+```bash
+make install-local
+```
+
+`make install-local` устанавливает user-site CLI layer. В managed/offline окружениях используется thin wrapper и `.pth`:
+
+```bash
+~/.local/bin/task-knowledge
+```
+
+Команда запускает `src/task_knowledge/cli.py` (через `python -m task_knowledge`) из того каталога, где был выполнен `make install-local`.
+Поэтому зелёный `task-knowledge --help` сам по себе не доказывает, что live skill copy в
+`~/.agents/skills/task-centric-knowledge` полная и свежая. Для этого использовать `make verify-global-install`.
+
+Для production rollout глобальный installer использует wrapper-based CLI layer независимо от editable-install режима, чтобы `task-knowledge` был привязан к live skill copy и проходил `verify-global-install`.
+
+После этого команда должна быть доступна из любого каталога:
+
+```bash
+command -v task-knowledge
+task-knowledge --help
+```
+
+## Подкоманды
+
+### `doctor` — диагностика окружения и проекта
+
+```bash
+task-knowledge doctor --project-root /abs/project
+task-knowledge --json doctor --project-root /abs/project
+```
+
+Выводит версию, доступность git, source root, profile, install check и dependency check.
+
+### `install` — установка и обновление knowledge-системы
+
+```bash
+task-knowledge install check --project-root /abs/project
+task-knowledge install apply --project-root /abs/project --force  # полное обновление managed-шаблонов
+task-knowledge install verify-project --project-root /abs/project --force  # read-only проверка результата
+task-knowledge install doctor-deps --project-root /abs/project
+task-knowledge install cleanup-plan --project-root /abs/project --existing-system-mode migrate
+task-knowledge install mass-update --source-root ~/.agents/skills/task-centric-knowledge  # массовое обновление проектов
+```
+
+`install apply` всегда выполняет post-install verification перед успешным `ok=True`.
+`install verify-project` повторяет ту же проверку read-only и нужен для отдельного аудита уже установленного проекта.
+Для полного обновления managed-шаблонов используй `--force`: шаблоны должны совпасть с дистрибутивом,
+а `knowledge/tasks/registry.md` и `knowledge/modules/registry.md` всё равно остаются project data и не перезаписываются.
+Managed-шаблоны, `AGENTS.md` и generated snippet не обновляются через symlink; такой project layout требует ручного исправления перед повторным запуском.
+
+### `bootstrap` — полный bootstrap нового проекта
+
+```bash
+task-knowledge bootstrap --project-root /abs/project --profile generic
+task-knowledge bootstrap --project-root /abs/project --profile 1c  # для 1c-профиля
+task-knowledge bootstrap --project-root /abs/project --dry-run     # предпросмотр без мутации
+task-knowledge bootstrap --project-root /abs/project --first-task-id TASK-2026-0001 --first-task-name "initial-setup"
+```
+
+### `task` — read-only отчётность по задачам
+
+```bash
+task-knowledge task status --project-root /abs/project
+task-knowledge task current --project-root /abs/project
+task-knowledge task show --project-root /abs/project current
+```
+
+### `module` / `file` — навигация по Module Core
+
+На текущем rollout-этапе `module` / `file` работают в partial-mode:
+если `module.md`, relation layer или file-local contracts ещё не внедрены,
+команды возвращают стабильный JSON/text shape и явные warning'и,
+опираясь как минимум на `knowledge/modules/*/verification.md`.
+Если passport-layer уже внедрён,
+`module show` поднимает shared/public truth из `module.md`,
+а `knowledge/modules/registry.md` используется как навигационный cache
+и проверяется на drift относительно канонического паспорта.
+Если в паспорте подключён `knowledge/modules/<MODULE-ID>-<slug>/file-local-policy.md`,
+`file show` читает private/local truth только для явных hot spots из этого policy-файла:
+без policy возвращается warning `file_contract_unavailable`,
+вне hot-spot списка — warning `file_not_governed_hotspot`,
+а для multi-owner файла без `--module` — warning `multi_owner_file_contract_ambiguous`.
+JSON-поля `contract_markers` и `blocks` всегда остаются стабильными,
+а text surface можно расширить через `file show --contracts --blocks`.
+Для relation-layer v1 `module show --with relations` читает исходящие `depends_on`
+из `module.md`,
+строит derived `used_by`,
+возвращает relation-summary для `ExecutionPacket`
+и помечает слой как `degraded`,
+если target не найден
+или relation row не проходит валидацию.
+`registry.md` relation-сводку не хранит.
+
+### `workflow` — синхронизация task workflow
+
+```bash
+task-knowledge workflow sync \
+  --project-root /abs/project \
+  --task-dir knowledge/tasks/TASK-2026-0001-zadacha \
+  --create-branch \
+  --register-if-missing
+```
+
+Для governed compatibility-backfill legacy-задачи:
+
+```bash
+task-knowledge workflow backfill --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --scope compatibility
+```
+
+### `workflow finalize` — локальное завершение задачи
+
+```bash
+task-knowledge workflow finalize --project-root /abs/project --task-dir knowledge/tasks/TASK-2026-0001-zadacha --base-branch main
+```
+
+`workflow finalize` работает только в local-only режиме:
+
+- при безопасном task-контексте он делает task-scoped commit, fast-forward merge в base-ветку и checkout base-ветки;
+- при блокере он не мутирует git-состояние и возвращает явный blocker-report с причинами и следующими действиями;
+- `push`, PR/MR и cleanup веток остаются отдельными шагами.
+
+### `borrowings` — управление заимствованным слоем
+
+```bash
+task-knowledge borrowings status --project-root /abs/project
+task-knowledge borrowings refresh --project-root /abs/project
+```
+
+## Политика JSON
+
+- Глобальный флаг `--json` включает стабильный машиночитаемый вывод.
+- В JSON верхний уровень всегда содержит `ok` и `command` либо режим install/runtime, чтобы внешний агент мог ветвить обработку без парсинга текста.
+- Для `doctor` JSON включает диагностические поля окружения, `runtime_root`, `source_root_valid` / `source_root_mode` и вложенные payload'ы `install_check` и `dependency_check`.
+- Для `install`, `task`, `module`, `file` и `workflow` JSON сохраняет payload существующих runtime-слоёв без потери деталей.
+- Ошибки в `--json` не должны требовать парсинга текста и не должны содержать секреты.
+
+## Контракт потребительского runtime
+
+Consumer repos могут использовать `task-knowledge` двумя способами:
+
+- установленная команда `task-knowledge task status --project-root /abs/project`;
+- consumer-owned embedded subset с явным manifest-ом и собственным update script-ом.
+
+Контракт `consumer-runtime-v1` описан в `references/consumer-runtime-v1.md`.
+Он фиксирует стабильный CLI/JSON surface, manifest-поля embedded subset-а и границу `project_root` / `runtime_root` / `source_root`.
+`task-centric-knowledge` не добавляет upstream-команду, которая сама обновляет файлы consumer repo: обновление embedded subset-а остаётся обязанностью потребителя.
