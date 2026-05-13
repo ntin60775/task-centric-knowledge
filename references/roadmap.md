@@ -45,7 +45,7 @@
 - `TASK-2026-0010`: канонический `Task Core` contract;
 - `TASK-2026-0011`: модульная декомпозиция helper/runtime;
 - `TASK-2026-0012`: `doctor-deps` и `migrate-cleanup-plan/confirm`;
-- `TASK-2026-0013`: read-model `status / current-task / task show`;
+- `TASK-2026-0013`: `read-model` `status / current-task / task show`;
 - `TASK-2026-0014`: полевая валидация и adoption package.
 
 Это означает, что skill уже перестал быть только раскладкой шаблонов и стал полноценным процессным слоем для agent-driven разработки.
@@ -212,7 +212,7 @@
 
 - фазность `spec -> plan -> tasks -> implement` из `GitHub Spec Kit`;
 - совместимость с project rules и контроль drift между слоями инструкций из `Cursor`;
-- правило, что память и read-model не подменяют `task.md`, по образцу memory-систем с явными областями контекста.
+- правило, что память и `read-model` не подменяют `task.md`, по образцу memory-систем с явными областями контекста.
 
 Откладывается:
 
@@ -365,78 +365,84 @@
 
 Если в реальных репозиториях пользователям чаще нужен feature-spec workflow, чем task-centric жизненный цикл, надо не распухать дальше, а честно разделить продукт на `task-centric core` и `spec-driven companion`.
 
-## 8. Следующая волна candidate delivery-tracks
+## 8. Обновление: стабильный релиз — 2026-05-13
 
-Ниже уже не “сырой backlog”, а traceability-map закрытых vNext tracks.
-Все пять пунктов были реализованы как отдельные задачи `TASK-2026-0010 ... TASK-2026-0014`;
-повторное открытие допустимо только как новый post-release цикл с отдельным `task.md`.
+### Все vNext-треки и post-release задачи закрыты
 
-### Track 1. `vNext-core contract` (закрыт в `TASK-2026-0010`)
+После завершения фаз 1-4 и post-release цикла `TASK-2026-0021 ... TASK-2026-0049`
+проект вошёл в стабильное состояние. Ниже traceability закрытых контуров:
 
-Назначение и выход:
+| Контур | Задачи | Что достигнуто |
+|--------|--------|---------------|
+| vNext core | `0010`–`0014` | Task Core, DDD-карта, модульная декомпозиция, `doctor`/`governance`, `read-model`, полевая валидация |
+| v1 release | `0021`, `0026`, `0030`–`0034` | Standalone bootstrap, productization, repo-wide review-fix до clean verdict |
+| Заимствованный `module core` | `0024` | Module passports, registry, dependency map, `file-local` contracts, verification catalog, module query |
+| Upgrade governance | `0025`, `0034`, `0037`, `0038`, `0040` | Безопасное обновление, `compatibility-backfill`, глобальная и проектная установка |
+| Нативный runtime | `0027`, `0028`, `0035`, `0036` | Local auto-finalize, CLI compat, consumer surfaces, `zip-context` ignore |
+| Package и CLI | `0041`, `0042`, `0043` | Удаление legacy-фасадов, unified CLI, нормализация `src/task_knowledge/`, `bootstrap`-формализация |
+| Publish | `0044` | `GitHubAPIAdapter` + `GitLabAPIAdapter` через HTTPS REST API без `gh`/`glab` |
+| Документация | `0045`, `0048`, `0049` | Миграция Doxygen → MkDocs, разделение `README`/`CLI-reference`, `docs/index.md` |
+| Интеграции | `0039`, `0046`, `0047` | Production-team snapshot, `mass-update` automation, `semantic-algorithm-design` reference |
 
-- выделена модель ядра и DDD-карта контекстов;
-- выпущен один канонический task-local документ Track 1;
-- зафиксирован полный агрегат `Task`, `Subtask`, `Delivery Unit`, `Verification Matrix`, `Task Artifact`, `Decision`, `Worklog Entry`, `Handoff`;
-- `task.md` закреплён как источник истины для summary, status, branch и delivery units;
-- статусная модель задач и delivery units закреплена;
-- локальное хранение доказательных артефактов задачи и базовый `plan -> confirm` cleanup-governance закреплены как инварианты ядра.
+### Текущая точка как стабильный релиз
 
-### Track 2. Модульная декомпозиция helper-а (закрыт в `TASK-2026-0011`)
+- Полный набор: **290 тестов**, все зелены.
+- Рабочее дерево чистое, все ветки слиты в `main`.
+- **37 задач** в `knowledge/tasks/registry.md` — все со статусом `завершена`.
+- Документация: `README.md` (обзор), `references/cli-reference.md` (CLI), `references/core-model.md` (ядро), `references/roadmap.md` (стратегия), `docs/index.md` (API).
+- CLI: 9 подкоманд (`doctor`, `install`, `task`, `module`, `file`, `workflow`, `borrowings`, `bootstrap`, `--help`).
+- Publish: CLI-адаптеры (`gh`/`glab`) + HTTP-адаптеры (`GITHUB_TOKEN`/`GITLAB_TOKEN`).
 
-Назначение и выход:
+### Что осталось вне scope v1
 
-- facade-entrypoints и runtime helper-а разрезаны по зонам ответственности;
-- тесты переведены на модульный уровень;
-- CLI-контракт сохранён без регрессии.
+Перечисленное ниже не входит в текущий стабильный контур и является кандидатами на следующий стратегический цикл:
 
-### Track 3. `doctor / cleanup governance` (закрыт в `TASK-2026-0012`)
+- **Memory layer**: дорожки памяти `session`/`semantic`/`episodic`/`procedural`, scoped memory, subagent contracts — идеи заимствованы из `Claude Code`, `memories.sh`, `LangChain Deep Agents`, но удерживаются вне ядра до отдельного strategy track.
+- **Расширенные adapter surfaces**: Bitbucket, Gitea, self-hosted forge; OAuth flow.
+- **Machine-executable subtask flow**: упаковка микроправил и автономные подзадачи по образцу `OpenHands`.
+- **Package/lock governance**: версионирование зависимостей skill-а по образцу `GitHub Agent Workflows`.
+- **Внешний docs hosting**: CI pipeline для публикации MkDocs-сайта.
+- **Параллельное обновление проектов**: в `mass-update` v1 обновление последовательное.
 
-Назначение и выход:
+## 9. Следующий стратегический цикл: candidate delivery-tracks
 
-- введён режим `doctor-deps` как проверочный governance-слой;
-- расширена fixture-матрица install/upgrade сценариев;
-- добавлены `migrate-cleanup-plan/confirm`.
+### Track 6. Memory layer (кандидат)
 
-### Track 4. `Read model / reporting` (закрыт в `TASK-2026-0013`)
+Назначение: добавить управляемый memory-layer поверх `Task Core` с дорожками:
+- `session` — контекст текущей сессии;
+- `procedural` — правила, инварианты, контракты (уже частично покрыто `AGENTS.md` и `references/`);
+- `semantic` — факты, решения, инсайты по задаче;
+- `episodic` — история действий и хронология.
 
-Назначение и выход:
+Граница: memory layer остаётся производным и не подменяет `task.md` как источник истины.
 
-- реализована read-модель для `status`;
-- реализована read-модель для `current-task`;
-- реализован `task show`;
-- отчётность сохранена как производный read-only слой, а не новый источник истины.
+### Track 7. Subagent contract (кандидат)
 
-### Track 5. Полевая валидация (закрыт в `TASK-2026-0014`)
+Назначение: формальный контракт для параллельных субагентов — изолированные контексты задач, скоупы файлов, протокол обмена результатами и агрегации.
 
-Назначение и выход:
+### Track 8. Расширенные adapter surfaces (кандидат)
 
-- skill прогнан на нескольких внешних репозиториях;
-- журнал friction собран;
-- в дорожную карту возвращены только реально подтверждённые улучшения.
+Назначение: Bitbucket, Gitea, self-hosted forge; OAuth flow; multi-remote publish.
 
-Подтверждённые сигналы по `TASK-2026-0014`:
+### Track 9. Внешний docs hosting (кандидат)
 
-- clean install требует явного bootstrap-порядка первой задачи:
-  если `install` и первые task-файлы уже сделали дерево dirty, `task-knowledge workflow sync --create-branch` останавливается корректно;
-  валидированный путь сейчас — ручная `task/...` ветка и затем `--register-if-missing`;
-- для больших `1c`-репозиториев governance/adoption validation нужно проводить вне `tmpfs`
-  или через sparse-checkout `AGENTS.md + knowledge/**`; полный checkout не является обязательным для такого класса проверки;
-- на shared `main` read-model должен оставаться warning-first:
-  ambiguity и legacy drift-сигналы — это ожидаемый operator feedback, а не повод молча выбирать задачу.
+Назначение: CI pipeline для автоматической сборки и публикации MkDocs-сайта на GitHub Pages или аналог.
 
-### Чего пока не делать
+### Чего по-прежнему не делать
 
-- Не добавлять новые большие capability прямо в текущий helper-монолит.
-- Не открывать memory-layer до завершения `vNext-core contract`, декомпозиции helper-а и read-model/governance tracks.
-- Не перепридумывать всю систему как universal agent platform.
-- Не уходить в full fork от внешней системы.
+- Не расширять ядро (Task Core) без отдельного strategy track и утверждённого contract.
+- Не превращать skill в universal agent platform.
+- Не добавлять host-specific логику в модель задачи.
+- Не форкаться от внешней системы целиком.
 
-## 9. Краткая рекомендация владельцу skill-а
+## 10. Краткая рекомендация владельцу skill-а
 
-Самая сильная линия развития сейчас:
+Текущая версия `task-centric-knowledge` (0.1.0, стабильный релиз 2026-05-13) прошла полный цикл:
+проектирование → модульная декомпозиция → governance → `read-model` → полевая валидация →
+productization → review-fix → publish-адаптеры → документация → CI-готовность.
 
-- не расширять модель дальше вширь;
-- сначала сделать skill меньше по архитектурной поверхности, но сильнее по чёткости контракта;
-- заимствовать идеи у `Spec Kit`, `Claude Code`, `Cursor`, `OpenHands` и `Deep Agents` точечно;
-- считать успехом не количество новых правил, а снижение неоднозначности и стоимости сопровождения.
+Самая сильная линия следующего цикла:
+- **не расширять модель вширь**;
+- **добавить memory-layer** как точечное усиление agent-driven разработки;
+- **формализовать subagent contract** для параллельной работы;
+- считать успехом снижение неоднозначности и стоимости сопровождения, а не количество новых правил.

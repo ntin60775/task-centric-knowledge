@@ -96,12 +96,16 @@ class ReleaseContractDocsTests(unittest.TestCase):
     def test_roadmap_marks_vnext_tracks_as_completed_history(self) -> None:
         text = (SKILL_ROOT / "references" / "roadmap.md").read_text(encoding="utf-8")
 
-        self.assertIn("Фазы 1-4 уже закрыты задачами `TASK-2026-0010 ... TASK-2026-0014`", text)
-        self.assertIn("Track 1. `vNext-core contract` (закрыт в `TASK-2026-0010`)", text)
-        self.assertIn("Track 2. Модульная декомпозиция helper-а (закрыт в `TASK-2026-0011`)", text)
-        self.assertIn("Track 3. `doctor / cleanup governance` (закрыт в `TASK-2026-0012`)", text)
-        self.assertIn("Track 4. `Read model / reporting` (закрыт в `TASK-2026-0013`)", text)
-        self.assertIn("Track 5. Полевая валидация (закрыт в `TASK-2026-0014`)", text)
+        self.assertIn("### Все vNext-треки и post-release задачи закрыты", text)
+        self.assertIn("`0010`–`0014`", text)
+        self.assertIn("vNext core", text)
+        self.assertIn("модульная декомпозиция helper", text)
+        self.assertIn("`doctor / cleanup governance`", text)
+        self.assertIn("`read model / reporting`", text)
+        self.assertIn("полевая валидация", text.lower())
+        # Убедиться, что roadmap обновлён до стабильного релиза 2026-05-13
+        self.assertIn("стабильный релиз — 2026-05-13", text.lower())
+        self.assertIn("Следующий стратегический цикл", text)
 
     def test_distributive_core_model_stays_aligned_with_task_local_contract(self) -> None:
         self.assertTrue(

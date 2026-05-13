@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 CLI_VERSION = __version__
 CONSUMER_RUNTIME_CONTRACT = "consumer-runtime-v1"
