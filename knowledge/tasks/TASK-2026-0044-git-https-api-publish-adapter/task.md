@@ -1,20 +1,45 @@
-# TASK-2026-0044: Git + HTTPS API publish adapter
+# Карточка задачи TASK-2026-0044
 
-## Краткое описание
+## Паспорт
+
+| Поле | Значение |
+|------|----------|
+| ID задачи | `TASK-2026-0044` |
+| Parent ID | `—` |
+| Уровень вложенности | `0` |
+| Ключ в путях | `TASK-2026-0044` |
+| Технический ключ для новых именуемых сущностей | `git-https-adapter` |
+| Краткое имя | `git-https-api-publish-adapter` |
+| Человекочитаемое описание | Git + HTTPS API publish adapter без обязательной зависимости от `gh`/`glab`. |
+| Статус | `завершена` |
+| Приоритет | `высокий` |
+| Ответственный | `не назначен` |
+| Ветка | `task/task-2026-0044-git-https-api-publish-adapter` |
+| Требуется SDD | `да` |
+| Статус SDD | `готов` |
+| Ссылка на SDD | `sdd.md` |
+| Дата создания | `2026-05-06` |
+| Дата обновления | `2026-05-13` |
+
+## Цель
 
 Добавить fallback-адаптер publish-flow на чистый git + HTTPS API (GitHub/GitLab REST) без обязательной зависимости от `gh`/`glab` CLI.
 
-## Статус
-
-завершена
-
-## Ветка
-
-task/task-2026-0044-git-https-api-publish-adapter
-
-## Приоритет
-
-высокий
-
 ## Контур публикации
 
+| Unit ID | Назначение | Head | Base | Host | Тип публикации | Статус | URL | Merge commit | Cleanup |
+|---------|------------|------|------|------|----------------|--------|-----|--------------|---------|
+| `—` | — | `—` | `—` | `none` | `none` | `planned` | `—` | `—` | `не требуется` |
+
+## Текущий этап
+
+Завершена. GitHubAPIAdapter и GitLabAPIAdapter реализованы, протестированы, задокументированы.
+
+## Итог
+
+- Реализованы `GitHubAPIAdapter` и `GitLabAPIAdapter` в `forge.py` на базе `urllib.request` (stdlib).
+- Аутентификация через `GITHUB_TOKEN` / `GITLAB_TOKEN` переменные окружения.
+- `resolve_forge_adapter` обновлён: CLI-адаптер первый, HTTP-адаптер как fallback.
+- 23 теста с mock HTTP в `tests/test_forge_http.py`.
+- Документация обновлена в `references/deployment.md` и `references/cli-reference.md`.
+- 290 тестов в общем наборе, все зелены.
