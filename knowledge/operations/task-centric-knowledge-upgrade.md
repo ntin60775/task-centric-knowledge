@@ -6,10 +6,10 @@
 |------|----------|
 | Система | `task-centric-knowledge` |
 | Эпоха совместимости | `module-core-v1` |
-| Статус перехода | `fully-upgraded` |
-| Контур исполнения | `single-writer` |
+| Статус перехода | `partially-upgraded` |
+| Контур исполнения | `dual-readiness` |
 | Последняя задача перехода | `TASK-2026-0024.7` |
-| Дата обновления | `2026-04-29` |
+| Дата обновления | `2026-05-28` |
 
 ## Исторические задачи
 
@@ -52,3 +52,13 @@
 | `TASK-2026-0038` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0038-project-install-verification-contract/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
 | `TASK-2026-0039` | `closed historical` | `note-only` | `knowledge/tasks/TASK-2026-0039-production-team-snapshot-integration/artifacts/migration/task-centric-knowledge-upgrade.md` | Закрытая historical-задача получила только migration note без переписывания protected fields. |
 | `TASK-2026-0040` | `closed historical` | `compatibility-backfilled` | `knowledge/tasks/TASK-2026-0040-project-copy-refresh-after-global-install/artifacts/migration/task-centric-knowledge-upgrade.md` | Active-задача прошла controlled compatibility-backfill и остаётся в обычном task lifecycle. |
+| `TASK-2026-0041` | `closed historical` | `pending` | `—` | Требуется сценарий `note-only compatibility-backfill` без переписывания исторического описания задачи. |
+| `TASK-2026-0042` | `closed historical` | `pending` | `—` | Требуется сценарий `note-only compatibility-backfill` без переписывания исторического описания задачи. |
+| `TASK-2026-0043` | `closed historical` | `pending` | `—` | Требуется сценарий `note-only compatibility-backfill` без переписывания исторического описания задачи. |
+| `TASK-2026-0044` | `closed historical` | `pending` | `—` | Требуется сценарий `note-only compatibility-backfill` без переписывания исторического описания задачи. |
+| `TASK-2026-0045` | `closed historical` | `pending` | `—` | Требуется сценарий `note-only compatibility-backfill` без переписывания исторического описания задачи. |
+| `TASK-2026-0046` | `closed historical` | `pending` | `—` | Требуется сценарий `note-only compatibility-backfill` без переписывания исторического описания задачи. |
+| `TASK-2026-0047` | `closed historical` | `pending` | `—` | Требуется сценарий `note-only compatibility-backfill` без переписывания исторического описания задачи. |
+| `TASK-2026-0048` | `closed historical` | `pending` | `—` | Требуется сценарий `note-only compatibility-backfill` без переписывания исторического описания задачи. |
+| `TASK-2026-0048.1` | `closed historical` | `pending` | `—` | Требуется сценарий `note-only compatibility-backfill` без переписывания исторического описания задачи. |
+| `TASK-2026-0049` | `closed historical` | `pending` | `—` | Требуется сценарий `note-only compatibility-backfill` без переписывания исторического описания задачи. |
