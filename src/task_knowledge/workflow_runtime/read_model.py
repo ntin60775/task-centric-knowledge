@@ -969,16 +969,14 @@ def inherited_branch_parent_candidate(candidates: list[TaskSnapshot]) -> TaskSna
 
 
 def prefer_non_final_candidates(candidates: list[TaskSnapshot]) -> list[TaskSnapshot]:
-    """Filter out final-status candidates when possible.
+    """Filter out final-status candidates.
 
-    Args:
-        candidates: List of task snapshots.
-
-    Returns:
-        Active candidates if any exist, otherwise the original list.
+    Returns active (non-final) candidates.  When every candidate is
+    already in a final status the list is empty — callers should
+    resolve to ``no_match`` instead of ``ambiguous``.
     """
     active_candidates = [candidate for candidate in candidates if candidate.status not in FINAL_TASK_STATUSES]
-    return active_candidates or candidates
+    return active_candidates
 
 
 def dedupe_warnings(items: list[WarningItem]) -> list[WarningItem]:
@@ -1138,6 +1136,8 @@ def resolve_current_task(project_root: Path, tasks: dict[str, TaskSnapshot]) -> 
         branch_candidates = prefer_non_final_candidates(
             [snapshot for score, snapshot in scored if score == best_score]
         )
+        if not branch_candidates:
+            return CurrentTaskResolution("unresolved", "all_final", None, warnings=[])
         if len(branch_candidates) == 1:
             task = branch_candidates[0]
             return CurrentTaskResolution(
