@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import subprocess
@@ -8,9 +7,8 @@ import sys
 import tempfile
 import textwrap
 import unittest
-from unittest import mock
 from pathlib import Path
-
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 SUBPROCESS_TIMEOUT_SECONDS = 30
@@ -20,14 +18,16 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 import task_knowledge.workflow_runtime.finalize_flow as finalize_flow_module
 from task_knowledge.workflow_runtime import (
-    backfill_task as runtime_backfill_task,
-    sync_task,
-    run_publish_flow,
-    finalize_task,
-    update_task_file_with_delivery_units,
-    DeliveryUnit,
     DELIVERY_ROW_PLACEHOLDER,
+    DeliveryUnit,
     PublicationSnapshot,
+    finalize_task,
+    run_publish_flow,
+    sync_task,
+    update_task_file_with_delivery_units,
+)
+from task_knowledge.workflow_runtime import (
+    backfill_task as runtime_backfill_task,
 )
 from task_knowledge.workflow_runtime import publish_flow as _publish_flow_module
 
@@ -632,19 +632,18 @@ class TaskCentricKnowledgeWorkflowTests(unittest.TestCase):
                 finalize_flow_module,
                 "branch_exists",
                 side_effect=RuntimeError("git command timed out after 120s: git -C /tmp/project branch --list main"),
+            ), mock.patch.object(
+                finalize_flow_module,
+                "has_remote",
+                side_effect=RuntimeError("git command timed out after 120s: git -C /tmp/project remote"),
             ):
-                with mock.patch.object(
-                    finalize_flow_module,
-                    "has_remote",
-                    side_effect=RuntimeError("git command timed out after 120s: git -C /tmp/project remote"),
-                ):
-                    payload = finalize_task(
-                        project_root,
-                        task_dir,
-                        base_branch="main",
-                        commit_message="TASK-2026-1504: finalize",
-                        today="2026-04-23",
-                    )
+                payload = finalize_task(
+                    project_root,
+                    task_dir,
+                    base_branch="main",
+                    commit_message="TASK-2026-1504: finalize",
+                    today="2026-04-23",
+                )
 
             self.assertFalse(payload["ok"])
             self.assertEqual(payload["outcome"], "blocked")

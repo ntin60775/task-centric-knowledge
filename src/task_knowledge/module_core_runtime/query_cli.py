@@ -48,10 +48,10 @@ def format_module_find_payload(payload: dict[str, object]) -> str:
         for item in items:
             assert isinstance(item, dict)
             rows.append(
-                (
+                
                     f"- {item['module_id']} | slug={item['slug']} | source={item['source_state']} | "
                     f"readiness={item['readiness_status']} | matched={','.join(item['matched_fields'])}"
-                )
+                
             )
             rows.append(f"  purpose_summary={item['purpose_summary'] or '—'}")
             rows.append(f"  verification_ref={item['verification_ref'] or '—'}")
@@ -172,11 +172,11 @@ def format_module_show_payload(
             for item in outgoing:
                 assert isinstance(item, dict)
                 relation_rows.append(
-                    (
+                    
                         f"- {item['target_module_id']} | type={item['relation_type']} | "
                         f"status={item['relation_status']} | slug={item['target_slug'] or '—'} | "
                         f"source={item['target_source_state'] or '—'} | readiness={item['target_readiness_status'] or '—'}"
-                    )
+                    
                 )
                 relation_rows.append(f"  passport_ref={item['target_passport_ref'] or '—'}")
                 relation_rows.append(f"  verification_ref={item['target_verification_ref'] or '—'}")
@@ -190,11 +190,11 @@ def format_module_show_payload(
             for item in used_by:
                 assert isinstance(item, dict)
                 relation_rows.append(
-                    (
+                    
                         f"- {item['source_module_id']} | type={item['relation_type']} | "
                         f"status={item['relation_status']} | slug={item['source_slug'] or '—'} | "
                         f"source={item['source_source_state'] or '—'} | readiness={item['source_readiness_status'] or '—'}"
-                    )
+                    
                 )
                 relation_rows.append(f"  passport_ref={item['source_passport_ref'] or '—'}")
                 relation_rows.append(f"  verification_ref={item['source_verification_ref'] or '—'}")

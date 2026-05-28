@@ -15,12 +15,12 @@ from .environment import (
     validate_target,
 )
 from .models import (
-    CleanupCandidate,
-    CleanupPlan,
     FINGERPRINT_PLACEHOLDER,
     FOREIGN_SYSTEM_INDICATORS,
     MIGRATION_NOTE_NAME,
     SKILL_NAME,
+    CleanupCandidate,
+    CleanupPlan,
     StepResult,
     cleanup_scope_fingerprint,
     has_errors,

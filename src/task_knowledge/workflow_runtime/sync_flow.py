@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
 
+from .git_ops import branch_exists, current_git_branch, has_remote, run_git, worktree_is_clean
 from .legacy_upgrade import (
     ensure_repo_upgrade_state,
     load_repo_upgrade_state,
@@ -15,8 +16,6 @@ from .legacy_upgrade import (
     write_repo_upgrade_state,
     write_task_migration_note,
 )
-
-from .git_ops import branch_exists, current_git_branch, has_remote, run_git, worktree_is_clean
 from .models import FINAL_TASK_STATUSES, PLACEHOLDER_BRANCH_VALUES, StepResult, default_branch_name
 from .path_safety import resolve_task_dir_inside_project
 from .registry_sync import (
@@ -27,7 +26,6 @@ from .registry_sync import (
     update_registry,
 )
 from .task_markdown import read_task_fields, task_summary_from_fields, update_task_file
-
 
 
 @dataclass(frozen=True)

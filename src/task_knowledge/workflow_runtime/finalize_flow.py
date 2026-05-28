@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
-from typing import Sequence
 
 from .git_ops import branch_exists, current_git_branch, has_remote, infer_base_branch, run_git
 from .models import (
@@ -19,7 +19,6 @@ from .models import (
 from .path_safety import resolve_task_dir_inside_project
 from .registry_sync import collect_delivery_units, update_registry
 from .task_markdown import derive_goal_summary_from_lines, read_task_fields, task_summary_from_fields, update_task_file
-
 
 OPEN_DELIVERY_STATUSES = {"planned", "local", "draft", "review"}
 FINAL_STAGE_TEXT = (

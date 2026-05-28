@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import ast
 import subprocess
+import sys
 import tempfile
 import tomllib
 import unittest
 from pathlib import Path
-import sys
-
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -37,7 +36,7 @@ class PythonHardeningContractsTests(unittest.TestCase):
         self.assertIn(f'__version__ = "{pyproject["project"]["version"]}"', version_text)
         self.assertIn("CLI_VERSION = __version__", version_text)
         self.assertIn('CONSUMER_RUNTIME_CONTRACT = "consumer-runtime-v1"', version_text)
-        self.assertIn("from .version import __version__", init_text)
+        self.assertIn("from .version import CLI_VERSION, CONSUMER_RUNTIME_CONTRACT, __version__", init_text)
         self.assertIn("from task_knowledge.version import CLI_VERSION", cli_text)
 
     def test_makefile_keeps_offline_fallback_for_local_install(self) -> None:

@@ -7,7 +7,6 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-
 SUPPORTED_SOURCE = "grace"
 CHECKOUT_ENV = "TASK_KNOWLEDGE_GRACE_CHECKOUT"
 ALLOWED_ACTIONS = {"create", "update", "noop"}

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-import re
 
 from task_knowledge.workflow_runtime.models import DELIVERY_ROW_PLACEHOLDER, normalize_table_value
 from task_knowledge.workflow_runtime.task_markdown import find_section_bounds, split_markdown_row
@@ -24,7 +24,6 @@ from .verification import (
     load_module_verification,
     resolve_execution_readiness,
 )
-
 
 MODULES_ROOT = Path("knowledge/modules")
 REGISTRY_FILENAME = "registry.md"
@@ -1847,9 +1846,7 @@ def file_show(
     blocks: list[dict[str, object]] = []
 
     contract_owner: ModuleRecord | None = None
-    if module_selector and owner_records:
-        contract_owner = owner_records[0]
-    elif len(owner_records) == 1:
+    if module_selector and owner_records or len(owner_records) == 1:
         contract_owner = owner_records[0]
     elif len(owner_records) > 1:
         warnings.append(

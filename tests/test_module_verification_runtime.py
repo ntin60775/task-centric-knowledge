@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import textwrap
 import sys
-import unittest
+import textwrap
 from pathlib import Path
 
 TESTS_DIR = Path(__file__).resolve().parent
@@ -13,8 +12,6 @@ SCRIPTS_DIR = TESTS_DIR.parent / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from task_workflow_testlib import TempRepoCase
-
 from task_knowledge.module_core_runtime import (
     ModuleVerificationError,
     build_failure_handoff,
@@ -22,6 +19,7 @@ from task_knowledge.module_core_runtime import (
     load_module_verification,
     resolve_execution_readiness,
 )
+from task_workflow_testlib import TempRepoCase
 
 
 def _verification_text(

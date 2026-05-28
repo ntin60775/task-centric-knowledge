@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-
 PLACEHOLDER_BRANCH_VALUES = {"", "—", "не создана"}
 TASK_SUMMARY_FIELD = "Человекочитаемое описание"
 TABLE_ROW_RE = re.compile(r"^\|\s*(?P<field>[^|]+?)\s*\|\s*(?P<value>.*?)\s*\|$")
@@ -91,7 +90,7 @@ class DeliveryUnit:
     cleanup: str
 
     @classmethod
-    def from_cells(cls, cells: list[str]) -> "DeliveryUnit":
+    def from_cells(cls, cells: list[str]) -> DeliveryUnit:
         """Создать DeliveryUnit из списка ячеек таблицы.
 
         Args:

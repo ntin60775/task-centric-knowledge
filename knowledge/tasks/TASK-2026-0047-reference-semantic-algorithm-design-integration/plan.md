@@ -14,6 +14,6 @@
 
 ## Проверки
 
-- [ ] `bash scripts/check-docs-localization.sh` проходит.
-- [ ] Шаблон `sdd.md` содержит ссылку на `semantic-algorithm-design`.
-- [ ] Managed-блоки generic и 1c содержат правило про семантическое моделирование.
+- [x] `bash scripts/check-docs-localization.sh` проходит.
+- [x] Шаблон `sdd.md` содержит ссылку на `semantic-algorithm-design`.
+- [x] Managed-блоки generic и 1c содержат правило про семантическое моделирование.

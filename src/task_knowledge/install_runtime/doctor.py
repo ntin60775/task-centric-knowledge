@@ -28,13 +28,12 @@ from .models import (
     DEPENDENCY_STATUS_NOT_APPLICABLE,
     DEPENDENCY_STATUS_OK,
     DEPENDENCY_STATUS_OPTIONAL,
+    SKILL_NAME,
     DependencyCheck,
     ExistingSystemReport,
-    SKILL_NAME,
     StepResult,
     has_errors,
 )
-
 
 GIT_TIMEOUT_SECONDS = 120
 

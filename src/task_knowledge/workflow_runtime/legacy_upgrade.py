@@ -8,7 +8,6 @@ from pathlib import Path
 
 from .task_markdown import read_task_fields, split_markdown_row
 
-
 UPGRADE_STATE_RELATIVE = Path("knowledge/operations/task-centric-knowledge-upgrade.md")
 MIGRATION_NOTE_RELATIVE = Path("artifacts/migration/task-centric-knowledge-upgrade.md")
 PASSPORT_SECTION = "## Паспорт"
@@ -212,15 +211,11 @@ def _normalize_entry(task_id: str, task_class: str, existing: LegacyTaskEntry | 
     backfill_status = existing.backfill_status
     if task_class == "reference":
         backfill_status = "manual-reference"
-    elif task_class == "active" and backfill_status not in {"pending", "compatibility-backfilled"}:
-        backfill_status = "pending"
-    elif task_class == "closed historical" and backfill_status not in {
+    elif task_class == "active" and backfill_status not in {"pending", "compatibility-backfilled"} or task_class == "closed historical" and backfill_status not in {
         "pending",
         "note-only",
         "compatibility-backfilled",
-    }:
-        backfill_status = "pending"
-    elif backfill_status not in VALID_BACKFILL_STATUSES or backfill_status == "manual-reference":
+    } or backfill_status not in VALID_BACKFILL_STATUSES or backfill_status == "manual-reference":
         backfill_status = "pending"
     decision = existing.decision.strip() or _default_decision(task_class, backfill_status)
     return LegacyTaskEntry(

@@ -15,10 +15,8 @@ from src.task_knowledge.workflow_runtime.forge import (
     _gitlab_mr_to_snapshot,
     _parse_github_remote,
     _parse_gitlab_remote,
-    _resolve_remote_url,
     resolve_forge_adapter,
 )
-from src.task_knowledge.workflow_runtime.models import DELIVERY_ROW_PLACEHOLDER, PublicationSnapshot
 
 
 class TestRemoteParsing(unittest.TestCase):

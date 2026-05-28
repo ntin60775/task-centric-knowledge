@@ -4,23 +4,27 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from task_knowledge.workflow_runtime.legacy_upgrade import ensure_repo_upgrade_state, repo_upgrade_state_path, upgrade_state_summary
+from task_knowledge.workflow_runtime.legacy_upgrade import (
+    ensure_repo_upgrade_state,
+    repo_upgrade_state_path,
+    upgrade_state_summary,
+)
 
 from .models import (
     ADDITIVE_MANAGED_TARGET_FILES,
     BEGIN_MARKER,
     COMPATIBILITY_BASELINE_TARGET_FILES,
     END_MARKER,
-    ExistingSystemReport,
     FORCE_OVERWRITABLE_TARGET_FILES,
+    FOREIGN_SYSTEM_INDICATORS,
     KNOWLEDGE_ASSET_FILES,
     MANAGED_TARGET_FILES,
     MIGRATION_NOTE_NAME,
     PROFILE_TO_BLOCK,
-    REQUIRED_RELATIVE_PATHS,
-    FOREIGN_SYSTEM_INDICATORS,
     PROJECT_DATA_TARGET_FILES,
+    REQUIRED_RELATIVE_PATHS,
     SKILL_NAME,
+    ExistingSystemReport,
     StepResult,
     has_errors,
 )

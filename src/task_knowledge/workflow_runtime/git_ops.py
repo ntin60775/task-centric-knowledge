@@ -9,7 +9,6 @@ from urllib.parse import urlparse
 
 from .models import DELIVERY_ROW_PLACEHOLDER, VALID_HOSTS, VALID_PUBLICATION_TYPES
 
-
 SUBPROCESS_TIMEOUT_SECONDS = 120
 
 

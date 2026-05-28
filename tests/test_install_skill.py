@@ -6,7 +6,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 INSTALL_SCRIPT = ROOT / "src" / "task_knowledge" / "install_runtime" / "__init__.py"
 

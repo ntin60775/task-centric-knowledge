@@ -9,9 +9,8 @@ import shutil
 import sys
 from pathlib import Path
 
-
+from task_knowledge.bootstrap import bootstrap as do_bootstrap
 from task_knowledge.borrowings_runtime import apply_refresh, build_refresh_plan, read_status
-from task_knowledge.bootstrap import bootstrap as do_bootstrap, BootstrapResult
 from task_knowledge.install_runtime import (
     check,
     doctor_deps,
@@ -19,9 +18,11 @@ from task_knowledge.install_runtime import (
     migrate_cleanup_confirm,
     migrate_cleanup_plan,
     resolve_source,
-    source_root_mode as detect_source_root_mode,
     source_root_ready,
     verify_project,
+)
+from task_knowledge.install_runtime import (
+    source_root_mode as detect_source_root_mode,
 )
 from task_knowledge.install_runtime.cli import print_text_report as print_install_text_report
 from task_knowledge.install_runtime.mass_update import mass_update
@@ -32,16 +33,17 @@ from task_knowledge.module_core_runtime.query_cli import (
     format_module_find_payload,
     format_module_show_payload,
 )
+from task_knowledge.version import CLI_VERSION, CONSUMER_RUNTIME_CONTRACT, CONSUMER_RUNTIME_SCHEMA_VERSION
 from task_knowledge.workflow_runtime import backfill_task, finalize_task, run_publish_flow, sync_task
 from task_knowledge.workflow_runtime.cli import print_text_report as print_workflow_text_report
 from task_knowledge.workflow_runtime.query_cli import (
     dispatch as dispatch_query,
+)
+from task_knowledge.workflow_runtime.query_cli import (
     format_current_task_payload,
     format_status_payload,
     format_task_show_payload,
 )
-from task_knowledge.version import CLI_VERSION, CONSUMER_RUNTIME_CONTRACT, CONSUMER_RUNTIME_SCHEMA_VERSION
-
 
 COMMAND_NAME = "task-knowledge"
 SUPPORTED_COMMANDS = ["bootstrap", "doctor", "install", "task", "module", "file", "workflow", "borrowings"]

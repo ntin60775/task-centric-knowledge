@@ -14,9 +14,6 @@ if str(TESTS_DIR) not in sys.path:
 from task_workflow_testlib import ROOT, SUBPROCESS_TIMEOUT_SECONDS, TempRepoCase, git
 
 
-
-
-
 class TaskKnowledgeCliTests(TempRepoCase):
     def run_cli(self, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(

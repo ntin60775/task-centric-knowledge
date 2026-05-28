@@ -6,7 +6,6 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 
-
 SKILL_NAME = "task-centric-knowledge"
 BEGIN_MARKER = "⟦⟦BEGIN_TASK_KNOWLEDGE_SYSTEM#KB01⟧⟧"
 END_MARKER = "⟦⟦END_TASK_KNOWLEDGE_SYSTEM#KB01⟧⟧"

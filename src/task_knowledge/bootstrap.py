@@ -31,6 +31,17 @@ KNOWN_KNOWLEDGE_PATTERNS = (
 
 @dataclass
 class BootstrapResult:
+    """Результат выполнения bootstrap-процедуры.
+
+    Attributes:
+        ok: Признак успешного завершения.
+        command: Выполненная команда (``check``, ``install``, ``bootstrap``).
+        profile: Профиль системы классификации (``generic``, ``1c``).
+        project_root: Абсолютный путь к корню проекта.
+        steps: Список результатов отдельных шагов.
+        error: Сообщение об ошибке при неудаче.
+        dry_run: Признак холостого прогона без мутации.
+    """
     ok: bool
     command: str
     profile: str

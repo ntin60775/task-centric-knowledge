@@ -11,8 +11,8 @@ TESTS_DIR = Path(__file__).resolve().parent
 if str(TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(TESTS_DIR))
 
-from task_workflow_testlib import ROOT, SUBPROCESS_TIMEOUT_SECONDS, TempRepoCase, git
 from task_knowledge.workflow_runtime.task_markdown import parse_delivery_units
+from task_workflow_testlib import ROOT, SUBPROCESS_TIMEOUT_SECONDS, TempRepoCase, git
 
 
 def _query_cmd(*parts: str, json_mode: bool = False) -> list[str]:

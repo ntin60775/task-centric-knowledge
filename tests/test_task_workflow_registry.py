@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import sys
-import unittest.mock as mock
 import unittest
+import unittest.mock as mock
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from task_knowledge.workflow_runtime.models import DeliveryUnit, DeliveryUnitVersion
 from task_knowledge.workflow_runtime import registry_sync
+from task_knowledge.workflow_runtime.models import DeliveryUnit, DeliveryUnitVersion
 from task_knowledge.workflow_runtime.registry_sync import merge_delivery_unit_versions, preferred_registry_summary
 
 

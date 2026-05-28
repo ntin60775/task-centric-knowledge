@@ -44,7 +44,6 @@ from .registry_sync import (
 )
 from .task_markdown import derive_summary_from_task, read_task_fields, update_task_file_with_delivery_units
 
-
 PUBLISH_FLOW_TRANSITIONS = {
     "start": {
         "planned": {"local"},

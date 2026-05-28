@@ -5,12 +5,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import os
 import textwrap
 import unittest
 from pathlib import Path
 from unittest import mock
-
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = ROOT / "src" / "task_knowledge"
@@ -217,17 +215,16 @@ class InstallSkillGovernanceTests(unittest.TestCase):
                 doctor_runtime,
                 "_command_exists",
                 side_effect=lambda command: which_map.get(command),
+            ), mock.patch.object(
+                doctor_runtime,
+                "_git_output",
+                side_effect=[
+                    (True, ".git", None),
+                    (True, "origin", None),
+                    (False, "git command timed out after 120s: git -C /tmp/demo remote get-url origin", "timeout"),
+                ],
             ):
-                with mock.patch.object(
-                    doctor_runtime,
-                    "_git_output",
-                    side_effect=[
-                        (True, ".git", None),
-                        (True, "origin", None),
-                        (False, "git command timed out after 120s: git -C /tmp/demo remote get-url origin", "timeout"),
-                    ],
-                ):
-                    payload = install_module.doctor_deps(project_root, ROOT, "generic")
+                payload = install_module.doctor_deps(project_root, ROOT, "generic")
 
             dependencies = {item["name"]: item for item in payload["dependencies"]}
             publish_remote = dependencies["publish_remote"]
@@ -250,17 +247,16 @@ class InstallSkillGovernanceTests(unittest.TestCase):
                 doctor_runtime,
                 "_command_exists",
                 side_effect=lambda command: which_map.get(command),
+            ), mock.patch.object(
+                doctor_runtime,
+                "_git_output",
+                side_effect=[
+                    (True, ".git", None),
+                    (True, "origin", None),
+                    (False, "fatal: unable to read remote url for origin", None),
+                ],
             ):
-                with mock.patch.object(
-                    doctor_runtime,
-                    "_git_output",
-                    side_effect=[
-                        (True, ".git", None),
-                        (True, "origin", None),
-                        (False, "fatal: unable to read remote url for origin", None),
-                    ],
-                ):
-                    payload = install_module.doctor_deps(project_root, ROOT, "generic")
+                payload = install_module.doctor_deps(project_root, ROOT, "generic")
 
             dependencies = {item["name"]: item for item in payload["dependencies"]}
             publish_remote = dependencies["publish_remote"]

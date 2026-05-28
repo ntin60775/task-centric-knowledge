@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-import re
 
 from .git_ops import current_git_branch, dirty_paths
 from .models import (
@@ -26,12 +26,11 @@ from .task_markdown import (
     derive_goal_summary_from_lines,
     find_section_bounds,
     parse_delivery_units_safe,
-    reference_mode_warning,
     read_task_fields,
+    reference_mode_warning,
     split_markdown_row,
     task_summary_from_fields,
 )
-
 
 BEGIN_MARKER = "⟦⟦BEGIN_TASK_KNOWLEDGE_SYSTEM#KB01⟧⟧"
 END_MARKER = "⟦⟦END_TASK_KNOWLEDGE_SYSTEM#KB01⟧⟧"

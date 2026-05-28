@@ -13,7 +13,6 @@ if str(TESTS_DIR) not in sys.path:
 
 from task_workflow_testlib import ROOT, SUBPROCESS_TIMEOUT_SECONDS, TempRepoCase, git
 
-
 GOLDEN_DIR = ROOT / "tests" / "golden"
 
 
